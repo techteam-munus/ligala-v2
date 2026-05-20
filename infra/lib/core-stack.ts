@@ -1,5 +1,5 @@
-import { Stack, StackProps, RemovalPolicy, Duration } from "aws-cdk-lib";
-import { Construct } from "constructs";
+import { Stack, RemovalPolicy, Duration, type StackProps } from "aws-cdk-lib";
+import type { Construct } from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as s3 from "aws-cdk-lib/aws-s3";
 

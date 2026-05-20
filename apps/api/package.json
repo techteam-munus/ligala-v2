@@ -8,7 +8,7 @@
     "dev": "tsx watch src/dev.ts",
     "build": "esbuild src/lambda.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/lambda.js --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" --external:@aws-sdk/*",
     "start": "node dist/lambda.js",
-    "lint": "eslint src",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist .turbo"

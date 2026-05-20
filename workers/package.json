@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "esbuild paymongo/handler.ts paypal/handler.ts idmeta/handler.ts email/handler.ts image/handler.ts --bundle --platform=node --target=node20 --format=esm --outdir=dist --external:@aws-sdk/* --external:sharp",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist .turbo"

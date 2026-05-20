@@ -30,7 +30,7 @@
   - [x] `pnpm install` clean (no peer warnings — after zod 4 + hono 4.10 bump)
   - [x] `pnpm typecheck` green locally (9/9 packages, ~3s)
   - [x] `pnpm build` green locally (web Next.js 5.1s + api esbuild 21ms + workers esbuild 11ms; 4 web routes detected, api bundle 78.4kb)
-  - [ ] `pnpm lint` green locally (ESLint config not yet added)
+  - [x] `pnpm lint` green locally (ESLint 9 flat config; 0 errors, 0 warnings)
   - [ ] `pnpm test` green locally (no tests yet)
   - [x] CDK `synth` clean (Core=35 resources: VPC + 6 subnets + NAT + S3 + endpoints; App=placeholder)
   - [ ] CDK `deploy` to dev env

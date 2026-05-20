@@ -16,7 +16,7 @@
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint .",
     "test": "vitest run",
     "clean": "rm -rf .turbo"
   },

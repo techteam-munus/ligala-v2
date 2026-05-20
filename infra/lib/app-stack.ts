@@ -1,7 +1,7 @@
-import { Stack, StackProps } from "aws-cdk-lib";
-import { Construct } from "constructs";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as s3 from "aws-cdk-lib/aws-s3";
+import { Stack, type StackProps } from "aws-cdk-lib";
+import type { Construct } from "constructs";
+import type * as ec2 from "aws-cdk-lib/aws-ec2";
+import type * as s3 from "aws-cdk-lib/aws-s3";
 
 export interface AppStackProps extends StackProps {
   envName: string;

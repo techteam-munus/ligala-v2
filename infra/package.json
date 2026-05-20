@@ -11,7 +11,7 @@
     "destroy:dev": "cdk destroy --all --context env=dev --force",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "eslint .",
+    "lint": "eslint . --ignore-pattern cdk.out --ignore-pattern dist",
     "clean": "rm -rf cdk.out .turbo"
   },
   "dependencies": {

@@ -5,5 +5,5 @@ const port = Number(process.env.PORT ?? 8787);
 const app = createApp();
 
 serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`[api] http://localhost:${info.port}`);
+  console.info(`[api] http://localhost:${info.port}`);
 });
