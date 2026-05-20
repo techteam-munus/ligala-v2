@@ -1,13 +1,18 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
-import { idmetaWebhookPayload } from "@ligala/shared/schemas";
+import { idmetaWebhookPayload, paymentWebhookInput } from "@ligala/shared/schemas";
+import { applyPaymentWebhook } from "./billing";
 
 /**
  * Webhook handlers. Real deployments verify signatures and enqueue to SQS;
- * for Phase 2 we do the IDMeta processing inline so the flow is observable
- * end-to-end locally. The dispatcher in `workers/idmeta` does the same work
- * when SQS is wired up — keep the logic identical.
+ * for dev we process inline so the flow is observable end-to-end locally.
+ * The worker dispatchers in `workers/` will reuse the same handlers via the
+ * shared `applyPaymentWebhook` helper.
+ *
+ * PayMongo + PayPal both normalize to `paymentWebhookInput` here — the real
+ * routes will translate from each provider's payload shape into this
+ * common form before calling `applyPaymentWebhook`.
  */
 export const webhooks = new Hono()
   .post("/idmeta", async (c) => {
@@ -18,9 +23,6 @@ export const webhooks = new Hono()
     }
     const { applicant_id, status, reject_reason } = parsed.data;
 
-    // Resolve the submission by IDMeta applicant id. Real IDMeta correlates by
-    // applicant_id; this stub also accepts a submission id passed as applicant_id
-    // for local testing.
     const submission =
       (await db().query.kycSubmissions.findFirst({
         where: eq(schema.kycSubmissions.idmetaApplicantId, applicant_id),
@@ -50,6 +52,33 @@ export const webhooks = new Hono()
     return c.json({ ok: true, submissionId: submission.id, status: next });
   })
 
-  // Phase 5 wires these. Returning 501 keeps anyone testing in dev honest.
-  .post("/paymongo", (c) => c.json({ error: "not_implemented", phase: 5 }, 501))
-  .post("/paypal", (c) => c.json({ error: "not_implemented", phase: 5 }, 501));
+  /**
+   * PayMongo webhook. Dev accepts a normalized payload (see paymentWebhookInput).
+   * Production wiring will sign-verify the X-Paymongo-Signature header and
+   * translate PayMongo's `data.attributes.data.attributes.payment_intent.id`
+   * shape into the normalized form before calling applyPaymentWebhook.
+   */
+  .post("/paymongo", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const parsed = paymentWebhookInput.safeParse({ ...body, provider: "paymongo" });
+    if (!parsed.success) {
+      return c.json({ error: "bad_payload", issues: parsed.error.flatten() }, 400);
+    }
+    const r = await applyPaymentWebhook({ ...parsed.data, rawPayload: body });
+    return c.json(r);
+  })
+
+  /**
+   * PayPal webhook. Same story as PayMongo: dev accepts normalized payload,
+   * production translates PayPal's `event_type=PAYMENT.CAPTURE.COMPLETED`
+   * resource ids before calling applyPaymentWebhook.
+   */
+  .post("/paypal", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const parsed = paymentWebhookInput.safeParse({ ...body, provider: "paypal" });
+    if (!parsed.success) {
+      return c.json({ error: "bad_payload", issues: parsed.error.flatten() }, 400);
+    }
+    const r = await applyPaymentWebhook({ ...parsed.data, rawPayload: body });
+    return c.json(r);
+  });

@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 4 — Cases & engagements **DONE locally** (full 23-step API smoke test passed including paid + pro bono lifecycles; awaiting browser walkthrough + AWS dev deploy)
+- **Active phase:** Phase 5 — Billing **DONE locally** (full 22-step API smoke test passed including invoice CRUD, discount apply, dev-simulate checkout, webhook idempotency, ledger; awaiting browser walkthrough + AWS dev deploy + real provider keys)
 - **Last working session:** 2026-05-20
-- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet
-- **Next action:** browser walkthrough of case flow (engage from public profile → submit → accept → sign → notes/attachments → close) once Playwright MCP is back, OR jump to Phase 5 (billing — invoices, PayMongo, PayPal, webhooks, discount codes).
+- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet. **Playwright MCP intermittent** (briefly online this session, disconnected again before walkthrough could run).
+- **Next action:** browser walkthrough of the billing flow + earlier-phase backlog, OR jump to Phase 6 (referrals + pro bono polish), OR wire real PayMongo + PayPal signature verification.
 - **Blockers:** none
 
 ---
@@ -89,7 +89,24 @@
   - [ ] Browser walkthrough of the engage/decide/sign/close flow (Playwright MCP currently unavailable)
   - [ ] Real S3 presigning for case attachments (dev stub same as KYC)
   - [ ] Deployed smoke test against dev env
-- [ ] Phase 5 — Billing (invoices, PayMongo + PayPal + webhooks, discount codes)
+- [ ] **Phase 5 — Billing** *(22-step API smoke test passed; browser walkthrough + real provider signature verification pending)*
+  - [x] Drizzle schema: 5 new tables (invoice, invoice_line, discount_code, payment, transaction) + 5 enums (invoice_status, payment_provider, payment_status, discount_kind, transaction_kind, transaction_direction)
+  - [x] Migration `0004_fresh_mercury.sql` applied; total: 26 tables in dev
+  - [x] Shared Zod: invoiceCreateInput, invoiceLineInput, invoicePatch, invoiceVoidInput, discountCodeInput (cross-field refine on kind↔value), applyDiscountInput, checkoutInput, paymentWebhookInput
+  - [x] Hono `/billing`: invoices list/create/read/patch (drafts only)/send/void, discount apply, checkout (returns provider URL), `/billing/dev/simulate-payment` (no-auth-style dev stub), transactions ledger
+  - [x] Hono `/billing/discount-codes`: lawyer-owned codes (list + create); uppercase + unique per lawyer
+  - [x] `apps/api/src/lib/billing.ts`: integer-cents math (computeLineTotalCents, computeDiscountCents), `newInvoiceNumber()` (INV-XXXXXX collision-retry)
+  - [x] Webhook handlers: `/webhooks/paymongo` + `/webhooks/paypal` both normalize to the shared `applyPaymentWebhook(...)` helper. Idempotency via unique (provider, providerPaymentId) index; replay returns `{ idempotent: true }`. Success writes payment + transaction (ledger credit) + flips invoice status to paid (or partially_paid) + bumps discount code redemptions on first successful payment.
+  - [x] Next.js client portal: `/invoices` list, `/invoices/[id]` detail (line items table, discount apply, pay widget with PayMongo / PayPal / Dev-Simulate buttons), client case detail links to invoices section
+  - [x] Next.js lawyer portal: `/lawyer/invoices` list, `/lawyer/invoices/new?case=...` line-item editor, `/lawyer/invoices/[id]` detail (send + void), `/lawyer/discount-codes` create + list. Lawyer case detail page has "New invoice" CTA when case is accepted/active/closed.
+  - [x] Shared `app/_components/invoice-detail.tsx` (Client Component, viewerRole prop): renders both client and lawyer views with role-conditional sections
+  - [x] Dashboards: client + lawyer both gained an "Invoices" tile
+  - [x] Full API smoke (`curl`, 22 checks): create draft with 2 line items (₱5,500 subtotal) → create LAUNCH10 (10% off) → apply → totals re-compute (₱4,950) → send → checkout via dev_simulate → POST checkoutUrl → idempotency replay no-ops → invoice flips to paid → ledger has charge row → discount redemptions=1 → 409 on pay/patch/void after paid → real `/webhooks/paymongo` no-auth POST flips a fresh invoice → outsider 403 → discount kind/value mismatch 400 → invoice on pending case 409.
+  - [ ] Browser walkthrough of the lawyer-creates-invoice → client-pays flow
+  - [ ] Real PayMongo + PayPal signature verification on inbound webhooks (deferred — drop-in once keys are provisioned)
+  - [ ] Real PayMongo Checkout / PayPal Orders v2 redirect URL generation (deferred — wraps `/checkout` handler)
+  - [ ] Refunds + partial-refunds (deferred to Phase 7 admin tooling)
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 6 — Referrals + pro bono polish (referral graph, IBP chapter integration)
 - [ ] Phase 7 — Admin portal (account oversight, verification approvals, discount mgmt)
 - [ ] Phase 8 — Hardening (Playwright E2E, observability alarms, load test, marketing MDX)
@@ -97,6 +114,34 @@
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 7 (Phase 5 billing)
+
+- **Did:**
+  - Schema: 5 new aggregates (`invoice`, `invoice_line`, `discount_code`, `payment`, `transaction`) + 5 enums in `packages/db/src/schema/billing.ts`. Migration `0004_fresh_mercury.sql` applied; 26 tables total.
+  - Shared Zod for invoice / discount / checkout / webhook payloads. `discountCodeInput` has a cross-field refine: kind=percent requires valueBps, kind=fixed requires valueCents; opposite slot must be null.
+  - Hono `/billing` (auth'd, role-scoped reads; lawyer-only writes for invoice mutation; client-only checkout). Invoice lifecycle: draft → sent → paid (or partially_paid if a payment lands but doesn't cover the full total) | void. Lines are immutable once sent; discounts can still be applied while in `sent` state.
+  - Helper `apps/api/src/lib/billing.ts`: `computeLineTotalCents` (integer math), `computeDiscountCents` (percent via bps, fixed via cents, both capped at subtotal), `newInvoiceNumber()` (INV-XXXXXX with 6-char alnum, 5-attempt retry on collision against the unique index).
+  - Lawyer-owned discount codes: codes live in the lawyer's namespace (unique on (lawyerId, code)); validation matches by lawyer of the invoice. Redemptions counter bumped only on the first successful payment for an invoice (avoids double-counting on idempotent replay).
+  - Payment webhooks: `/webhooks/paymongo` + `/webhooks/paypal` both validate `paymentWebhookInput`, then call the shared `applyPaymentWebhook(...)` helper. Idempotency via unique (provider, providerPaymentId) index — replay returns `{ idempotent: true, paymentId, status }` without re-applying. Dev simulate endpoint at `/billing/dev/simulate-payment` does the same thing for the in-house test path.
+  - Next.js: client portal gains `/invoices` (list) + `/invoices/[id]` (detail with discount apply + pay widget); lawyer portal gains `/lawyer/invoices` (list) + `/lawyer/invoices/new?case=...` (line-item editor with live subtotal) + `/lawyer/invoices/[id]` (send + void) + `/lawyer/discount-codes` (list + create). Shared `app/_components/invoice-detail.tsx` powers both views via a `viewerRole` prop, same pattern as Phase 4's case-detail.
+  - 22-step curl smoke (see Phase Tracker entry for the full chain). DB verified.
+  - **Playwright MCP came back online mid-session, then disconnected again before any walkthrough could run.** Sweep across Phases 1–5 still queued.
+- **Did NOT:**
+  - Browser walkthrough (deferred; queued with Phase 1–4 walkthroughs).
+  - Real PayMongo / PayPal signature verification on webhooks (dev accepts the normalized payload directly; production wiring is a one-file change in `webhooks.ts`).
+  - Real PayMongo Checkout / PayPal Orders v2 URL generation in the `/checkout` handler (returns the dev simulate URL today).
+  - Refunds + partial refunds (Phase 7 admin tooling; transaction kind enum already has `refund`).
+  - Invoice PDF export (deferred — no real demand yet; Phase 8 or beyond).
+  - Email-on-invoice-sent (SES wiring lands when AWS deploys).
+- **Decisions made:**
+  - Money is integer cents end-to-end. Discount values: bps for percent (1% = 100bps), cents for fixed. Both stored as nullable columns with a cross-field check at write time. Why: rerunning a percent code against a different subtotal recomputes deterministically with `floor((subtotal * bps) / 10_000)`; floats lose pennies. **How to apply:** Phase 7 admin tooling and any partial-refund flow uses the same integer convention; never introduce `numeric(10,2)` or float in money paths.
+  - Webhook idempotency lives at the DB level via unique (provider, providerPaymentId). `applyPaymentWebhook` is shared by both real webhook endpoints AND the dev simulate stub so replay-correctness is exercised by every smoke run. **How to apply:** when SQS workers in `workers/{paymongo,paypal}/handler.ts` land, they call the same helper — no duplicated logic.
+  - Discount codes live in the lawyer's namespace (unique on (lawyerId, code)). Two lawyers can both have `LAUNCH10` with different rates without colliding. Why: simpler than a global namespace with admin moderation; no admin UI required at MVP; the validation path is `find where lawyerId=invoice.lawyerId AND code=...`. **How to apply:** if admin-level platform-wide codes are needed later, add `lawyerId IS NULL` as the "global" sentinel and update the lookup to `OR (lawyerId IS NULL)`.
+  - Invoice number format = `INV-XXXXXX` (6 alphanumeric chars excluding I/O/0/1 ambiguity). Why: humans need to read these aloud over the phone; unique index + 5-attempt retry handles the rare collision. Per-lawyer sequential numbering would need row locks. **How to apply:** if compliance (PH BIR) requires monotonic per-lawyer sequence numbers, add `seq` column + per-lawyer counter table; the current `number` becomes a secondary display.
+  - Dashboard tiles standardized at 4-column grid for both portals. Each role's nav surface is now: cases / invoices / public-profile / office (lawyer); find / cases / invoices / profile (client). **How to apply:** new top-level features get their own tile only after the user can actually do something useful with them; intermediate nav lives behind the tile.
+  - Discount can still be applied while invoice is in `sent` state (not just `draft`). Why: lawyers can negotiate post-send; locking discounts at send-time forces re-issuing an invoice for any negotiation. **How to apply:** locking happens at the first successful payment via the invoice state machine (paid + partially_paid both reject discount changes).
+- **Open questions:** none — Playwright sweep + AWS deploy are the standing items.
 
 ### 2026-05-20 — Session 6 (Phase 4 cases + engagements)
 
@@ -266,6 +311,10 @@
 - **2026-05-20 — Pro bono cases skip the engagement row.** Why: free legal work shouldn't gate on a signed fee agreement; an empty/zero-rate engagement is noise. The decision handler writes both `accepted` and `activated` activities for clarity. **How to apply:** any future `paid`-only behaviour gates on `caseRow.type === "paid"`; the engagement create endpoint explicitly returns `engagement_not_applicable` for pro bono.
 - **2026-05-20 — Money fields are integer cents; contingency is basis points (1% = 100 bps).** Why: integer math is safe across JS/Postgres/JSON boundaries; floats accumulate error when discounted; bps gives 0.01% precision (way more than needed). **How to apply:** all payment-adjacent fields in Phase 5 (invoices, line items, discounts, refunds) use the same integer-cents + bps convention. Never store currency as `numeric(10,2)` or float.
 - **2026-05-20 — Note visibility enforced server-side, not just hidden in UI.** Why: a malicious client could POST `visibility: "lawyer"` and try to read everyone else's private notes; the server rejects on write (clients can't post `lawyer`, lawyers can't post `client`) AND filters on read. **How to apply:** any future per-role-private content reuses the same enum + the `(includes(allowed) OR author=self)` filter pattern.
+- **2026-05-20 — Payment-webhook idempotency lives at the DB level via unique (provider, providerPaymentId).** Why: webhooks retry on 5xx; the same providerPaymentId arriving twice MUST NOT double-credit the invoice or double-bump discount redemptions. The shared `applyPaymentWebhook(...)` helper detects the dup via the unique index and returns `{ idempotent: true }` early. **How to apply:** the dev simulate stub + future SQS workers all call the same helper — no place to forget the check.
+- **2026-05-20 — Discount codes are lawyer-namespaced (unique on (lawyerId, code)).** Why: two lawyers can use the same code text with different rates; no admin moderation required at MVP; validation is a single equality query. **How to apply:** if platform-wide codes are needed later, add `lawyerId IS NULL` as a sentinel and OR it into the lookup; preserve uniqueness with a partial index.
+- **2026-05-20 — Invoice numbers are `INV-XXXXXX` (6 alnum, ambiguity-free chars).** Why: must be readable aloud; per-lawyer sequential numbering would need row locks. Retry-on-collision against the unique index handles the rare hit (5 attempts cover 32^6 / 5 birthday probability). **How to apply:** if PH BIR compliance requires monotonic per-lawyer numbering, add a `seq` column populated from a per-lawyer counter; keep `number` as the friendly display.
+- **2026-05-20 — Discount apply allowed in both `draft` AND `sent` states.** Why: lawyers may negotiate post-send; locking at send forces re-issue. Discount lock happens only when the first payment posts (status transitions to paid/partially_paid). **How to apply:** any other "post-send but pre-pay" mutation (memo update, due-date adjustment) should follow the same gate — allowed while `status IN ('draft','sent')`, rejected after first payment.
 
 ---
 
@@ -294,6 +343,13 @@
 - **Edit / delete notes + attachments** — Append-only at MVP. Edit-with-history is a Phase 6 polish if anyone asks (need a `case_note_revision` table to keep an audit trail).
 - **Engagement amendments** — One engagement per case; lawyer can't send a revised one if the first is signed. Real-world workflow may need amendment-as-new-engagement (Phase 6+).
 - **Multi-engagement / case bundling** — Each case has one lawyer + one engagement. Co-counsel and matter bundles are a future concern; revisit if firms ask.
+- **Real PayMongo + PayPal signature verification** — Dev webhooks accept normalized JSON without signature check. Production wiring goes in `webhooks.ts` — for PayMongo, validate `X-Paymongo-Signature` HMAC; for PayPal, call `/v1/notifications/verify-webhook-signature`. Drop-in once keys land in Secrets Manager.
+- **Real PayMongo Checkout / PayPal Orders v2 redirect URLs** — `/checkout` returns the dev simulate URL. Swap to provider URL builders behind the same response shape; the client UI doesn't need to change.
+- **Refunds + partial refunds** — `transaction_kind` enum already includes `refund`; no handler yet. Add when a real refund happens or for Phase 7 admin tooling.
+- **Invoice PDF export** — No PDF generator wired. Defer until a user actually asks; if needed, render via React Email + Puppeteer in a worker.
+- **Invoice-on-send email via SES** — Lands with AWS deploy. Template lives in `packages/email/` (currently empty).
+- **Per-case invoice filter on the case detail page** — The list endpoint doesn't accept a `caseId` filter yet; client case page shows all the user's invoices with a note. Add `?caseId=…` query param + filter on Phase 6 polish.
+- **Platform fee / payouts** — Currently money flows lawyer ← client direct via PayMongo/PayPal merchant accounts. When we add a platform take rate, we need split-pay or a clearing account; add `fee` rows to the ledger.
 
 ---
 

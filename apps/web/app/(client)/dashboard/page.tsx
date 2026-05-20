@@ -11,38 +11,39 @@ export default async function ClientDashboard() {
         <code>{session?.user.role}</code>).
       </p>
 
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/lawyers"
           className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
         >
           <h2 className="font-medium">Find a lawyer</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            Browse verified Philippine lawyers by practice area, jurisdiction, and city.
-          </p>
+          <p className="mt-1 text-sm text-neutral-600">Browse verified Philippine lawyers.</p>
         </Link>
         <Link
           href="/cases"
           className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
         >
           <h2 className="font-medium">Your cases</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            Track engagements, sign terms, and follow case activity.
-          </p>
+          <p className="mt-1 text-sm text-neutral-600">Engagements, signing, activity.</p>
+        </Link>
+        <Link
+          href="/invoices"
+          className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
+        >
+          <h2 className="font-medium">Invoices</h2>
+          <p className="mt-1 text-sm text-neutral-600">Pay bills, see history.</p>
         </Link>
         <Link
           href="/profile"
           className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
         >
           <h2 className="font-medium">Your profile</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            Keep your contact info current so lawyers can reach you.
-          </p>
+          <p className="mt-1 text-sm text-neutral-600">Contact info.</p>
         </Link>
       </div>
 
       <p className="mt-8 text-sm text-neutral-500">
-        Phase 5 adds billing (invoices, PayMongo, PayPal).
+        Phase 6 adds referrals + pro bono polish.
       </p>
       <div className="mt-6">
         <Link

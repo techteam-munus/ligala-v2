@@ -8,7 +8,7 @@ import { clients } from "./routes/clients";
 import { directory } from "./routes/directory";
 import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
-import { billing } from "./routes/billing";
+import { billing, discountCodesRouter } from "./routes/billing";
 import { referrals } from "./routes/referrals";
 import { files } from "./routes/files";
 import { references } from "./routes/references";
@@ -37,6 +37,7 @@ export function createApp() {
   app.route("/cases", cases);
   app.route("/engagements", engagements);
   app.route("/billing", billing);
+  app.route("/billing/discount-codes", discountCodesRouter);
   app.route("/referrals", referrals);
   app.route("/files", files);
   app.route("/references", references);

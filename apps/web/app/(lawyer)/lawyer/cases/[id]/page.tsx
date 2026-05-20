@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -33,6 +34,8 @@ export default async function LawyerCasePage({
     load<{ items: Activity[] }>(`/cases/${id}/activities`),
   ]);
 
+  const canInvoice = ["accepted", "active", "closed"].includes(head.case.status);
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <CaseDetail
@@ -43,6 +46,20 @@ export default async function LawyerCasePage({
         attachments={attachRes?.items ?? []}
         activities={actsRes?.items ?? []}
       />
+      {canInvoice ? (
+        <section className="mt-10 rounded border border-neutral-200 p-4">
+          <h2 className="font-medium">Billing</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Create an invoice for time + expenses on this case.
+          </p>
+          <Link
+            href={`/lawyer/invoices/new?case=${head.case.id}` as never}
+            className="mt-3 inline-block rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white"
+          >
+            New invoice
+          </Link>
+        </section>
+      ) : null}
     </main>
   );
 }

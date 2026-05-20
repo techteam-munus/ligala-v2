@@ -10,3 +10,4 @@ export * from "./client";
 export * from "./search";
 export * from "./case";
 export * from "./engagement";
+export * from "./billing";
