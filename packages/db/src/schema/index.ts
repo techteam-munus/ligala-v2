@@ -14,3 +14,4 @@ export * from "./reference";
 export * from "./lawyers";
 export * from "./kyc";
 export * from "./offices";
+export * from "./clients";

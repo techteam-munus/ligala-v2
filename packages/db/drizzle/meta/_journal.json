@@ -15,6 +15,13 @@
       "when": 1779244174245,
       "tag": "0001_military_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779246425632,
+      "tag": "0002_tired_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

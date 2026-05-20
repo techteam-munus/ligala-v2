@@ -10,8 +10,30 @@ export default async function ClientDashboard() {
         Signed in as <strong>{session?.user.email}</strong> (role:{" "}
         <code>{session?.user.role}</code>).
       </p>
-      <p className="mt-6 text-sm text-neutral-500">
-        Phase 3 fills this dashboard with lawyer search, your cases, and account actions.
+
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          href="/lawyers"
+          className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
+        >
+          <h2 className="font-medium">Find a lawyer</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Browse verified Philippine lawyers by practice area, jurisdiction, and city.
+          </p>
+        </Link>
+        <Link
+          href="/profile"
+          className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
+        >
+          <h2 className="font-medium">Your profile</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Keep your contact info current so lawyers can reach you.
+          </p>
+        </Link>
+      </div>
+
+      <p className="mt-8 text-sm text-neutral-500">
+        Phase 4 fills this dashboard with your cases, engagements, and account actions.
       </p>
       <div className="mt-6">
         <Link

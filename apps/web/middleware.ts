@@ -7,7 +7,11 @@ import { getSessionCookie } from "better-auth/cookies";
 // Public paths anyone can hit:
 const PUBLIC_PATHS = new Set(["/", "/login", "/signup", "/forgot-password"]);
 const isPublic = (pathname: string) =>
-  PUBLIC_PATHS.has(pathname) || pathname.startsWith("/about");
+  PUBLIC_PATHS.has(pathname) ||
+  pathname.startsWith("/about") ||
+  // Public lawyer directory + profile pages (SSR for SEO; no auth required).
+  pathname === "/lawyers" ||
+  pathname.startsWith("/lawyers/");
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

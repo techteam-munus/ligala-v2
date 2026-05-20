@@ -6,3 +6,5 @@ export * from "./lawyer";
 export * from "./kyc";
 export * from "./office";
 export * from "./files";
+export * from "./client";
+export * from "./search";

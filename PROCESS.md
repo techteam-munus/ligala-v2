@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 2 — Lawyer onboarding **DONE locally** (full API smoke test passed; awaiting browser walkthrough + AWS dev deploy)
+- **Active phase:** Phase 3 — Client onboarding & lawyer discovery **DONE locally** (full API + Next.js SSR smoke test passed; awaiting browser walkthrough + AWS dev deploy)
 - **Last working session:** 2026-05-20
 - **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet
-- **Next action:** browser walkthrough of `/become-a-lawyer → /lawyer/{profile,kyc,office}` flow once Playwright MCP is back, OR jump to Phase 3 (client onboarding + lawyer discovery).
+- **Next action:** browser walkthrough of `/lawyers` directory + `/lawyers/[slug]` public profile + client `/profile` flow once Playwright MCP is back, OR jump to Phase 4 (cases + engagements).
 - **Blockers:** none
 
 ---
@@ -62,7 +62,18 @@
   - [ ] Browser walkthrough of `/become-a-lawyer → onboarding flow` (Playwright MCP currently unavailable)
   - [ ] Real S3 presigning (stub in dev; lands when CDK provisions the bucket)
   - [ ] Deployed smoke test against dev env
-- [ ] Phase 3 — Client onboarding & lawyer discovery (search + Google Maps + public profiles)
+- [ ] **Phase 3 — Client onboarding & lawyer discovery** *(API + SSR smoke test passed; browser walkthrough pending)*
+  - [x] Drizzle schema: `client_profile` (userId PK/FK to user; displayName, phone, city, region, preferredLanguage)
+  - [x] Migration `0002_tired_roland_deschain.sql` applied; total: 16 tables in dev
+  - [x] Shared Zod schemas: `clientProfileInput`/`clientProfilePatch`, `lawyerSearchQuery`, `lawyerSearchResultItem`
+  - [x] Hono routes: `/accounts/profile` GET/PATCH (auth'd, auto-create on first read); public `/directory/lawyers` (search w/ q + practiceAreaId + jurisdictionId + city + page/pageSize); public `/directory/lawyers/:slug` (full profile w/ practice areas, jurisdictions, IBP chapter, office, schedule, FAQs) — both directory endpoints visible-only to KYC-approved lawyers
+  - [x] Next.js public pages: `/lawyers` (SSR directory with filter sidebar + pagination, MetaData for SEO) and `/lawyers/[slug]` (SSR public profile with generateMetadata, Google Maps iframe via lat/lng or address, weekly schedule grid, FAQ list)
+  - [x] Next.js client portal: `/profile` editor (Server Action), dashboard now links to `/lawyers` + `/profile`
+  - [x] Middleware allows public access to `/lawyers` + `/lawyers/[slug]` (SEO + anonymous browse)
+  - [x] Full API + SSR smoke (`curl`, 17 checks): client signup → auto-create profile → patch → verify; public search no-filter, by-practice-area, by-city, by-q (positive + empty); 404 for unverified lawyer slug; pagination beyond range; Next.js SSR `/lawyers`, `/lawyers/[slug]`, `/lawyers/<bad>` all 200/200/404. DB verified.
+  - [ ] Browser walkthrough of the directory + public profile + client profile editor (Playwright MCP currently unavailable)
+  - [ ] Real Google Maps Embed API + key (dev uses keyless `google.com/maps?q=…&output=embed` which works without an API key)
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 4 — Cases & engagements (paid + pro bono unified, accept/decline, activities, notes)
 - [ ] Phase 5 — Billing (invoices, PayMongo + PayPal + webhooks, discount codes)
 - [ ] Phase 6 — Referrals + pro bono polish (referral graph, IBP chapter integration)
@@ -72,6 +83,28 @@
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 5 (Phase 3 client onboarding + lawyer discovery)
+
+- **Did:**
+  - Schema: `client_profile` aggregate (`packages/db/src/schema/clients.ts`) — 1:1 with `user` via userId PK/FK + cascade delete. Migration `0002_tired_roland_deschain.sql` applied; 16 tables total.
+  - Shared Zod: `client.ts` (`clientProfileInput`/`Patch`) and `search.ts` (`lawyerSearchQuery` with coerce-int pagination, `lawyerSearchResultItem`).
+  - Hono: extended `/accounts` with profile GET (lazy-create on first read) + PATCH (upsert via `onConflictDoUpdate`); new public router `directory.ts` mounted at `/directory` with `/lawyers` search and `/lawyers/:slug` profile. Search is paginated and filterable; visibility scope is "current KYC submission = approved" — unverified lawyers never appear and slug lookup returns 404 to not leak existence.
+  - Next.js: public pages under `(marketing)` route group — `/lawyers` (filter sidebar + result cards + pagination, full `metadata`) and `/lawyers/[slug]` (`generateMetadata` for SEO, Google Maps iframe via lat/lng → fallback to address, weekly schedule grid, FAQ list). Client portal gains `/profile` editor (form + Server Action) and dashboard tiles linking to `/lawyers` and `/profile`.
+  - Middleware: extended `isPublic` to allow unauthenticated access to `/lawyers` + `/lawyers/[slug]` (SEO + anonymous browse). Other paths stay gated.
+  - Smoke test via curl (17 checks): client signup → auto-create profile on first GET → PATCH → re-GET; public search no-filter / by-practice / by-jurisdiction-equivalent (via city) / by-q (positive + empty); 404 on unverified slug; pagination beyond range. Next.js SSR `/lawyers`, `/lawyers/atty-final`, `/lawyers/nonexistent` returned 200/200/404. DB verified.
+- **Did NOT:**
+  - Browser walkthrough (Playwright MCP still unavailable; same situation as Phase 2). API + SSR HEAD-level smoke is conclusive.
+  - Real Google Maps Embed API + key (kept the keyless `google.com/maps?q=…&output=embed` for dev; production swap is a one-line change once the key is provisioned in Secrets Manager).
+  - "Favorite a lawyer" or saved searches (Phase 6 polish item).
+  - Distance/geo search (no PostGIS or lat-lng radius filter at MVP; city ILIKE is enough until we have real lawyer volume).
+  - Public profile photo rendering (lawyer_profile.profile_photo_s3_key exists; needs S3 presign on the read path — lands when real S3 is wired).
+- **Decisions made:**
+  - "Verified" gate for the directory = newest `kyc_submission` for the lawyer has `status='approved'`. Why: a lawyer who had an approved submission then resubmitted (now pending/rejected) should drop off the directory until re-approved; using the freshest row reflects current trust. **How to apply:** any read path that surfaces a lawyer publicly must apply this same `(newest row WHERE status='approved')` gate, not "exists any approved submission".
+  - Public `/directory` namespace separate from the auth-gated `/lawyers` Hono router. Why: `requireRole("lawyer")` is mounted at `use("*", ...)` on the existing `lawyers` router and would block public traffic; using a separate router at a separate prefix keeps the auth boundary clean. **How to apply:** anything public-readable about lawyers goes under `/directory`; anything for the signed-in lawyer themself goes under `/lawyers`.
+  - Lazy initialization of `client_profile` on first GET. Why: keeps signup cheap (no extra write at sign-up time), avoids a backfill migration for any pre-Phase-3 users, and keeps the auth + role tables independent of the profile aggregate. **How to apply:** future per-user "shadow" aggregates (notification prefs, billing prefs) can follow the same lazy-create pattern.
+  - Google Maps embed via keyless `https://www.google.com/maps?q=…&output=embed`. Why: works in dev with zero config, no quota tracking, no key rotation. Production cutover is one helper function (`mapsEmbedSrc`) — swap for the Embed API URL when the key lands. **How to apply:** never query the Embed API from the browser without a domain-restricted key; keep all key references behind a server-side helper.
+- **Open questions:** none — pre-existing Playwright UI gap remains the only outstanding item.
 
 ### 2026-05-20 — Session 4 (Phase 2 lawyer onboarding)
 
@@ -187,6 +220,10 @@
 - **2026-05-20 — Better Auth session cookie cache disabled.** Why: cookie cache (default 5min) holds onto the old `role` field after a client→lawyer promotion, breaking `requireRole("lawyer")` for the entire cache window. With cache off, every request validates against DB — small per-request cost in exchange for instant role propagation. **How to apply:** revisit only after routing role changes through Better Auth's `updateUser` API (which invalidates the cache automatically); then we can re-enable cookieCache with a short maxAge (e.g. 30s).
 - **2026-05-20 — `apps/api` env loading via dedicated side-effect module.** Why: ESM hoists imports above top-level statements *within* a module, so calling `dotenv.config()` inline in `dev.ts` runs AFTER `@ligala/auth` (imported transitively) has already read `process.env.BETTER_AUTH_SECRET`. A separate `load-env.ts` whose imports run first means its `loadEnv()` call executes before sibling imports load downstream modules. **How to apply:** any process that needs env vars set before module-evaluation reads must use a side-effect-only `import "./load-env"` as the FIRST import, not an inline call.
 - **2026-05-20 — Server Actions forward session cookies to Hono via `apps/web/lib/api.ts`.** Why: browser cookies set on `localhost:3000` are not sent to `localhost:8787` (port differs → different origin per cookie spec). Server-side fetch via `headers()` reads the incoming request cookie and re-sends it; api validates the same Better Auth session. Browser-direct calls to api are blocked by design — except `/api/files/presign-proxy` which exists for client-side file uploads and forwards cookies similarly. **How to apply:** never call the api from a Client Component directly; always go through a Server Action or a `/api/*` proxy route.
+- **2026-05-20 — Public lawyer endpoints live under `/directory`, not `/lawyers`.** Why: the existing `lawyers` Hono router applies `use("*", requireRole("lawyer"))`, which would 401/403 anonymous traffic. A separate router at a separate prefix keeps the auth boundary explicit instead of relying on per-route ordering. **How to apply:** anything public-readable about lawyers → `/directory/*`; anything for the signed-in lawyer themself → `/lawyers/*`. Web URLs (`/lawyers`, `/lawyers/[slug]`) are unaffected — they're a different namespace (Next.js routes), and the SSR pages call `/directory/*` server-side.
+- **2026-05-20 — "Visible in directory" = newest `kyc_submission` for the lawyer has `status='approved'`.** Why: lets a lawyer drop off the directory automatically if they resubmit and the new submission is pending or rejected, even though they had an earlier approval. Using "any approved row" would let a fraud rescind never go dark. **How to apply:** every public read path that surfaces a lawyer must apply the freshest-row filter, not exists-approved.
+- **2026-05-20 — `client_profile` is lazy-created on first GET.** Why: keeps signup cheap, no backfill needed for any pre-existing users, and decouples the profile aggregate from auth. **How to apply:** future per-user shadow aggregates (notification prefs, billing prefs) follow the same lazy-create pattern; never assume the profile row exists before the user opens the relevant page.
+- **2026-05-20 — Google Maps embed via keyless `google.com/maps?q=…&output=embed`.** Why: works in dev without provisioning a key, no quota tracking, no rotation risk. Production swap is one helper (`mapsEmbedSrc` in `apps/web/app/(marketing)/lawyers/[slug]/page.tsx`) — point at the Embed API URL when the key is in Secrets Manager. **How to apply:** all map URL construction must go through that helper so the cutover is one file; never reference a key in client code (use a domain-restricted key + server-side URL building).
 
 ---
 
@@ -206,6 +243,10 @@
 - **Office multi-instance** — One office per lawyer at launch (unique constraint on `office.lawyer_id`). Drop the unique + add a `primary` flag if a firm asks.
 - **Profile slug uniqueness with smarter retry** — Currently 5 random suffix attempts before giving up. Fine at MVP scale; revisit if collisions are a real problem.
 - **Re-enable cookie cache** — Currently off so role changes propagate instantly. Re-enable with short TTL after role updates go through Better Auth's own update path.
+- **Google Maps Embed API + domain-restricted key** — Currently using the keyless `google.com/maps?q=…&output=embed` URL. Swap `mapsEmbedSrc()` in `apps/web/app/(marketing)/lawyers/[slug]/page.tsx` to the Embed API when the key is provisioned in Secrets Manager.
+- **Public lawyer profile photo** — `lawyer_profile.profile_photo_s3_key` exists in schema but the public profile page doesn't render it yet. Needs read-side S3 presigning (or a CloudFront signed URL) once real S3 is wired.
+- **Geo/distance search** — City filter is plain ILIKE today. PostGIS + lat/lng radius can replace it once we have enough verified lawyers that "near me" is meaningful.
+- **Favorites + saved searches** — Deferred to Phase 6 polish. v1 had "saved lawyers" in StartPage; bring back only if user research shows demand.
 
 ---
 

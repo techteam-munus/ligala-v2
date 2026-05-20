@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { roleAssignmentInput } from "@ligala/shared/schemas";
+import { clientProfilePatch, roleAssignmentInput } from "@ligala/shared/schemas";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { requireSession } from "../middleware/session";
@@ -57,4 +57,44 @@ export const clients = new Hono()
     // role === "client" — demotion path.
     await conn.update(schema.user).set({ role: "client", updatedAt: new Date() }).where(eq(schema.user.id, user.id));
     return c.json({ user: { ...user, role: "client" } });
+  })
+
+  /**
+   * Client profile — auto-created on first read. Lazy initialization keeps
+   * signup cheap and avoids a second migration step for existing users.
+   */
+  .get("/profile", async (c) => {
+    const user = c.get("user");
+    const conn = db();
+    let profile = await conn.query.clientProfiles.findFirst({
+      where: eq(schema.clientProfiles.userId, user.id),
+    });
+    if (!profile) {
+      const [created] = await conn
+        .insert(schema.clientProfiles)
+        .values({ userId: user.id })
+        .returning();
+      profile = created;
+    }
+    return c.json({ profile });
+  })
+
+  .patch("/profile", zValidator("json", clientProfilePatch), async (c) => {
+    const user = c.get("user");
+    const patch = c.req.valid("json");
+    const conn = db();
+
+    // Upsert: insert with defaults if missing, then apply patch.
+    await conn
+      .insert(schema.clientProfiles)
+      .values({ userId: user.id, ...patch })
+      .onConflictDoUpdate({
+        target: schema.clientProfiles.userId,
+        set: { ...patch, updatedAt: new Date() },
+      });
+
+    const profile = await conn.query.clientProfiles.findFirst({
+      where: eq(schema.clientProfiles.userId, user.id),
+    });
+    return c.json({ profile });
   });

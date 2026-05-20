@@ -5,6 +5,7 @@ import { health } from "./routes/health";
 import { auth } from "./routes/auth";
 import { lawyers } from "./routes/lawyers";
 import { clients } from "./routes/clients";
+import { directory } from "./routes/directory";
 import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
 import { billing } from "./routes/billing";
@@ -32,6 +33,7 @@ export function createApp() {
   app.route("/auth", auth);
   app.route("/accounts", clients);
   app.route("/lawyers", lawyers);
+  app.route("/directory", directory);
   app.route("/cases", cases);
   app.route("/engagements", engagements);
   app.route("/billing", billing);
