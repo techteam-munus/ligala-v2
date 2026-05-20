@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 
 export default async function ClientDashboard() {
@@ -10,9 +11,16 @@ export default async function ClientDashboard() {
         <code>{session?.user.role}</code>).
       </p>
       <p className="mt-6 text-sm text-neutral-500">
-        Phase 3 fills this dashboard with lawyer search, your cases, and account
-        actions.
+        Phase 3 fills this dashboard with lawyer search, your cases, and account actions.
       </p>
+      <div className="mt-6">
+        <Link
+          href="/become-a-lawyer"
+          className="rounded border border-neutral-300 px-4 py-2 text-sm font-medium"
+        >
+          I&apos;m a lawyer — list my practice
+        </Link>
+      </div>
     </main>
   );
 }
