@@ -10,7 +10,7 @@
 - **Active phase:** Phase 0 — Scaffold & infra
 - **Last working session:** 2026-05-20
 - **Environment status:** dev not yet deployed | staging not yet | prod not yet
-- **Next action:** run `cdk synth` from `infra/` to verify both stacks synthesize; add ESLint config; wire Sentry DSN
+- **Next action:** add ESLint config (so `pnpm lint` works); wire Sentry DSN; then `cdk bootstrap` + `cdk deploy --all --context env=dev` against the AWS dev account
 - **Blockers:** none
 
 ---
@@ -32,7 +32,7 @@
   - [x] `pnpm build` green locally (web Next.js 5.1s + api esbuild 21ms + workers esbuild 11ms; 4 web routes detected, api bundle 78.4kb)
   - [ ] `pnpm lint` green locally (ESLint config not yet added)
   - [ ] `pnpm test` green locally (no tests yet)
-  - [ ] CDK `synth` clean against dev account
+  - [x] CDK `synth` clean (Core=35 resources: VPC + 6 subnets + NAT + S3 + endpoints; App=placeholder)
   - [ ] CDK `deploy` to dev env
   - [ ] Sentry DSN wired in both apps
   - [ ] `/health` returns 200 from deployed API and Next URLs
