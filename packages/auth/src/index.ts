@@ -60,6 +60,14 @@ export const auth = betterAuth({
         defaultValue: "client",
         input: false,
       },
+      // Phase 7. Admins toggle paused/banned via /admin/users/:id/status.
+      // Marked input:false so end-users can't self-assign at signup.
+      status: {
+        type: "string",
+        required: false,
+        defaultValue: "active",
+        input: false,
+      },
     },
   },
   session: {

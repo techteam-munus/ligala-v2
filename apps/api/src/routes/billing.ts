@@ -578,3 +578,94 @@ export async function applyPaymentWebhook(input: {
 
   return { idempotent: false, paymentId, status: input.status };
 }
+
+/**
+ * Refund part or all of a successful payment. Writes a `refund` transaction
+ * row (debit), bumps `payment.refundedCents`, flips the payment status to
+ * `refunded` when fully refunded, and rolls back the invoice's `paidCents`
+ * + status accordingly:
+ *   paidCents - amount > 0  → partially_paid
+ *   paidCents - amount === 0 → sent (re-payable)
+ *
+ * Caller (admin handler) is responsible for the audit log entry. This helper
+ * is intentionally provider-agnostic — admin issues refunds directly today;
+ * when real PayMongo/PayPal refunds land they'll call this AFTER the provider
+ * acknowledges, and pass the provider refund id as `providerRefundId`.
+ */
+export async function refundPayment(input: {
+  paymentId: string;
+  amountCents: number;
+  providerRefundId?: string;
+  note?: string;
+}) {
+  const conn = db();
+
+  const payment = await conn.query.payments.findFirst({
+    where: eq(schema.payments.id, input.paymentId),
+  });
+  if (!payment) {
+    throw new HTTPException(404, { message: "payment_not_found" });
+  }
+  if (payment.status !== "succeeded" && payment.status !== "refunded") {
+    throw new HTTPException(409, { message: "payment_not_refundable" });
+  }
+  const remaining = payment.amountCents - payment.refundedCents;
+  if (input.amountCents > remaining) {
+    throw new HTTPException(409, { message: "refund_exceeds_remaining" });
+  }
+  if (input.amountCents <= 0) {
+    throw new HTTPException(400, { message: "refund_amount_invalid" });
+  }
+
+  const invoice = await conn.query.invoices.findFirst({
+    where: eq(schema.invoices.id, payment.invoiceId),
+  });
+  if (!invoice) {
+    throw new HTTPException(404, { message: "invoice_not_found" });
+  }
+
+  const now = new Date();
+  const newRefunded = payment.refundedCents + input.amountCents;
+  const fullyRefunded = newRefunded >= payment.amountCents;
+
+  await conn
+    .update(schema.payments)
+    .set({
+      refundedCents: newRefunded,
+      status: fullyRefunded ? "refunded" : payment.status,
+      updatedAt: now,
+    })
+    .where(eq(schema.payments.id, payment.id));
+
+  await conn.insert(schema.transactions).values({
+    id: crypto.randomUUID(),
+    invoiceId: invoice.id,
+    paymentId: payment.id,
+    kind: "refund",
+    direction: "debit",
+    amountCents: input.amountCents,
+    currency: payment.currency,
+    note: input.note ?? `Refund${input.providerRefundId ? ` ${input.providerRefundId}` : ""}`,
+  });
+
+  // Roll back the invoice paid total + status.
+  const newPaid = Math.max(0, invoice.paidCents - input.amountCents);
+  const nextStatus: "sent" | "partially_paid" | "paid" =
+    newPaid <= 0 ? "sent" : newPaid < invoice.totalCents ? "partially_paid" : "paid";
+  await conn
+    .update(schema.invoices)
+    .set({
+      paidCents: newPaid,
+      status: nextStatus,
+      paidAt: nextStatus === "paid" ? invoice.paidAt : null,
+      updatedAt: now,
+    })
+    .where(eq(schema.invoices.id, invoice.id));
+
+  return {
+    paymentId: payment.id,
+    refundedCents: newRefunded,
+    invoiceStatus: nextStatus,
+    fullyRefunded,
+  };
+}

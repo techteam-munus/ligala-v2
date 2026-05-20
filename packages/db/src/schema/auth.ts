@@ -7,6 +7,13 @@ import { boolean, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 export const userRole = pgEnum("user_role", ["client", "lawyer", "admin"]);
 
 /**
+ * Account-level status. Admins can pause or ban users (Phase 7). `paused`
+ * keeps the account readable but blocks writes; `banned` rejects all API
+ * traffic. Default for all signups is `active`.
+ */
+export const userStatus = pgEnum("user_status", ["active", "paused", "banned"]);
+
+/**
  * Better Auth tables. Field names + types follow Better Auth's default Drizzle
  * schema so we can drop in their adapter without remapping. The one addition
  * is `role` on user.
@@ -22,6 +29,7 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
   role: userRole("role").default("client").notNull(),
+  status: userStatus("status").default("active").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .$defaultFn(() => new Date())
     .notNull(),

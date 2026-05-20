@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 6 — Referrals + pro bono polish + IBP chapter integration **DONE locally** (49-step API + SSR smoke test passed; awaiting browser walkthrough + AWS dev deploy)
+- **Active phase:** Phase 7 — Admin portal **DONE locally** (50-step API + SSR smoke test passed including admin bootstrap, user status enforcement, KYC approval, partial + full refund, discount moderation, audit log, role change)
 - **Last working session:** 2026-05-20
-- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet. **Playwright MCP intermittent** (came online during this session but disconnected before any walkthrough could run).
-- **Next action:** Phase 7 (admin portal — account oversight, verification approvals, discount + referral moderation, refunds) OR backlog (browser walkthrough sweep, AWS dev deploy, real PayMongo + PayPal signature verification, real S3 presigning).
+- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet. **Playwright MCP intermittent** (came online during Session 8, disconnected before walkthrough could run).
+- **Next action:** Phase 8 (hardening — Playwright E2E sweep, observability alarms, load test, marketing MDX). Backlog: browser walkthrough sweep, AWS dev deploy, real PayMongo + PayPal signature verification + checkout URLs, real S3 presigning, real Google Maps key, SES email-on-send, refund-via-provider (current refunds are admin-internal only — no money actually leaves the merchant account).
 - **Blockers:** none
 
 ---
@@ -125,12 +125,53 @@
   - [ ] Browser walkthrough of refer-a-case + referral-link-signup + chapter index (Playwright MCP intermittent)
   - [ ] Real S3 presigning + real Google Maps Embed API key (deferred — same backlog as Phase 2/3)
   - [ ] Deployed smoke test against dev env
-- [ ] Phase 7 — Admin portal (account oversight, verification approvals, discount mgmt)
+- [ ] **Phase 7 — Admin portal** *(50-step API + SSR smoke test passed; browser walkthrough pending)*
+  - [x] Drizzle schema: `user_status` enum + `user.status` column (default `active`), `payment.refunded_cents` column, `admin_audit_log` table + `admin_audit_action` enum
+  - [x] Migration `0006_phase7_admin.sql` applied; total: 29 tables in dev
+  - [x] Better Auth additionalFields extended: `status` (input:false) joins `role` so the typed session user carries both
+  - [x] Shared Zod: `admin.ts` (`userStatusInput`, `adminUserRoleInput`, `kycAdminDecisionInput`, `refundInput`, `adminListQuery`, `adminInvoiceListQuery`) — all status/role/refund mutations REQUIRE a `reason` (min 3 chars) for the audit log
+  - [x] Session middleware: `assertStatus(user, method)` enforces `banned` = 403 on every method, `paused` = 403 on writes / 200 on GET+HEAD; admins are exempt to prevent self-lock-out
+  - [x] Hono `/admin/*` (requireRole admin): `/stats` (grouped user counts + KYC pending + invoices paid + refund count + pending referrals), `/users` (paginated list + filters), `/users/:id` (detail w/ profile + KYC submissions + audit log), `/users/:id/status` + `/role` (with self-change guard), `/kyc` (pending inbox) + `/kyc/:id/decision`, `/discount-codes` (global list) + DELETE, `/referrals` (read-only graph), `/invoices` (search) + `/invoices/:id/refund`, `/audit-log` (filterable by subjectType + subjectId)
+  - [x] `apps/api/src/routes/billing.ts` gains `refundPayment(...)` — writes a refund transaction, bumps `payment.refunded_cents`, flips the payment to `refunded` when fully refunded, rolls back the invoice's `paidCents` AND status (`paid → partially_paid → sent`) deterministically; called from the admin handler and ready for real provider refunds when those land
+  - [x] `packages/db/scripts/seed-admin.ts` (`pnpm --filter @ligala/db seed-admin <email>`) — legit one-shot bootstrap for the first admin; idempotent re-runs
+  - [x] Next.js `(admin)/admin/{dashboard,users,users/[id],kyc,discount-codes,invoices,invoices/[id],referrals,audit-log}` — Server Components for reads, Server Actions for mutations via `apps/web/lib/actions/admin.ts`; 9 admin routes total in the build
+  - [x] Full API + SSR smoke (`curl`, 50 checks): admin signup → seed-admin promotion → admin stats + users list/detail + ACL (lawyer 403, unauth 401) → lawyer submits KYC → admin sees in inbox → admin approves (409 on re-decision) → lawyer now visible in directory → admin pauses client (paused client gets 403 on POST, 200 on GET) → admin restores (POST works again) → admin bans (banned 403 on GET too) → admin restores → self-status change 400 → role demote/restore (demoted lawyer gets 403 on /lawyers/profile) → self-role change 400 → partial refund (₱100) → over-refund 409 → full refund → payment.status=refunded + invoice.status=sent + paidCents=0 → discount code list + moderation delete → audit log shows 4 distinct action kinds + subjectType filter works → unauth 401 → SSR /admin/{dashboard,users,kyc,discount-codes,invoices,audit-log} all 200 → lawyer accessing /admin/dashboard 307s to /lawyer/dashboard
+  - [ ] Browser walkthrough of the admin flow (Playwright MCP intermittent)
+  - [ ] Real provider refunds (current refunds are admin-internal accounting only — no money leaves the PayMongo/PayPal merchant account; production refund path goes through provider APIs then calls `refundPayment(...)` after the provider acknowledges)
+  - [ ] IP allowlist on admin endpoints (deferred — single-LB IP at AWS deploy time)
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 8 — Hardening (Playwright E2E, observability alarms, load test, marketing MDX)
 
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 9 (Phase 7 admin portal)
+
+- **Did:**
+  - Schema: `user_status` enum + `user.status` column, `payment.refunded_cents` column, new aggregate `admin_audit_log` + `admin_audit_action` enum in `packages/db/src/schema/admin.ts`. Migration `0006_phase7_admin.sql` applied; 29 tables total in dev.
+  - `@ligala/auth`: added `status` to the user `additionalFields` map (input:false) so the typed session user carries it alongside `role` without an extra DB hit per request.
+  - Session middleware now blocks `banned` users on every request and `paused` users on writes only (GET/HEAD still allowed). Admins are exempt from their own status — prevents locking ourselves out of the very endpoint that pauses.
+  - `apps/api/src/routes/admin.ts`: full router (requireRole admin) — stats, users list/detail/status/role, KYC inbox/decision, global discount-codes list + delete, referral graph read, invoice search + refund, audit-log read. Every mutating handler calls a shared `logAdmin(...)` writer for the audit row; `reason` is required for status + role + refund.
+  - `apps/api/src/routes/billing.ts` gains `refundPayment(...)` — provider-agnostic refund: writes a `refund` transaction (debit), bumps `payment.refunded_cents`, flips payment status to `refunded` when fully refunded, rolls back invoice paidCents + status (paid → partially_paid → sent). Admin handler calls this directly today; future provider-initiated refunds (PayMongo / PayPal) call it AFTER the provider acknowledges.
+  - `packages/db/scripts/seed-admin.ts` (`pnpm --filter @ligala/db seed-admin <email>`) — one-shot bootstrap, idempotent. Needed because `/accounts/role` only accepts client/lawyer (admin elevation must be out-of-band), and the admin endpoints require an existing admin.
+  - Next.js: `(admin)/admin/{dashboard,users,users/[id],kyc,discount-codes,invoices,invoices/[id],referrals,audit-log}` — 9 admin routes. Server Actions in `apps/web/lib/actions/admin.ts` forward to the api with the same Zod schemas. Dashboard tile counts come from `/admin/stats`.
+  - 50-step curl smoke (see Phase Tracker entry for the chain). DB verified end-to-end.
+- **Did NOT:**
+  - Browser walkthrough (Playwright MCP intermittent again).
+  - Wire real provider refunds — the admin refund handler only writes ledger + invoice rollback, it does NOT call PayMongo or PayPal. Adding real refunds is a thin wrapper in `webhooks.ts`-style: call provider, then call `refundPayment(...)` after the provider acknowledges.
+  - IP allowlist on `/admin/*` (relies on AWS deploy + the LB egress IP for the lock-down). Today the only gate is `requireRole("admin")`.
+  - Audit-log on Better Auth-mediated changes (Better Auth's `updateUser` API isn't currently wrapped; the only role/status changes today are through `/admin/users/:id/{role,status}` and those DO log).
+  - Soft-delete users (`status: 'banned'` is the closest; full deletion is intentionally out of scope to preserve case + invoice integrity).
+  - SES email-on-status-change (notification UX waits on SES wiring).
+- **Decisions made:**
+  - **`user.status` is enforced at the session middleware, not per-route.** Why: a single chokepoint guarantees every authed API call applies the rule; per-route checks invite the "forgot to check on the new endpoint" class of bug. Two distinct behaviors — `paused` blocks writes only (so the user can see *why* they were paused via their own dashboard), `banned` blocks everything. Admins are exempt from their own status; otherwise the audit endpoint that pauses an admin would also lock them out before they can revert. **How to apply:** any future status value follows the same chokepoint pattern; new HTTP methods automatically get the right behavior (writes = paused-blocked).
+  - **Mutating admin endpoints REQUIRE a `reason` (min 3 chars).** Why: the audit log only earns its keep if it answers *why*, not just *what*. The Zod refusal at the boundary is cheaper than relying on admin discipline. **How to apply:** any new `/admin/*` action that changes external state takes a `reason` arg in its input schema and passes it to `logAdmin(...)`.
+  - **Admin bootstrap is a CLI script, not an API endpoint.** Why: an API path that turns any user into an admin is a privilege-escalation target; a CLI run by whoever has DB credentials is the same trust boundary as DB access itself. Idempotent + env-aware so production deploys can run it once in a Lambda or task. **How to apply:** never add an HTTP path that grants admin; always go through seed-admin or a future "promote to admin (admin-only)" path that goes through the existing audit-logged `/admin/users/:id/role`.
+  - **Admin can't change their own role OR status.** Why: prevents the "I locked myself out by accident" + "I demoted myself in a UI race" failure modes. The check is a single equality in both handlers; the smoke test exercises both 400s. **How to apply:** any future admin-level mutation that targets a user record applies the same `if (target.id === actor.id) 400` guard.
+  - **Refund flow is a single helper exported from billing, callable from both admin handler AND future provider webhooks.** Why: same idempotency story as `applyPaymentWebhook` — the rollback logic (payment status, transaction row, invoice status + paidCents) is invariant whether the trigger is admin action or PayMongo callback. **How to apply:** real provider refunds add a thin route that POSTs the refund to the provider, then on success calls `refundPayment(...)` with the provider's refund id — same shape as how `applyPaymentWebhook` is called from the webhook handlers today.
+  - **`admin_audit_log.subjectType` is a free-text discriminator, not an enum.** Why: new admin actions don't need a migration just to add a type. `subjectId` is opaque text — no FK so cascading deletes don't strand audit rows. Adding new `action` values DOES require a migration (enum), which is the right level of friction for "we're introducing a new kind of admin power." **How to apply:** when adding an action, add the enum value + the corresponding handler in the same PR; keep `subjectType` as a short noun ("user", "invoice", etc.).
+- **Open questions:** none — Playwright sweep + AWS deploy + real provider refund wiring are the standing items.
 
 ### 2026-05-20 — Session 8 (Phase 6 referrals + pro bono + IBP chapters)
 
@@ -363,6 +404,12 @@
 - **2026-05-20 — Pro bono opt-in is a lawyer-level boolean, not a per-case attribute.** Why: it's a stance ("I take pro bono cases"), not a case-level toggle (that's `case.type`). Simpler than a separate aggregate; the directory filter is a single equality query. **How to apply:** if "pro bono only for tax law" lands, add a `lawyer_probono_practice_area` link table; don't overload the bool with magic values.
 - **2026-05-20 — `case.referralId` is a `text` column with no FK to `referral`.** Why: `referral` already references `case`; adding the reverse FK creates a circular cross-file dependency that breaks Drizzle's schema eval order. The same handler creates both rows, and `referral` is append-only, so the soft id is safe. **How to apply:** if a future aggregate must hold a real cycle, prefer "the newer side gets the FK; the older side carries a soft id" — and write a migration script if you ever break the convention.
 - **2026-05-20 — Click counter on referral links is public + unauthenticated; signup counter is auth-gated.** Why: public bump lets the lawyer see traffic without forcing a login; signup bump runs from inside the authenticated `/cases` POST so it's compensation-grade. **How to apply:** any "vanity vs payable" counter pair on a public object splits the same way — public bump for the engagement metric, auth'd bump for the metric that drives money.
+- **2026-05-20 — User status enforced at session middleware, with method-aware behavior.** `banned` blocks every request; `paused` blocks writes only (GET/HEAD allowed so the user can see their status). Admins are exempt from their own status (avoid self-lockout via the same endpoint that pauses). Why: single chokepoint > per-route checks; method-aware lets paused users still see why they were paused via their own dashboard. **How to apply:** any new status value plugs into `assertStatus(user, method)`; new HTTP verbs automatically get the right policy.
+- **2026-05-20 — Mutating admin endpoints require a `reason` (min 3 chars).** Why: the audit log is only useful if it answers *why*, not just *what*. Boundary-level Zod rejection is cheaper than relying on admin discipline. **How to apply:** every new `/admin/*` action takes a `reason` in its input schema and threads it to `logAdmin(...)`.
+- **2026-05-20 — Admin bootstrap is a CLI seed script, not an API endpoint.** Why: an HTTP path that elevates to admin is a privilege-escalation target; a CLI behind DB credentials is the same trust boundary as DB access itself. `pnpm --filter @ligala/db seed-admin <email>` is idempotent and works for prod via a one-shot task. **How to apply:** never add an HTTP path that grants admin; always go through seed-admin OR an existing admin promoting another via `/admin/users/:id/role` (which IS audit-logged).
+- **2026-05-20 — Admin cannot change their own role OR status.** Why: prevents accidental self-lockout + race-condition self-demotion. **How to apply:** any future admin-level mutation targeting a user record applies the same `if (target.id === actor.id) 400` guard.
+- **2026-05-20 — Refund logic is a single helper (`refundPayment`) exported from `billing.ts`.** Used today by `/admin/invoices/:id/refund`; tomorrow by provider-initiated refunds (PayMongo / PayPal). Why: same idempotency story as `applyPaymentWebhook` — the rollback (payment status, transaction row, invoice status + paidCents) is invariant whether the trigger is admin action or provider callback. **How to apply:** when provider refunds land, the route calls the provider first, then `refundPayment(...)` after the provider acknowledges — never write the rollback inline.
+- **2026-05-20 — `admin_audit_log.action` is a pgEnum; `subjectType` is free text.** Why: new admin actions need a migration anyway (handler + enum value go together — right level of friction); subject types are noun strings that don't need schema discipline. `subjectId` has no FK so cascading deletes don't strand audit rows. **How to apply:** add the enum value + handler in the same PR; keep `subjectType` short and conventional ("user", "invoice", "discount_code").
 
 ---
 
@@ -405,6 +452,13 @@
 - **Pro bono case routing to IBP chapter pool** — If an IBP chapter wants to triage incoming pro bono requests centrally, we'd need a chapter-level inbox + assignment workflow. Out of MVP scope; revisit if a chapter formally pilots Ligala.
 - **Notifications on referral state changes** — Recipient sees inbound referrals only by visiting `/lawyer/referrals`. Email/push lands with SES + workers.
 - **Chapter officer / curator role** — Phase 6 IBP integration is read-only. If chapters want to feature lawyers or add a chapter bio, we need a new `chapter_officer` link + admin tooling.
+- **Real provider refunds** — Admin refunds today only write the ledger + invoice rollback; no money actually leaves the merchant account. The `refundPayment(...)` helper is ready; what's missing is a per-provider call (PayMongo `POST /refunds`, PayPal `POST /v2/payments/captures/:id/refund`) that runs first and on success calls the helper with the provider's refund id.
+- **Admin IP allowlist** — `/admin/*` is gated by `requireRole("admin")` only. Once we have a known LB egress IP, add an IP allowlist middleware on the router so even a compromised admin password can't be used from arbitrary networks.
+- **Admin forced re-decision on referrals** — Schema has the `referral_force_decided` audit action but no handler yet. Add `POST /admin/referrals/:id/decision` if real moderation cases come up (today the recipient is the only one who can decide).
+- **Soft-delete users** — `status='banned'` is the closest we have. Full deletion is intentionally out of scope to preserve case + invoice integrity; if GDPR-style deletion is required, redact PII in place rather than hard delete.
+- **Audit log retention / export** — All audit rows live in `admin_audit_log` forever. Add a CSV export endpoint + retention policy once we have a year of data and a compliance ask.
+- **Per-admin permission tiers** — All admins have all powers today. If we add finance-only or moderation-only roles, do it via a `admin_capability` link table rather than splitting the `admin` role enum.
+- **SES notification on admin actions** — User isn't told via email when they're paused/banned/refunded. Lands with SES wiring; template lives in `packages/email/`.
 
 ---
 

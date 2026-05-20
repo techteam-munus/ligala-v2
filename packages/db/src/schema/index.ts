@@ -18,3 +18,4 @@ export * from "./clients";
 export * from "./cases";
 export * from "./billing";
 export * from "./referrals";
+export * from "./admin";

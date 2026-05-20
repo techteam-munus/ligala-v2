@@ -151,6 +151,12 @@ export const payments = pgTable(
     providerPaymentId: text("provider_payment_id").notNull(),
     status: paymentStatus("status").default("pending").notNull(),
     amountCents: integer("amount_cents").notNull(),
+    /**
+     * Cumulative refunded amount in cents. Bumped by /admin/invoices/:id/refund.
+     * Partial refunds are supported: refundedCents <= amountCents. When fully
+     * refunded, the payment.status flips to `refunded`.
+     */
+    refundedCents: integer("refunded_cents").default(0).notNull(),
     currency: text("currency").default("PHP").notNull(),
     succeededAt: timestamp("succeeded_at", { withTimezone: true }),
     failedAt: timestamp("failed_at", { withTimezone: true }),

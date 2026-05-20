@@ -43,6 +43,13 @@
       "when": 1779249949700,
       "tag": "0005_phase6_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779252162578,
+      "tag": "0006_phase7_admin",
+      "breakpoints": true
     }
   ]
 }
