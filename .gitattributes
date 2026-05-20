@@ -1,0 +1,17 @@
+# Normalize line endings on commit, check out as-is per OS.
+* text=auto eol=lf
+
+# Keep Windows line endings for native scripts (none yet, but reserve the rule).
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

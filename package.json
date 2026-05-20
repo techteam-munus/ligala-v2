@@ -1,0 +1,28 @@
+{
+  "name": "ligala-v2",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "db:generate": "pnpm --filter @ligala/db generate",
+    "db:migrate": "pnpm --filter @ligala/db migrate",
+    "db:studio": "pnpm --filter @ligala/db studio",
+    "cdk:synth": "pnpm --filter @ligala/infra synth",
+    "cdk:diff": "pnpm --filter @ligala/infra diff",
+    "cdk:deploy:dev": "pnpm --filter @ligala/infra deploy:dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^20.16.0"
+  }
+}

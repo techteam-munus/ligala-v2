@@ -1,0 +1,47 @@
+{
+  "name": "@ligala/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "clean": "rm -rf .next .turbo"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@ligala/auth": "workspace:*",
+    "@ligala/db": "workspace:*",
+    "@ligala/shared": "workspace:*",
+    "@ligala/ui": "workspace:*",
+    "@sentry/nextjs": "^8.45.0",
+    "@tanstack/react-query": "^5.62.0",
+    "better-auth": "^1.0.0",
+    "clsx": "^2.1.1",
+    "react-hook-form": "^7.54.0",
+    "tailwind-merge": "^2.5.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@tailwindcss/postcss": "^4.0.0-beta.7",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^20.16.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "^15.1.0",
+    "jsdom": "^25.0.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^4.0.0-beta.7",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

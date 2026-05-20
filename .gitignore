@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+.turbo/
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# CDK
+infra/cdk.out/
+infra/.cdk.staging/
+
+# Drizzle (keep migration SQL, ignore introspection)
+packages/db/drizzle/meta/_journal.json.bak
+
+# Sentry
+.sentryclirc
+
+# Local env scratch
+.scratch/
