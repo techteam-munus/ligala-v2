@@ -16,6 +16,7 @@
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "db:generate": "pnpm --filter @ligala/db generate",
     "db:migrate": "pnpm --filter @ligala/db migrate",
+    "db:seed": "pnpm --filter @ligala/db seed",
     "db:studio": "pnpm --filter @ligala/db studio",
     "cdk:synth": "pnpm --filter @ligala/infra synth",
     "cdk:diff": "pnpm --filter @ligala/infra diff",

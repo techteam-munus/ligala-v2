@@ -10,3 +10,7 @@
 //   Phase 6 — referrals
 
 export * from "./auth";
+export * from "./reference";
+export * from "./lawyers";
+export * from "./kyc";
+export * from "./offices";

@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 1 — Auth foundation **DONE locally** (browser smoke test passed; awaiting AWS dev deploy)
+- **Active phase:** Phase 2 — Lawyer onboarding **DONE locally** (full API smoke test passed; awaiting browser walkthrough + AWS dev deploy)
 - **Last working session:** 2026-05-20
 - **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet
-- **Next action:** Phase 2 — lawyer onboarding (signup → lawyer profile → KYC submission → IDMeta webhook → office setup). AWS dev deploy can land in parallel whenever creds + Sentry project are ready.
+- **Next action:** browser walkthrough of `/become-a-lawyer → /lawyer/{profile,kyc,office}` flow once Playwright MCP is back, OR jump to Phase 3 (client onboarding + lawyer discovery).
 - **Blockers:** none
 
 ---
@@ -50,7 +50,18 @@
   - [x] `pnpm db:migrate` applied (commit `86b6d25` added dotenv auto-loading; psql confirms 4 tables + user_role enum + FKs)
   - [x] Signup → signin → role dashboard flow exercised in browser at `localhost:3000` (Playwright, see Session Log)
   - [ ] Deployed smoke test against dev env
-- [ ] Phase 2 — Lawyer onboarding (signup → profile → KYC → IDMeta webhook → office setup)
+- [ ] **Phase 2 — Lawyer onboarding** *(API smoke test passed; browser walkthrough pending)*
+  - [x] Drizzle schema: 11 new tables (ibp_chapter, practice_area, jurisdiction, lawyer_profile, lawyer_practice_area, lawyer_jurisdiction, kyc_submission, kyc_document, office, office_schedule, office_faq) + `kyc_status` + `kyc_document_kind` enums
+  - [x] Migration `0001_military_maggott.sql` applied; total: 15 tables in dev
+  - [x] Reference data seeded (`pnpm db:seed`): 13 IBP chapters, 15 practice areas, 10 jurisdictions, stable slug IDs, idempotent re-runs
+  - [x] Shared Zod schemas: lawyer profile/patch, KYC submission, office input/patch/schedule/FAQ, file presign request/response, role assignment
+  - [x] Hono routes: `/accounts/me`, `/accounts/role` (promotion), `/lawyers/profile`, `/lawyers/kyc`, `/lawyers/office`, `/lawyers/office/schedule`, `/lawyers/office/faqs`, `/references/*`, `/webhooks/idmeta`, `/files/presign` (dev stub) + `/files/_dev/upload`
+  - [x] Next.js pages: `/become-a-lawyer`, `/lawyer/dashboard` (status chips), `/lawyer/profile` (form + reference dropdowns/checkboxes), `/lawyer/kyc` (form with browser-side presigned upload via Next proxy), `/lawyer/office` (office + 7-day schedule + FAQ CRUD)
+  - [x] Server Actions in `apps/web/lib/actions/{role,lawyer}.ts` forward session cookies to api via `lib/api.ts`
+  - [x] Full API smoke (`curl`): signup → promote → patch profile → submit KYC → IDMeta webhook approves → create office → set schedule → add FAQ. DB verified.
+  - [ ] Browser walkthrough of `/become-a-lawyer → onboarding flow` (Playwright MCP currently unavailable)
+  - [ ] Real S3 presigning (stub in dev; lands when CDK provisions the bucket)
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 3 — Client onboarding & lawyer discovery (search + Google Maps + public profiles)
 - [ ] Phase 4 — Cases & engagements (paid + pro bono unified, accept/decline, activities, notes)
 - [ ] Phase 5 — Billing (invoices, PayMongo + PayPal + webhooks, discount codes)
@@ -61,6 +72,27 @@
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 4 (Phase 2 lawyer onboarding)
+
+- **Did:**
+  - Schema: 11 new tables across `packages/db/src/schema/{reference,lawyers,kyc,offices}.ts`; one migration generated and applied (`0001_military_maggott.sql`); reference data seeded via `pnpm db:seed` (idempotent).
+  - Bumped drizzle-orm to ^0.45.2 and drizzle-kit to ^0.31.0 to satisfy better-auth's drizzle-adapter peer requirement.
+  - Shared Zod schemas for every Phase 2 input (lawyer profile/patch, KYC, office, schedule, FAQ, file presign, role assignment).
+  - Hono API: full CRUD for lawyer profile, KYC submission, office, schedule, FAQs + reference reads + IDMeta webhook (inline processing for dev; same logic moves to SQS worker later).
+  - Next.js: `/become-a-lawyer` promotion page + Server Action; new `/lawyer/{dashboard,profile,kyc,office}` pages with client forms, dropdowns, checkboxes, file upload widget; cookie-forwarding `lib/api.ts` + `/api/files/presign-proxy` for browser-side presigned URLs.
+  - Smoke test via curl: signup → promote → patch profile → submit KYC → webhook approves → create office → set schedule → add FAQ → DB verification all green.
+- **Did NOT:**
+  - Browser walkthrough (Playwright MCP disconnected mid-session). API smoke is conclusive; UI walkthrough deferred to next session.
+  - Real S3 presigning (intentional — dev stub returns local URL).
+  - Profile slug uniqueness retry beyond 5 attempts (good enough at MVP scale).
+  - SQS worker implementation (the webhook handler in `apps/api/src/routes/webhooks.ts` does the work inline; `workers/idmeta/handler.ts` will reuse it when SQS lands in deploy).
+- **Decisions made:**
+  - Cookie cache disabled (was 5min). Why: role promotion needs to take effect on the next request, not 5 minutes later. Re-enable with a short TTL only after we route role changes through Better Auth's own `updateUser` (which invalidates the cache for us).
+  - `apps/api/src/load-env.ts` side-effect-only module imported first in `dev.ts`. Why: ESM hoists imports above top-level statements within a module, so a `loadEnv()` call in `dev.ts`'s body runs AFTER `@ligala/auth` (which reads `process.env` at import time). A separate module's top-level statements run when the import is evaluated, in source order — so `import "./load-env"` first guarantees env is set before `import "./app"` triggers downstream `process.env` reads.
+  - Office FAQs are append-only with sortOrder set by the client (current count). Resorting is a Phase 6 polish item.
+  - One office per lawyer at launch (unique constraint). Multi-office support arrives if/when a paid firm asks.
+- **Open questions:** none — pre-existing Playwright UI gap is the only outstanding item.
 
 ### 2026-05-20 — Session 3 (Phase 1 browser smoke test + local stack)
 
@@ -152,6 +184,9 @@
 - **2026-05-20 — Edge middleware does cookie presence only; role gating lives in route group layouts.** Why: Better Auth's session resolution needs Node runtime (jose, DB). Layouts are server components that can call `getSession()` against the DB. Middleware handles the cheap "are you signed in?" check that catches 99% of unauthorized hits before they reach a layout.
 - **2026-05-20 — Local dev uses `docker compose` for Postgres 16 + Redis 7.** Why: parity with prod (Aurora Serverless v2 Postgres 16, ElastiCache Redis 7); zero-cost; survives `down`/`up` cycles via named volumes (`pgdata`, `redisdata`). `drizzle.config.ts` loads `.env.local` via `dotenv` so `pnpm db:migrate` works without manual env exports.
 - **2026-05-20 — Edge middleware passes `cookiePrefix: "ligala"` to `getSessionCookie`.** Why: Better Auth's helper defaults to the standard `better-auth.session_token` cookie name; our config sets a custom `cookiePrefix: "ligala"`, producing `ligala.session_token`. Without the prefix arg, middleware sees no session and 100% of signed-in users get redirected to `/login` (caught during the first Playwright run). **How to apply:** any reader of the session cookie outside the Better Auth instance itself must thread the same `cookiePrefix`. If we ever change the prefix, this is the second place to update.
+- **2026-05-20 — Better Auth session cookie cache disabled.** Why: cookie cache (default 5min) holds onto the old `role` field after a client→lawyer promotion, breaking `requireRole("lawyer")` for the entire cache window. With cache off, every request validates against DB — small per-request cost in exchange for instant role propagation. **How to apply:** revisit only after routing role changes through Better Auth's `updateUser` API (which invalidates the cache automatically); then we can re-enable cookieCache with a short maxAge (e.g. 30s).
+- **2026-05-20 — `apps/api` env loading via dedicated side-effect module.** Why: ESM hoists imports above top-level statements *within* a module, so calling `dotenv.config()` inline in `dev.ts` runs AFTER `@ligala/auth` (imported transitively) has already read `process.env.BETTER_AUTH_SECRET`. A separate `load-env.ts` whose imports run first means its `loadEnv()` call executes before sibling imports load downstream modules. **How to apply:** any process that needs env vars set before module-evaluation reads must use a side-effect-only `import "./load-env"` as the FIRST import, not an inline call.
+- **2026-05-20 — Server Actions forward session cookies to Hono via `apps/web/lib/api.ts`.** Why: browser cookies set on `localhost:3000` are not sent to `localhost:8787` (port differs → different origin per cookie spec). Server-side fetch via `headers()` reads the incoming request cookie and re-sends it; api validates the same Better Auth session. Browser-direct calls to api are blocked by design — except `/api/files/presign-proxy` which exists for client-side file uploads and forwards cookies similarly. **How to apply:** never call the api from a Client Component directly; always go through a Server Action or a `/api/*` proxy route.
 
 ---
 
@@ -166,6 +201,11 @@
 - **Microsoft 365 SSO for law firms** — Not on roadmap; revisit if a paid firm asks.
 - **Builder.io CMS replacement** — Marketing pages will be MDX inside `app/(marketing)`. Revisit if non-devs need to edit content regularly.
 - **PayMongo + PayPal abstraction layer** — Per-provider implementations in Phase 5; refactor to a `PaymentProvider` interface only if/when a third provider lands.
+- **Real S3 presigning** — `/files/presign` is a dev stub; will use `@aws-sdk/s3-request-presigner` against the CoreStack uploads bucket once CDK deploys to dev.
+- **SQS worker for IDMeta** — Webhook processes inline in dev (`apps/api/src/routes/webhooks.ts`). When AWS SQS lands the same logic moves to `workers/idmeta/handler.ts`; keep the implementations identical so the cutover is one-line.
+- **Office multi-instance** — One office per lawyer at launch (unique constraint on `office.lawyer_id`). Drop the unique + add a `primary` flag if a firm asks.
+- **Profile slug uniqueness with smarter retry** — Currently 5 random suffix attempts before giving up. Fine at MVP scale; revisit if collisions are a real problem.
+- **Re-enable cookie cache** — Currently off so role changes propagate instantly. Re-enable with short TTL after role updates go through Better Auth's own update path.
 
 ---
 

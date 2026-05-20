@@ -65,7 +65,11 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
-    cookieCache: { enabled: true, maxAge: 60 * 5 },
+    // Cookie cache disabled: lets role updates (e.g. client -> lawyer) take
+    // effect on the next request instead of waiting for the cache to expire.
+    // Re-enable with a short maxAge (e.g. 30s) once role changes are routed
+    // through Better Auth's own update path that invalidates the cache.
+    cookieCache: { enabled: false },
   },
   advanced: {
     cookiePrefix: "ligala",
