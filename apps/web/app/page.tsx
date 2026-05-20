@@ -1,13 +1,26 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-svh max-w-3xl flex-col items-start justify-center gap-4 px-6">
+    <main className="mx-auto flex min-h-svh max-w-3xl flex-col items-start justify-center gap-6 px-6">
       <h1 className="text-4xl font-semibold tracking-tight">Ligala</h1>
       <p className="text-lg text-neutral-600">
-        Philippine legal services platform. v2 is under construction.
+        Philippine legal services platform.
       </p>
-      <p className="text-sm text-neutral-500">
-        Scaffold is live. See <code>PROCESS.md</code> for the current build phase.
-      </p>
+      <div className="flex gap-3">
+        <Link
+          href="/login"
+          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/signup"
+          className="rounded border border-neutral-300 px-4 py-2 text-sm font-medium"
+        >
+          Create account
+        </Link>
+      </div>
     </main>
   );
 }

@@ -1,20 +1,20 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { health } from "./routes/health.js";
-import { auth } from "./routes/auth.js";
-import { lawyers } from "./routes/lawyers.js";
-import { clients } from "./routes/clients.js";
-import { cases } from "./routes/cases.js";
-import { engagements } from "./routes/engagements.js";
-import { billing } from "./routes/billing.js";
-import { referrals } from "./routes/referrals.js";
-import { files } from "./routes/files.js";
-import { references } from "./routes/references.js";
-import { integrations } from "./routes/integrations.js";
-import { webhooks } from "./routes/webhooks.js";
-import { admin } from "./routes/admin.js";
-import { errorHandler } from "./middleware/error.js";
+import { health } from "./routes/health";
+import { auth } from "./routes/auth";
+import { lawyers } from "./routes/lawyers";
+import { clients } from "./routes/clients";
+import { cases } from "./routes/cases";
+import { engagements } from "./routes/engagements";
+import { billing } from "./routes/billing";
+import { referrals } from "./routes/referrals";
+import { files } from "./routes/files";
+import { references } from "./routes/references";
+import { integrations } from "./routes/integrations";
+import { webhooks } from "./routes/webhooks";
+import { admin } from "./routes/admin";
+import { errorHandler } from "./middleware/error";
 
 export function createApp() {
   const app = new Hono();

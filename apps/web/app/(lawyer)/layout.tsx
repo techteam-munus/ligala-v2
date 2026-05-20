@@ -1,6 +1,11 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
+import { roleHome } from "@/lib/role";
 
-// Phase 1 will guard this group with a Better Auth session check + role=lawyer.
-export default function LawyerLayout({ children }: { children: ReactNode }) {
+export default async function LawyerLayout({ children }: { children: ReactNode }) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.user.role !== "lawyer") redirect(roleHome(session.user.role));
   return <>{children}</>;
 }

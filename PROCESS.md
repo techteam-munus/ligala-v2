@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 0 — Scaffold & infra
+- **Active phase:** Phase 1 — Auth foundation (functionally complete locally; awaiting deployed verification)
 - **Last working session:** 2026-05-20
 - **Environment status:** dev not yet deployed | staging not yet | prod not yet
-- **Next action:** add ESLint config (so `pnpm lint` works); wire Sentry DSN; then `cdk bootstrap` + `cdk deploy --all --context env=dev` against the AWS dev account
+- **Next action:** stand up local Postgres + Redis (docker-compose), run `pnpm db:migrate`, exercise signup/signin against `pnpm dev`. Then move to Phase 2 (lawyer onboarding).
 - **Blockers:** none
 
 ---
@@ -36,7 +36,19 @@
   - [ ] CDK `deploy` to dev env
   - [ ] Sentry DSN wired in both apps
   - [ ] `/health` returns 200 from deployed API and Next URLs
-- [ ] Phase 1 — Auth foundation (Better Auth + Drizzle users/sessions + role middleware)
+- [ ] **Phase 1 — Auth foundation** *(scaffold complete; needs deployed smoke test)*
+  - [x] Drizzle schema: `user`, `session`, `account`, `verification` + `user_role` enum
+  - [x] First migration generated (`packages/db/drizzle/0000_regular_rachel_grey.sql`)
+  - [x] Better Auth config in `packages/auth` (Drizzle adapter, email/password, conditional Google OAuth, role on user)
+  - [x] Mounted in `apps/web` at `/api/auth/[...all]` (Next.js catch-all)
+  - [x] Mounted in `apps/api` at `/auth/*` (Hono catch-all)
+  - [x] `requireSession` + `requireRole` middleware in Hono
+  - [x] Edge-safe session-cookie middleware in Next.js + role-guarded route group layouts
+  - [x] Minimal `/login`, `/signup` pages (client components, react-hook-form deferred to later phase)
+  - [x] Role-aware redirect (`roleHome`) for cross-portal navigation
+  - [ ] Local Postgres running + `pnpm db:migrate` applied successfully
+  - [ ] Signup → signin → role dashboard flow exercised in browser at `localhost:3000`
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 2 — Lawyer onboarding (signup → profile → KYC → IDMeta webhook → office setup)
 - [ ] Phase 3 — Client onboarding & lawyer discovery (search + Google Maps + public profiles)
 - [ ] Phase 4 — Cases & engagements (paid + pro bono unified, accept/decline, activities, notes)
@@ -48,6 +60,29 @@
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 2 (Phase 1 auth foundation)
+
+- **Did:**
+  - Wrote Drizzle schema for Better Auth (`user`, `session`, `account`, `verification`) + `user_role` enum + custom `role` column on user.
+  - Generated first migration via `drizzle-kit generate` → `drizzle/0000_regular_rachel_grey.sql` (4 tables, 2 FKs, 1 enum).
+  - Configured Better Auth in `packages/auth/src/index.ts` (Drizzle adapter, email/password, conditional Google OAuth, `additionalFields.role`, 7-day sessions with 5-min cookie cache).
+  - Mounted auth catch-all in `apps/web/app/api/auth/[...all]/route.ts` via `toNextJsHandler`.
+  - Replaced Hono `/auth` route stub with Better Auth catch-all.
+  - Added `requireSession` and `requireRole(...)` middleware factories in `apps/api/src/middleware/session.ts` with context augmentation for `user`/`session`.
+  - Added Next.js client helper (`lib/auth-client.ts`) and server helper (`lib/session.ts` with `getSession`/`requireSession`).
+  - Replaced pass-through Next.js middleware with edge-safe cookie check + redirect-to-`/login` logic.
+  - Guarded `(client)`, `(lawyer)`, `(admin)` route group layouts with session + role checks, redirecting mismatches to the right portal home via new `lib/role.ts`.
+  - Built minimal `/login` and `/signup` client components (no design system polish yet).
+  - Updated root `/` to point to `/login` and `/signup`.
+- **Did NOT:**
+  - Apply the migration (needs a running Postgres; will run when local docker-compose lands or after CDK deploys Aurora).
+  - Exercise the flow in a browser (deferred; pages typecheck and build, full smoke test pending).
+  - Email verification / magic links (deferred to Phase 7+ per plan).
+  - SES wiring (Phase 2+).
+- **Decisions made:** five additions to Decisions Log above (`.js` extensions, db placeholder URL, auth secret placeholder, role enum, middleware split).
+- **Open questions:**
+  - Do we want a docker-compose for local Postgres + Redis to make `pnpm dev` self-contained, or use a remote dev DB from day one? (Defaulting to docker-compose in next session unless told otherwise.)
 
 ### 2026-05-20 — Session 1 (Phase 0 scaffolding)
 
@@ -84,6 +119,11 @@
 - **2026-05-20 — Sharp in dedicated Lambda layer (carry pattern from v1).** Why: avoids Next.js Image runtime cost for the high-volume KYC upload path.
 - **2026-05-20 — `verbatimModuleSyntax: true` in `tsconfig.base.json`.** Why: forces explicit `import type` everywhere, which Drizzle and Next.js Server Actions are picky about.
 - **2026-05-20 — Pinned zod to `^4.0.0` repo-wide and Hono to `^4.10.0` / `@hono/zod-validator` to `^0.8.0`.** Why: Better Auth's `better-call` requires zod v4, and `@hono/zod-validator@0.8` is the first version with dual zod v3/v4 peer support. Resolves peer-dep warning from initial install. **Migration impact:** `z.string().url()` and `z.string().email()` are deprecated in zod 4 (still work); prefer `z.url()` / `z.email()` in new schemas.
+- **2026-05-20 — Drop `.js` extensions in internal TS imports across the repo.** Why: drizzle-kit's CJS loader couldn't resolve `./schema/index.js` (no `.ts` rewriting). Next.js webpack also failed with `.js` extensions in transpiled workspace packages. Bundler-mode TS, esbuild, and Next webpack all accept extensionless. Reverting only one file would be inconsistent. **How to apply:** all relative imports within and between workspace packages use bare specifiers (`"./client"`, not `"./client.js"`). External package imports unchanged.
+- **2026-05-20 — `packages/db` `db()` falls back to a placeholder Postgres URL.** Why: Next.js's `next build` page-data collection step evaluates server modules; without `DATABASE_URL` the old hard-throw aborted builds. postgres-js lazy-connects, so the placeholder is safe — first real query fails loudly with a connection error. **How to apply:** never rely on the placeholder silently in prod; surface DATABASE_URL absence at deploy time via env checks elsewhere.
+- **2026-05-20 — `packages/auth` seeds `process.env.BETTER_AUTH_SECRET` with a placeholder if missing.** Why: Better Auth performs its own env lookup at init independent of the config-passed `secret` and throws during `next build` page collection if absent. Placeholder unblocks builds. **How to apply:** real secret MUST be injected before serving traffic; the placeholder string is deliberately recognizable in logs.
+- **2026-05-20 — Role on `user` table is a Postgres enum (`user_role`), not text.** Values: `client | lawyer | admin`. Why: enum gives DB-level integrity; tight value set means migration cost for new roles is acceptable. Mapped from Better Auth's `additionalFields` (which TS-types it as `string | null | undefined` regardless — we narrow at consumers).
+- **2026-05-20 — Edge middleware does cookie presence only; role gating lives in route group layouts.** Why: Better Auth's session resolution needs Node runtime (jose, DB). Layouts are server components that can call `getSession()` against the DB. Middleware handles the cheap "are you signed in?" check that catches 99% of unauthorized hits before they reach a layout.
 
 ---
 
