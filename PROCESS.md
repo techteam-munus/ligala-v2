@@ -125,7 +125,7 @@
   - [ ] Browser walkthrough of refer-a-case + referral-link-signup + chapter index (Playwright MCP intermittent)
   - [ ] Real S3 presigning + real Google Maps Embed API key (deferred — same backlog as Phase 2/3)
   - [ ] Deployed smoke test against dev env
-- [ ] **Phase 7 — Admin portal** *(50-step API + SSR smoke test passed; browser walkthrough pending)*
+- [ ] **Phase 7 — Admin portal** *(50-step API + SSR smoke test passed; commit `9c6c709`; browser walkthrough pending)*
   - [x] Drizzle schema: `user_status` enum + `user.status` column (default `active`), `payment.refunded_cents` column, `admin_audit_log` table + `admin_audit_action` enum
   - [x] Migration `0006_phase7_admin.sql` applied; total: 29 tables in dev
   - [x] Better Auth additionalFields extended: `status` (input:false) joins `role` so the typed session user carries both
