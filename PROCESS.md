@@ -48,8 +48,11 @@
 
 ### 2026-05-20 — Session 1 (Phase 0 scaffolding)
 
+**Commit:** `d687eaf` — `chore: scaffold ligala-v2 monorepo (Phase 0)` (85 files)
+
 - **Did:**
-  - Created full monorepo directory tree at `C:\Users\dejes\munus\ligala\ligala-v2`
+  - Initialized git repo (main branch) at `C:\Users\dejes\munus\ligala\ligala-v2`
+  - Created full monorepo directory tree
   - Wrote root config files (pnpm-workspace.yaml, turbo.json, tsconfig.base.json, .gitignore, .editorconfig, .nvmrc, .env.example)
   - Wrote app skeletons: Next.js 15 (`apps/web`) with route groups for (client)(lawyer)(admin)(marketing) and `/api/health`; Hono (`apps/api`) with `/health` and per-domain route stubs.
   - Wrote package skeletons: `@ligala/db` (Drizzle config + empty schema), `@ligala/auth` (Better Auth config), `@ligala/ui` (shadcn entry), `@ligala/shared` (Zod schemas + errors), `@ligala/email` (React Email).
