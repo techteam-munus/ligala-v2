@@ -10,7 +10,7 @@
 - **Active phase:** Phase 0 — Scaffold & infra
 - **Last working session:** 2026-05-20
 - **Environment status:** dev not yet deployed | staging not yet | prod not yet
-- **Next action:** run `pnpm build` locally; add ESLint config (deferred from scaffold)
+- **Next action:** run `cdk synth` from `infra/` to verify both stacks synthesize; add ESLint config; wire Sentry DSN
 - **Blockers:** none
 
 ---
@@ -29,7 +29,7 @@
   - [x] GitHub Actions CI workflow
   - [x] `pnpm install` clean (no peer warnings — after zod 4 + hono 4.10 bump)
   - [x] `pnpm typecheck` green locally (9/9 packages, ~3s)
-  - [ ] `pnpm build` green locally
+  - [x] `pnpm build` green locally (web Next.js 5.1s + api esbuild 21ms + workers esbuild 11ms; 4 web routes detected, api bundle 78.4kb)
   - [ ] `pnpm lint` green locally (ESLint config not yet added)
   - [ ] `pnpm test` green locally (no tests yet)
   - [ ] CDK `synth` clean against dev account
