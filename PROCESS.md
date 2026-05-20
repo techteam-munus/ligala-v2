@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 1 — Auth foundation (functionally complete locally; awaiting deployed verification)
+- **Active phase:** Phase 1 — Auth foundation (functionally complete locally + local DB live; awaiting browser smoke test and deployed verification)
 - **Last working session:** 2026-05-20
-- **Environment status:** dev not yet deployed | staging not yet | prod not yet
-- **Next action:** stand up local Postgres + Redis (docker-compose), run `pnpm db:migrate`, exercise signup/signin against `pnpm dev`. Then move to Phase 2 (lawyer onboarding).
+- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7, both healthy) | AWS dev not yet | staging not yet | prod not yet
+- **Next action:** `pnpm dev` and exercise signup → signin → role dashboard in the browser. Then move to Phase 2 (lawyer onboarding).
 - **Blockers:** none
 
 ---
@@ -46,7 +46,8 @@
   - [x] Edge-safe session-cookie middleware in Next.js + role-guarded route group layouts
   - [x] Minimal `/login`, `/signup` pages (client components, react-hook-form deferred to later phase)
   - [x] Role-aware redirect (`roleHome`) for cross-portal navigation
-  - [ ] Local Postgres running + `pnpm db:migrate` applied successfully
+  - [x] Local Postgres + Redis running via `docker compose up -d` (compose.yaml, both healthy in <15s)
+  - [x] `pnpm db:migrate` applied (commit `86b6d25` added dotenv auto-loading; psql confirms 4 tables + user_role enum + FKs)
   - [ ] Signup → signin → role dashboard flow exercised in browser at `localhost:3000`
   - [ ] Deployed smoke test against dev env
 - [ ] Phase 2 — Lawyer onboarding (signup → profile → KYC → IDMeta webhook → office setup)
@@ -82,7 +83,7 @@
   - SES wiring (Phase 2+).
 - **Decisions made:** five additions to Decisions Log above (`.js` extensions, db placeholder URL, auth secret placeholder, role enum, middleware split).
 - **Open questions:**
-  - Do we want a docker-compose for local Postgres + Redis to make `pnpm dev` self-contained, or use a remote dev DB from day one? (Defaulting to docker-compose in next session unless told otherwise.)
+  - Resolved same session: docker-compose for local Postgres + Redis (Postgres 16, Redis 7).
 
 ### 2026-05-20 — Session 1 (Phase 0 scaffolding)
 
@@ -124,6 +125,7 @@
 - **2026-05-20 — `packages/auth` seeds `process.env.BETTER_AUTH_SECRET` with a placeholder if missing.** Why: Better Auth performs its own env lookup at init independent of the config-passed `secret` and throws during `next build` page collection if absent. Placeholder unblocks builds. **How to apply:** real secret MUST be injected before serving traffic; the placeholder string is deliberately recognizable in logs.
 - **2026-05-20 — Role on `user` table is a Postgres enum (`user_role`), not text.** Values: `client | lawyer | admin`. Why: enum gives DB-level integrity; tight value set means migration cost for new roles is acceptable. Mapped from Better Auth's `additionalFields` (which TS-types it as `string | null | undefined` regardless — we narrow at consumers).
 - **2026-05-20 — Edge middleware does cookie presence only; role gating lives in route group layouts.** Why: Better Auth's session resolution needs Node runtime (jose, DB). Layouts are server components that can call `getSession()` against the DB. Middleware handles the cheap "are you signed in?" check that catches 99% of unauthorized hits before they reach a layout.
+- **2026-05-20 — Local dev uses `docker compose` for Postgres 16 + Redis 7.** Why: parity with prod (Aurora Serverless v2 Postgres 16, ElastiCache Redis 7); zero-cost; survives `down`/`up` cycles via named volumes (`pgdata`, `redisdata`). `drizzle.config.ts` loads `.env.local` via `dotenv` so `pnpm db:migrate` works without manual env exports.
 
 ---
 
