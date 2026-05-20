@@ -107,7 +107,7 @@
   - [ ] Real PayMongo Checkout / PayPal Orders v2 redirect URL generation (deferred — wraps `/checkout` handler)
   - [ ] Refunds + partial-refunds (deferred to Phase 7 admin tooling)
   - [ ] Deployed smoke test against dev env
-- [ ] **Phase 6 — Referrals + pro bono polish** *(49-step API + SSR smoke test passed; browser walkthrough pending)*
+- [ ] **Phase 6 — Referrals + pro bono polish** *(49-step API + SSR smoke test passed; commit `ae2f0ae`; browser walkthrough pending)*
   - [x] Drizzle schema: 2 new tables (`referral`, `referral_link`) + 2 enums (`referral_kind`, `referral_status`); 3 new pro-bono columns on `lawyer_profile` (`probono_available`, `probono_statement`, `probono_cap_active`); 2 new columns on `case` (`referral_id`, `probono_reason`); 3 new `case_activity_kind` values (`referred`, `referral_accepted`, `referral_declined`)
   - [x] Migration `0005_phase6_referrals.sql` applied; total: 28 tables in dev
   - [x] Shared Zod: `referral` (`referralCreateInput`, `referralDecisionInput`, `referralLinkInput`, `referralLinkPatch`); lawyer profile gains pro-bono fields; `lawyerSearchQuery` gains `probono` + `chapterId`; `caseCreateInput` gains `referralLinkSlug` + `probonoReason`
