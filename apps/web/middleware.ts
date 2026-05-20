@@ -11,7 +11,10 @@ const isPublic = (pathname: string) =>
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasSession = !!getSessionCookie(request);
+  // Pass cookiePrefix so this matches the `ligala` prefix configured in
+  // @ligala/auth. Without it the helper looks for `better-auth.session_token`
+  // and fails to see our `ligala.session_token`.
+  const hasSession = !!getSessionCookie(request, { cookiePrefix: "ligala" });
 
   if (!hasSession && !isPublic(pathname)) {
     const url = request.nextUrl.clone();

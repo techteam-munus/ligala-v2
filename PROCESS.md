@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 1 — Auth foundation (functionally complete locally + local DB live; awaiting browser smoke test and deployed verification)
+- **Active phase:** Phase 1 — Auth foundation **DONE locally** (browser smoke test passed; awaiting AWS dev deploy)
 - **Last working session:** 2026-05-20
-- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7, both healthy) | AWS dev not yet | staging not yet | prod not yet
-- **Next action:** `pnpm dev` and exercise signup → signin → role dashboard in the browser. Then move to Phase 2 (lawyer onboarding).
+- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet
+- **Next action:** Phase 2 — lawyer onboarding (signup → lawyer profile → KYC submission → IDMeta webhook → office setup). AWS dev deploy can land in parallel whenever creds + Sentry project are ready.
 - **Blockers:** none
 
 ---
@@ -48,7 +48,7 @@
   - [x] Role-aware redirect (`roleHome`) for cross-portal navigation
   - [x] Local Postgres + Redis running via `docker compose up -d` (compose.yaml, both healthy in <15s)
   - [x] `pnpm db:migrate` applied (commit `86b6d25` added dotenv auto-loading; psql confirms 4 tables + user_role enum + FKs)
-  - [ ] Signup → signin → role dashboard flow exercised in browser at `localhost:3000`
+  - [x] Signup → signin → role dashboard flow exercised in browser at `localhost:3000` (Playwright, see Session Log)
   - [ ] Deployed smoke test against dev env
 - [ ] Phase 2 — Lawyer onboarding (signup → profile → KYC → IDMeta webhook → office setup)
 - [ ] Phase 3 — Client onboarding & lawyer discovery (search + Google Maps + public profiles)
@@ -61,6 +61,31 @@
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 3 (Phase 1 browser smoke test + local stack)
+
+- **Did:**
+  - `docker compose up -d` — Postgres 16 + Redis 7, both healthy in <15s. Round-tripped a Redis key as a sanity check.
+  - `pnpm db:migrate` — applied `0000_regular_rachel_grey.sql` against local Postgres (`packages/db/drizzle.config.ts` now loads `.env.local` via `dotenv`). Verified 4 tables + `user_role` enum + FKs.
+  - Wrote `.env.local` for `apps/web`, `apps/api`, `packages/db` (all gitignored; real 32-byte BETTER_AUTH_SECRET).
+  - `pnpm dev` — Next on :3000, Hono on :8787. Both `/health` and `/api/health` returned 200.
+  - Playwright walkthrough:
+    1. `/` → "Sign in" / "Create account" links render.
+    2. `/signup` → filled name/email/password, submitted. POST `/api/auth/sign-up/email` returned 200.
+    3. Auto-navigation to `/dashboard` → **first run failed**: middleware redirected to `/login?next=/dashboard` because `getSessionCookie(request)` was looking for `better-auth.session_token` but our `cookiePrefix: "ligala"` set it as `ligala.session_token`.
+    4. Fixed: middleware passes `{ cookiePrefix: "ligala" }` to `getSessionCookie`. Retried — `/dashboard` rendered "Welcome back, signed in as test@ligala.local (role: client)".
+    5. `/lawyer/dashboard` as a client → redirected back to `/dashboard` via the `(lawyer)` layout's role guard.
+    6. POST `/api/auth/sign-out` (with `Content-Type: application/json`) → 200, cookie cleared.
+    7. `/dashboard` while logged out → middleware redirected to `/login?next=/dashboard`.
+    8. Filled `/login`, submitted → 200, landed on `/dashboard`, role-correct render.
+  - Screenshot kept at `apps/web/.playwright-mcp/phase1-dashboard-after-signin.png` (gitignored if `.playwright-mcp` is ignored; otherwise rotate it).
+- **Did NOT:**
+  - Test the lawyer role end-to-end (would require flipping the test user's role via psql; the cross-role guard direction is symmetric so the inverse is covered by inspection).
+  - Cross-origin session sharing between web (:3000) and api (:8787). Phase 1 didn't require it; first cross-call lands in Phase 2 when the lawyer profile endpoint goes live.
+  - AWS dev deploy.
+- **Decisions made:**
+  - Middleware passes `{ cookiePrefix: "ligala" }` to `getSessionCookie`. Added below.
+- **Open questions:** none — Phase 1 is functionally complete locally.
 
 ### 2026-05-20 — Session 2 (Phase 1 auth foundation)
 
@@ -126,6 +151,7 @@
 - **2026-05-20 — Role on `user` table is a Postgres enum (`user_role`), not text.** Values: `client | lawyer | admin`. Why: enum gives DB-level integrity; tight value set means migration cost for new roles is acceptable. Mapped from Better Auth's `additionalFields` (which TS-types it as `string | null | undefined` regardless — we narrow at consumers).
 - **2026-05-20 — Edge middleware does cookie presence only; role gating lives in route group layouts.** Why: Better Auth's session resolution needs Node runtime (jose, DB). Layouts are server components that can call `getSession()` against the DB. Middleware handles the cheap "are you signed in?" check that catches 99% of unauthorized hits before they reach a layout.
 - **2026-05-20 — Local dev uses `docker compose` for Postgres 16 + Redis 7.** Why: parity with prod (Aurora Serverless v2 Postgres 16, ElastiCache Redis 7); zero-cost; survives `down`/`up` cycles via named volumes (`pgdata`, `redisdata`). `drizzle.config.ts` loads `.env.local` via `dotenv` so `pnpm db:migrate` works without manual env exports.
+- **2026-05-20 — Edge middleware passes `cookiePrefix: "ligala"` to `getSessionCookie`.** Why: Better Auth's helper defaults to the standard `better-auth.session_token` cookie name; our config sets a custom `cookiePrefix: "ligala"`, producing `ligala.session_token`. Without the prefix arg, middleware sees no session and 100% of signed-in users get redirected to `/login` (caught during the first Playwright run). **How to apply:** any reader of the session cookie outside the Better Auth instance itself must thread the same `cookiePrefix`. If we ever change the prefix, this is the second place to update.
 
 ---
 
