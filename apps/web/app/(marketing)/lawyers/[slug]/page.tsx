@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { api, ApiError } from "@/lib/api";
@@ -121,6 +122,14 @@ export default async function PublicLawyerProfile({
         {profile.bio ? (
           <p className="mt-4 max-w-2xl text-neutral-700">{profile.bio}</p>
         ) : null}
+        <div className="mt-6">
+          <Link
+            href={`/cases/new?lawyer=${encodeURIComponent(profile.slug)}` as never}
+            className="inline-block rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
+          >
+            Engage this lawyer
+          </Link>
+        </div>
       </header>
 
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">

@@ -11,7 +11,7 @@ export default async function ClientDashboard() {
         <code>{session?.user.role}</code>).
       </p>
 
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Link
           href="/lawyers"
           className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
@@ -19,6 +19,15 @@ export default async function ClientDashboard() {
           <h2 className="font-medium">Find a lawyer</h2>
           <p className="mt-1 text-sm text-neutral-600">
             Browse verified Philippine lawyers by practice area, jurisdiction, and city.
+          </p>
+        </Link>
+        <Link
+          href="/cases"
+          className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
+        >
+          <h2 className="font-medium">Your cases</h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Track engagements, sign terms, and follow case activity.
           </p>
         </Link>
         <Link
@@ -33,7 +42,7 @@ export default async function ClientDashboard() {
       </div>
 
       <p className="mt-8 text-sm text-neutral-500">
-        Phase 4 fills this dashboard with your cases, engagements, and account actions.
+        Phase 5 adds billing (invoices, PayMongo, PayPal).
       </p>
       <div className="mt-6">
         <Link

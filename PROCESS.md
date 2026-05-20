@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 3 — Client onboarding & lawyer discovery **DONE locally** (full API + Next.js SSR smoke test passed; awaiting browser walkthrough + AWS dev deploy)
+- **Active phase:** Phase 4 — Cases & engagements **DONE locally** (full 23-step API smoke test passed including paid + pro bono lifecycles; awaiting browser walkthrough + AWS dev deploy)
 - **Last working session:** 2026-05-20
 - **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet
-- **Next action:** browser walkthrough of `/lawyers` directory + `/lawyers/[slug]` public profile + client `/profile` flow once Playwright MCP is back, OR jump to Phase 4 (cases + engagements).
+- **Next action:** browser walkthrough of case flow (engage from public profile → submit → accept → sign → notes/attachments → close) once Playwright MCP is back, OR jump to Phase 5 (billing — invoices, PayMongo, PayPal, webhooks, discount codes).
 - **Blockers:** none
 
 ---
@@ -74,7 +74,21 @@
   - [ ] Browser walkthrough of the directory + public profile + client profile editor (Playwright MCP currently unavailable)
   - [ ] Real Google Maps Embed API + key (dev uses keyless `google.com/maps?q=…&output=embed` which works without an API key)
   - [ ] Deployed smoke test against dev env
-- [ ] Phase 4 — Cases & engagements (paid + pro bono unified, accept/decline, activities, notes)
+- [ ] **Phase 4 — Cases & engagements** *(23-step API smoke test passed; browser walkthrough pending)*
+  - [x] Drizzle schema: 5 new tables (case, case_activity, case_note, case_attachment, engagement) + 6 enums (case_type, case_status, case_activity_kind, case_note_visibility, engagement_rate_type, engagement_status)
+  - [x] Migration `0003_burly_rhino.sql` applied; total: 21 tables in dev
+  - [x] Shared Zod schemas: case (`caseCreateInput`, `caseDecisionInput`, `caseCloseInput`, `caseNoteInput`, `caseAttachmentInput`) + engagement (`engagementInput` with rate-type cross-field refine, `engagementDecisionInput`)
+  - [x] Hono `/cases`: list (role-scoped), POST (clients only, requires lawyer slug + verified KYC), GET/:id, POST/:id/decision (lawyer accept/decline, pro bono jumps to active), POST/:id/close (close=either-party when active, cancel=client-only pre-active), notes GET+POST with visibility filtering (`shared` for both, `lawyer` for lawyer-only, `client` for client-only — clients can't post lawyer-only and vice versa), attachments GET+POST, activities GET (append-only timeline written by every state-changing handler)
+  - [x] Hono `/engagements`: POST `/engagements/cases/:caseId` (lawyer sends terms, paid+accepted only), POST `/engagements/:id/decision` (client signs → engagement signed + case → active; client declines → engagement declined)
+  - [x] Next.js client portal: `/cases` (list), `/cases/new?lawyer=slug` (form), `/cases/[id]` (detail w/ sign/decline engagement, add note, attach file, cancel/close)
+  - [x] Next.js lawyer portal: `/lawyer/cases` (3-bucket inbox: pending / open / closed), `/lawyer/cases/[id]` (detail w/ accept/decline, send engagement, notes/attachments, close)
+  - [x] Shared `app/_components/case-detail.tsx` renders the same case view for both client + lawyer with role-conditional action sections (saves duplicating ~500 LOC)
+  - [x] "Engage this lawyer" CTA on `/lawyers/[slug]` → `/cases/new?lawyer=slug` (middleware redirects unauthed to /login?next=…)
+  - [x] Lawyer dashboard now shows pending/active case counts; client dashboard links to /cases
+  - [x] Full API smoke (`curl`, 23 checks): paid case lifecycle (create → accept → engagement sent → signed → active → notes (shared+lawyer-only, visibility-filtered) → attachment → close); pro bono (create → accept → straight-to-active); decline; ACL (outsider gets 403); state guard (re-decision after decline 409). DB verified.
+  - [ ] Browser walkthrough of the engage/decide/sign/close flow (Playwright MCP currently unavailable)
+  - [ ] Real S3 presigning for case attachments (dev stub same as KYC)
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 5 — Billing (invoices, PayMongo + PayPal + webhooks, discount codes)
 - [ ] Phase 6 — Referrals + pro bono polish (referral graph, IBP chapter integration)
 - [ ] Phase 7 — Admin portal (account oversight, verification approvals, discount mgmt)
@@ -83,6 +97,29 @@
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 6 (Phase 4 cases + engagements)
+
+- **Did:**
+  - Schema: 5 new aggregates (`case`, `case_activity`, `case_note`, `case_attachment`, `engagement`) + 6 enums in `packages/db/src/schema/cases.ts`. Migration `0003_burly_rhino.sql` applied; 21 tables total in dev.
+  - Shared Zod: `case.ts` + `engagement.ts` with cross-field refine (rate amount must match `rateType`).
+  - Hono `/cases`: role-scoped list, create (client + KYC-verified lawyer slug), decision (lawyer accept/decline; pro bono jumps to active), close (close=active only by either party; cancel=client-only pre-active), notes GET+POST with visibility filtering, attachments GET+POST (s3Key + metadata), activities GET (read-only timeline). Every state-changing handler writes a `case_activity` row via the `logActivity` helper.
+  - Hono `/engagements`: `POST /engagements/cases/:caseId` (lawyer sends, paid+accepted only) and `POST /engagements/:id/decision` (client signs → engagement signed + case active; or client declines).
+  - Next.js: `(client)/cases/{list,new,[id]}` + `(lawyer)/lawyer/cases/{list,[id]}`. Shared `app/_components/case-detail.tsx` renders the case view for both sides with role-conditional sections (saves ~500 LOC of duplicate UI). Client dashboard gains a "Your cases" tile; lawyer dashboard shows pending/active counts; public lawyer profile gains the "Engage this lawyer" CTA which routes to `/cases/new?lawyer=<slug>` (middleware redirects unauthed users to login with `next` set).
+  - 23-step curl smoke: paid (create → accept → engagement sent (hourly @ ₱2,500/hr) → client signs → status flips to active → client adds shared note → lawyer adds lawyer-only note → client sees 1 note, lawyer sees 2 → attachment added → outsider gets 403 → lawyer closes); pro bono (create → accept → jumps to active, no engagement); decline (lawyer declines → status=declined → re-decision returns 409). Full activity timeline (9 rows for the paid case) verified.
+- **Did NOT:**
+  - Browser walkthrough (Playwright MCP still down).
+  - Real S3 presigning for case attachments (same dev stub as KYC; flips when real S3 lands).
+  - Reopen / restart of closed cases (intentional — terminal status; reopening is a Phase 6+ polish item).
+  - Lawyer search "engage" deep linking to a draft case row (the form just pre-fills the lawyer slug; a "draft" concept would be Phase 6).
+  - Editing or deleting notes/attachments (append-only by design at MVP; deferred).
+- **Decisions made:**
+  - Shared `app/_components/case-detail.tsx` (Client Component, marked `"use client"`) used by both `(client)/cases/[id]` and `(lawyer)/lawyer/cases/[id]`. Why: 90% of the UI is identical between the two roles — header, engagement section, notes, attachments, timeline. The only role-specific bits are which action buttons render (lawyer-only Accept/Decline + Send-engagement, client-only Sign/Decline-engagement). One component with a `viewerRole` prop is much easier to keep in sync than two copies. **How to apply:** any future detail page that's shown to multiple roles with mostly identical chrome should follow the same pattern (one component + `viewerRole`), not duplicate.
+  - Append-only `case_activity` written by every state change. Why: gives both sides a complete, indelible timeline without needing to diff snapshots or parse audit logs in another system; payload as `jsonb` keeps the kind set small without losing context. **How to apply:** any new state mutation on a case MUST call `logActivity(...)` in the same handler; if you're adding a new kind, also add it to the `case_activity_kind` pgEnum (requires migration).
+  - Pro bono cases skip engagement: lawyer accept goes pending → active directly, with a second `activated` activity for clarity. Why: free legal work shouldn't gate on a signed fee agreement; an explicit engagement row would just be empty/zero-rate noise. Re-introduce only if Bar regulation requires a written pro bono engagement letter. **How to apply:** the decision handler checks `caseRow.type === "probono"` and writes two activities; engagement-creation path explicitly rejects pro bono cases (`engagement_not_applicable`).
+  - Rate amounts stored as integer cents (and contingency as basis points, 1%=100bps). Why: integer math is safe across JS/Postgres/JSON boundaries; floats accumulate error when discounted/multiplied; bps gives 0.01% precision which is more than enough for contingency tiers. **How to apply:** all payment-adjacent fields in Phase 5 (invoices, line items, discounts) follow the same integer-cents convention.
+  - Note visibility: `shared` | `lawyer` | `client`. Clients can't post `lawyer`-only; lawyers can't post `client`-only. The server enforces this even though the UI hides the options — never trust the form. **How to apply:** any future per-role-private content (e.g., internal billing memos) reuses the same enum and the same `!includes(...visibilityForRole)` filter on read.
+- **Open questions:** none — the pre-existing Playwright UI gap remains the only outstanding item.
 
 ### 2026-05-20 — Session 5 (Phase 3 client onboarding + lawyer discovery)
 
@@ -224,6 +261,11 @@
 - **2026-05-20 — "Visible in directory" = newest `kyc_submission` for the lawyer has `status='approved'`.** Why: lets a lawyer drop off the directory automatically if they resubmit and the new submission is pending or rejected, even though they had an earlier approval. Using "any approved row" would let a fraud rescind never go dark. **How to apply:** every public read path that surfaces a lawyer must apply the freshest-row filter, not exists-approved.
 - **2026-05-20 — `client_profile` is lazy-created on first GET.** Why: keeps signup cheap, no backfill needed for any pre-existing users, and decouples the profile aggregate from auth. **How to apply:** future per-user shadow aggregates (notification prefs, billing prefs) follow the same lazy-create pattern; never assume the profile row exists before the user opens the relevant page.
 - **2026-05-20 — Google Maps embed via keyless `google.com/maps?q=…&output=embed`.** Why: works in dev without provisioning a key, no quota tracking, no rotation risk. Production swap is one helper (`mapsEmbedSrc` in `apps/web/app/(marketing)/lawyers/[slug]/page.tsx`) — point at the Embed API URL when the key is in Secrets Manager. **How to apply:** all map URL construction must go through that helper so the cutover is one file; never reference a key in client code (use a domain-restricted key + server-side URL building).
+- **2026-05-20 — Case detail page is one shared Client Component (`app/_components/case-detail.tsx`) with a `viewerRole` prop.** Why: ~90% of the UI is identical between client + lawyer views of a case (header, engagement panel, notes, attachments, timeline); only the action buttons differ. One component is easier to keep in sync than two duplicate ~500 LOC files. **How to apply:** detail pages shown to multiple roles with mostly identical chrome should follow the same pattern; the `_components` folder is private (Next.js excludes underscore-prefixed folders from routing) and is the home for non-routed shared UI.
+- **2026-05-20 — Append-only `case_activity` written by every state change.** Why: gives both parties an indelible timeline without diff-ing snapshots; `payload` is `jsonb` so the kind enum stays small without losing context. **How to apply:** every handler that mutates a case calls `logActivity(caseId, actorUserId, kind, payload)`; adding a new kind requires adding the value to the `case_activity_kind` pgEnum + a migration.
+- **2026-05-20 — Pro bono cases skip the engagement row.** Why: free legal work shouldn't gate on a signed fee agreement; an empty/zero-rate engagement is noise. The decision handler writes both `accepted` and `activated` activities for clarity. **How to apply:** any future `paid`-only behaviour gates on `caseRow.type === "paid"`; the engagement create endpoint explicitly returns `engagement_not_applicable` for pro bono.
+- **2026-05-20 — Money fields are integer cents; contingency is basis points (1% = 100 bps).** Why: integer math is safe across JS/Postgres/JSON boundaries; floats accumulate error when discounted; bps gives 0.01% precision (way more than needed). **How to apply:** all payment-adjacent fields in Phase 5 (invoices, line items, discounts, refunds) use the same integer-cents + bps convention. Never store currency as `numeric(10,2)` or float.
+- **2026-05-20 — Note visibility enforced server-side, not just hidden in UI.** Why: a malicious client could POST `visibility: "lawyer"` and try to read everyone else's private notes; the server rejects on write (clients can't post `lawyer`, lawyers can't post `client`) AND filters on read. **How to apply:** any future per-role-private content reuses the same enum + the `(includes(allowed) OR author=self)` filter pattern.
 
 ---
 
@@ -247,6 +289,11 @@
 - **Public lawyer profile photo** — `lawyer_profile.profile_photo_s3_key` exists in schema but the public profile page doesn't render it yet. Needs read-side S3 presigning (or a CloudFront signed URL) once real S3 is wired.
 - **Geo/distance search** — City filter is plain ILIKE today. PostGIS + lat/lng radius can replace it once we have enough verified lawyers that "near me" is meaningful.
 - **Favorites + saved searches** — Deferred to Phase 6 polish. v1 had "saved lawyers" in StartPage; bring back only if user research shows demand.
+- **Case attachments via real S3 presigning** — Same dev stub as KYC (`/files/presign` returns a localhost upload URL). Flips when CoreStack provisions the uploads bucket.
+- **Reopen / restart closed cases** — Currently terminal. Add a `reopen` activity kind + transition if user research shows demand; ideally rare.
+- **Edit / delete notes + attachments** — Append-only at MVP. Edit-with-history is a Phase 6 polish if anyone asks (need a `case_note_revision` table to keep an audit trail).
+- **Engagement amendments** — One engagement per case; lawyer can't send a revised one if the first is signed. Real-world workflow may need amendment-as-new-engagement (Phase 6+).
+- **Multi-engagement / case bundling** — Each case has one lawyer + one engagement. Co-counsel and matter bundles are a future concern; revisit if firms ask.
 
 ---
 
