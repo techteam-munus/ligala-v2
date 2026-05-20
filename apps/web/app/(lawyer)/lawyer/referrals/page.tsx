@@ -36,7 +36,7 @@ export default async function LawyerReferralsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Referrals</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Hand cases off to another lawyer (conflict of interest, capacity,
         specialty). Also see signups attributed via your referral links.
       </p>
@@ -44,14 +44,14 @@ export default async function LawyerReferralsPage() {
       <OutboundForm />
 
       <section className="mt-10">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Inbound ({inbound.length})
         </h2>
         <ReferralsList items={inbound} side="inbound" meId={meId} />
       </section>
 
       <section className="mt-10">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Outbound ({outbound.length})
         </h2>
         <ReferralsList items={outbound} side="outbound" meId={meId} />

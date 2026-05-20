@@ -2,8 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { createCase } from "@/lib/actions/case";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Ref = { id: string; name: string };
+
+const SELECT_CLASS =
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 export function NewCaseForm({
   lawyerSlug,
@@ -59,34 +66,33 @@ export function NewCaseForm({
   return (
     <form onSubmit={submit} className="mt-6 space-y-4">
       <input type="hidden" name="lawyerSlug" value={form.lawyerSlug} />
-      <div>
-        <label htmlFor="type" className="block text-sm font-medium">Type</label>
+      <div className="space-y-1.5">
+        <Label htmlFor="type">Type</Label>
         <select
           id="type"
           value={form.type}
           onChange={(e) => setForm({ ...form, type: e.target.value as "paid" | "probono" })}
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+          className={SELECT_CLASS}
         >
           <option value="paid">Paid engagement</option>
           <option value="probono">Pro bono request</option>
         </select>
       </div>
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium">Title</label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="title">Title</Label>
+        <Input
           id="title"
           required
           minLength={3}
           maxLength={200}
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           placeholder="One-line summary"
         />
       </div>
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium">Description</label>
-        <textarea
+      <div className="space-y-1.5">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
           id="description"
           required
           minLength={10}
@@ -94,18 +100,17 @@ export function NewCaseForm({
           rows={6}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           placeholder="Background, what you need help with, timeline."
         />
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="practiceAreaId" className="block text-sm font-medium">Practice area</label>
+        <div className="space-y-1.5">
+          <Label htmlFor="practiceAreaId">Practice area</Label>
           <select
             id="practiceAreaId"
             value={form.practiceAreaId}
             onChange={(e) => setForm({ ...form, practiceAreaId: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+            className={SELECT_CLASS}
           >
             <option value="">— Not sure —</option>
             {practiceAreas.map((p) => (
@@ -113,13 +118,13 @@ export function NewCaseForm({
             ))}
           </select>
         </div>
-        <div>
-          <label htmlFor="jurisdictionId" className="block text-sm font-medium">Jurisdiction</label>
+        <div className="space-y-1.5">
+          <Label htmlFor="jurisdictionId">Jurisdiction</Label>
           <select
             id="jurisdictionId"
             value={form.jurisdictionId}
             onChange={(e) => setForm({ ...form, jurisdictionId: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+            className={SELECT_CLASS}
           >
             <option value="">— Not sure —</option>
             {jurisdictions.map((j) => (
@@ -129,28 +134,21 @@ export function NewCaseForm({
         </div>
       </div>
       {form.type === "probono" ? (
-        <div>
-          <label htmlFor="probonoReason" className="block text-sm font-medium">
-            Pro bono eligibility (optional)
-          </label>
-          <textarea
+        <div className="space-y-1.5">
+          <Label htmlFor="probonoReason">Pro bono eligibility (optional)</Label>
+          <Textarea
             id="probonoReason"
             value={form.probonoReason}
             onChange={(e) => setForm({ ...form, probonoReason: e.target.value })}
             rows={3}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
             placeholder="Indigency, household size, income, or other context."
           />
         </div>
       ) : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <Button type="submit" disabled={pending}>
         {pending ? "Submitting…" : "Submit case"}
-      </button>
+      </Button>
     </form>
   );
 }

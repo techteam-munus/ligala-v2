@@ -2,10 +2,15 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { roleHome } from "@/lib/role";
+import { PortalShell } from "@/app/_components/portal-shell";
 
 export default async function LawyerLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.user.role !== "lawyer") redirect(roleHome(session.user.role));
-  return <>{children}</>;
+  return (
+    <PortalShell variant="lawyer" userEmail={session.user.email}>
+      {children}
+    </PortalShell>
+  );
 }

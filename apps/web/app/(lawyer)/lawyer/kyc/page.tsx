@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { KycForm } from "./form";
+import { Card, CardContent } from "@/components/ui/card";
 
 type KycResponse = {
   submission: {
@@ -26,27 +27,29 @@ export default async function KycPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">KYC verification</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Upload a government ID, your bar certificate, and a selfie. We submit them to
         IDMeta for verification; you&apos;ll see status updates here.
       </p>
 
       {kyc.submission && (
-        <div className="mt-6 rounded border border-neutral-200 p-4">
-          <p className="text-sm">
-            Current status: <strong>{kyc.submission.status}</strong>
-            {kyc.submission.submittedAt &&
-              ` (submitted ${new Date(kyc.submission.submittedAt).toLocaleString()})`}
-          </p>
-          {kyc.submission.rejectReason && (
-            <p className="mt-2 text-sm text-red-700">
-              Reason: {kyc.submission.rejectReason}
+        <Card className="mt-6 gap-2 py-4">
+          <CardContent className="px-4">
+            <p className="text-sm">
+              Current status: <strong>{kyc.submission.status}</strong>
+              {kyc.submission.submittedAt &&
+                ` (submitted ${new Date(kyc.submission.submittedAt).toLocaleString()})`}
             </p>
-          )}
-          <p className="mt-2 text-xs text-neutral-500">
-            {kyc.documents.length} document{kyc.documents.length === 1 ? "" : "s"} on file.
-          </p>
-        </div>
+            {kyc.submission.rejectReason && (
+              <p className="mt-2 text-sm text-destructive">
+                Reason: {kyc.submission.rejectReason}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              {kyc.documents.length} document{kyc.documents.length === 1 ? "" : "s"} on file.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       <KycForm allowResubmit={kyc.submission?.status !== "submitted"} />

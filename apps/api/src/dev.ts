@@ -6,6 +6,9 @@ import "./load-env";
 
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
+import { initSentry } from "./lib/sentry";
+
+initSentry();
 
 const port = Number(process.env.PORT ?? 8787);
 const app = createApp();

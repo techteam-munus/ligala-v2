@@ -19,6 +19,7 @@ new AppStack(app, `${prefix}-App`, {
   envName,
   vpc: core.vpc,
   uploadsBucket: core.uploadsBucket,
+  alarmEmail: process.env.ALARM_EMAIL,
 });
 
 Tags.of(app).add("Project", "ligala-v2");

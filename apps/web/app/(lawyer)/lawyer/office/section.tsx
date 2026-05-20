@@ -8,6 +8,12 @@ import {
   saveOfficeSchedule,
   updateOffice,
 } from "@/lib/actions/lawyer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 
 type ScheduleEntry = {
   dayOfWeek: number;
@@ -119,7 +125,6 @@ export function OfficeSection({
           answer: newFaq.answer,
           sortOrder: faqs.length,
         });
-        // Server-revalidated path will rehydrate; for instant UX add locally too.
         setFaqs((prev) => [
           ...prev,
           { id: `local-${prev.length}`, ...newFaq, sortOrder: prev.length },
@@ -145,88 +150,83 @@ export function OfficeSection({
 
   return (
     <div className="mt-8 flex flex-col gap-10">
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       {savedNote && !error && (
         <p className="text-sm text-emerald-700">{savedNote}</p>
       )}
 
       <form onSubmit={onSubmitOffice} className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Details</h2>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Office name</span>
-          <input
-            type="text"
+        <div className="space-y-1.5">
+          <Label htmlFor="office-name">Office name</Label>
+          <Input
+            id="office-name"
             required
             value={office.name}
             onChange={(e) => setOffice({ ...office, name: e.target.value })}
-            className="rounded border border-neutral-300 px-3 py-2"
           />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Address</span>
-          <input
-            type="text"
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="office-address">Address</Label>
+          <Input
+            id="office-address"
             value={office.addressLine1 ?? ""}
             onChange={(e) => setOffice({ ...office, addressLine1: e.target.value })}
-            className="rounded border border-neutral-300 px-3 py-2"
           />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">City</span>
-            <input
-              type="text"
-              value={office.city ?? ""}
-              onChange={(e) => setOffice({ ...office, city: e.target.value })}
-              className="rounded border border-neutral-300 px-3 py-2"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">Region</span>
-            <input
-              type="text"
-              value={office.region ?? ""}
-              onChange={(e) => setOffice({ ...office, region: e.target.value })}
-              className="rounded border border-neutral-300 px-3 py-2"
-            />
-          </label>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">Phone</span>
-            <input
-              type="text"
+          <div className="space-y-1.5">
+            <Label htmlFor="office-city">City</Label>
+            <Input
+              id="office-city"
+              value={office.city ?? ""}
+              onChange={(e) => setOffice({ ...office, city: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="office-region">Region</Label>
+            <Input
+              id="office-region"
+              value={office.region ?? ""}
+              onChange={(e) => setOffice({ ...office, region: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="office-phone">Phone</Label>
+            <Input
+              id="office-phone"
               value={office.phone ?? ""}
               onChange={(e) => setOffice({ ...office, phone: e.target.value })}
-              className="rounded border border-neutral-300 px-3 py-2"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">Email</span>
-            <input
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="office-email">Email</Label>
+            <Input
+              id="office-email"
               type="email"
               value={office.email ?? ""}
               onChange={(e) => setOffice({ ...office, email: e.target.value })}
-              className="rounded border border-neutral-300 px-3 py-2"
             />
-          </label>
+          </div>
         </div>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Website</span>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="office-website">Website</Label>
+          <Input
+            id="office-website"
             type="url"
             value={office.website ?? ""}
             onChange={(e) => setOffice({ ...office, website: e.target.value })}
-            className="rounded border border-neutral-300 px-3 py-2"
           />
-        </label>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="self-start rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
+        </div>
+        <Button type="submit" disabled={isPending} className="self-start">
           {hasOffice ? "Save office" : "Create office"}
-        </button>
+        </Button>
       </form>
 
       <form onSubmit={onSubmitSchedule} className="flex flex-col gap-3">
@@ -239,7 +239,7 @@ export function OfficeSection({
           {schedule.map((entry, i) => (
             <div key={i} className="contents">
               <span>{DAYS[i]}</span>
-              <input
+              <Input
                 type="time"
                 value={entry.opensAt ?? ""}
                 disabled={entry.isClosed}
@@ -248,9 +248,9 @@ export function OfficeSection({
                   next[i] = { ...next[i]!, opensAt: e.target.value || null };
                   setSchedule(next);
                 }}
-                className="rounded border border-neutral-300 px-2 py-1"
+                className="h-8"
               />
-              <input
+              <Input
                 type="time"
                 value={entry.closesAt ?? ""}
                 disabled={entry.isClosed}
@@ -259,7 +259,7 @@ export function OfficeSection({
                   next[i] = { ...next[i]!, closesAt: e.target.value || null };
                   setSchedule(next);
                 }}
-                className="rounded border border-neutral-300 px-2 py-1"
+                className="h-8"
               />
               <input
                 type="checkbox"
@@ -269,19 +269,20 @@ export function OfficeSection({
                   next[i] = { ...next[i]!, isClosed: e.target.checked };
                   setSchedule(next);
                 }}
+                className="h-4 w-4 rounded border-input"
               />
             </div>
           ))}
         </div>
-        <button
+        <Button
           type="submit"
           disabled={isPending || !hasOffice}
-          className="self-start rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="self-start"
         >
           Save schedule
-        </button>
+        </Button>
         {!hasOffice && (
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-muted-foreground">
             Create the office first to save a schedule.
           </span>
         )}
@@ -291,48 +292,52 @@ export function OfficeSection({
         <h2 className="text-xl font-semibold">FAQs</h2>
         <ul className="flex flex-col gap-2">
           {faqs.map((faq) => (
-            <li key={faq.id} className="rounded border border-neutral-200 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium">{faq.question}</p>
-                  <p className="mt-1 text-sm text-neutral-600">{faq.answer}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onDeleteFaq(faq.id)}
-                  className="text-xs text-red-700 underline"
-                >
-                  Delete
-                </button>
-              </div>
+            <li key={faq.id}>
+              <Card className="gap-2 py-3">
+                <CardContent className="px-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{faq.question}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{faq.answer}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteFaq(faq.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>
 
         <form onSubmit={onAddFaq} className="flex flex-col gap-2">
-          <input
-            type="text"
+          <Input
             required
             placeholder="Question"
             value={newFaq.question}
             onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
-          <textarea
+          <Textarea
             required
             placeholder="Answer"
             value={newFaq.answer}
             onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
             rows={2}
-            className="rounded border border-neutral-300 px-3 py-2 text-sm"
           />
-          <button
+          <Button
             type="submit"
+            variant="outline"
             disabled={isPending || !hasOffice}
-            className="self-start rounded border border-neutral-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="self-start"
           >
             Add FAQ
-          </button>
+          </Button>
         </form>
       </section>
     </div>

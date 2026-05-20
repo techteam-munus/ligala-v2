@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 type User = {
   id: string;
@@ -29,6 +33,9 @@ function qs(params: Record<string, string | undefined>): string {
   return s ? `?${s}` : "";
 }
 
+const SELECT_CLASS =
+  "flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
@@ -57,95 +64,89 @@ export default async function AdminUsersPage({
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Users</h1>
-      <p className="mt-2 text-neutral-600">{resp.total} total.</p>
+      <p className="mt-2 text-muted-foreground">{resp.total} total.</p>
 
-      <form className="mt-6 flex flex-wrap gap-3 rounded border border-neutral-200 p-3">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="email or name"
-          className="flex-1 rounded border border-neutral-300 px-2 py-1.5 text-sm"
-        />
-        <select
-          name="role"
-          defaultValue={role}
-          className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-        >
-          <option value="">All roles</option>
-          <option value="client">client</option>
-          <option value="lawyer">lawyer</option>
-          <option value="admin">admin</option>
-        </select>
-        <select
-          name="status"
-          defaultValue={status}
-          className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-        >
-          <option value="">All statuses</option>
-          <option value="active">active</option>
-          <option value="paused">paused</option>
-          <option value="banned">banned</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white"
-        >
-          Filter
-        </button>
-        <Link href="/admin/users" className="text-xs text-neutral-500 underline">
-          Reset
-        </Link>
-      </form>
+      <Card className="mt-6 gap-0 py-3">
+        <CardContent className="px-3">
+          <form className="flex flex-wrap items-center gap-3">
+            <Input
+              name="q"
+              defaultValue={q}
+              placeholder="email or name"
+              className="flex-1"
+            />
+            <select name="role" defaultValue={role} className={SELECT_CLASS}>
+              <option value="">All roles</option>
+              <option value="client">client</option>
+              <option value="lawyer">lawyer</option>
+              <option value="admin">admin</option>
+            </select>
+            <select name="status" defaultValue={status} className={SELECT_CLASS}>
+              <option value="">All statuses</option>
+              <option value="active">active</option>
+              <option value="paused">paused</option>
+              <option value="banned">banned</option>
+            </select>
+            <Button type="submit" size="sm">
+              Filter
+            </Button>
+            <Link href="/admin/users" className="text-xs text-muted-foreground underline">
+              Reset
+            </Link>
+          </form>
+        </CardContent>
+      </Card>
 
-      <ul className="mt-6 divide-y divide-neutral-200 rounded border border-neutral-200">
-        {resp.items.map((u) => (
-          <li key={u.id} className="flex items-center justify-between px-3 py-2 text-sm">
-            <div>
-              <Link
-                href={`/admin/users/${u.id}` as never}
-                className="font-medium hover:underline"
-              >
-                {u.name}
-              </Link>
-              <p className="text-xs text-neutral-500">{u.email}</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <Badge>{u.role}</Badge>
-              <Badge tone={u.status === "active" ? "ok" : "warn"}>{u.status}</Badge>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <Card className="mt-6 gap-0 py-0">
+        <CardContent className="px-0">
+          <ul className="divide-y">
+            {resp.items.map((u) => (
+              <li key={u.id} className="flex items-center justify-between px-4 py-2 text-sm">
+                <div>
+                  <Link
+                    href={`/admin/users/${u.id}` as never}
+                    className="font-medium hover:underline"
+                  >
+                    {u.name}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">{u.email}</p>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <Badge variant="outline">{u.role}</Badge>
+                  <Badge
+                    variant="outline"
+                    className={
+                      u.status === "active"
+                        ? "border-green-600 text-green-700"
+                        : "border-amber-600 text-amber-700"
+                    }
+                  >
+                    {u.status}
+                  </Badge>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
       {totalPages > 1 ? (
         <nav className="mt-4 flex items-center justify-between text-sm">
-          <Link
-            href={`/admin/users${qs({ q, role, status, page: String(Math.max(1, page - 1)) })}` as never}
-            className={page <= 1 ? "pointer-events-none text-neutral-300" : "underline"}
-          >
-            ← Previous
-          </Link>
-          <span className="text-neutral-500">
+          <Button asChild variant="ghost" size="sm" disabled={page <= 1}>
+            <Link href={`/admin/users${qs({ q, role, status, page: String(Math.max(1, page - 1)) })}` as never}>
+              ← Previous
+            </Link>
+          </Button>
+          <span className="text-muted-foreground">
             Page {page} of {totalPages}
           </span>
-          <Link
-            href={`/admin/users${qs({ q, role, status, page: String(Math.min(totalPages, page + 1)) })}` as never}
-            className={page >= totalPages ? "pointer-events-none text-neutral-300" : "underline"}
-          >
-            Next →
-          </Link>
+          <Button asChild variant="ghost" size="sm" disabled={page >= totalPages}>
+            <Link href={`/admin/users${qs({ q, role, status, page: String(Math.min(totalPages, page + 1)) })}` as never}>
+              Next →
+            </Link>
+          </Button>
         </nav>
       ) : null}
     </main>
   );
-}
-
-function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "ok" | "warn" }) {
-  const color =
-    tone === "ok"
-      ? "border-green-600 text-green-700"
-      : tone === "warn"
-        ? "border-amber-600 text-amber-700"
-        : "border-neutral-300 text-neutral-700";
-  return <span className={`rounded-full border px-2 py-0.5 ${color}`}>{children}</span>;
 }

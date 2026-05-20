@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { api } from "@/lib/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "IBP chapters · Ligala",
@@ -32,7 +33,7 @@ export default async function ChaptersIndexPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">IBP chapters</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Browse the Integrated Bar of the Philippines chapters represented by
         verified lawyers on Ligala.
       </p>
@@ -40,17 +41,20 @@ export default async function ChaptersIndexPage() {
       <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {items.map((ch) => (
           <li key={ch.id}>
-            <Link
-              href={`/chapters/${ch.id}` as never}
-              className="block rounded border border-neutral-200 p-4 hover:border-neutral-500"
-            >
-              <p className="font-medium">{ch.name}</p>
-              <p className="mt-1 text-sm text-neutral-500">
-                {[ch.city, ch.region].filter(Boolean).join(" · ")}
-              </p>
-              <p className="mt-2 text-xs text-neutral-500">
-                {ch.memberCount} verified member{ch.memberCount === 1 ? "" : "s"}
-              </p>
+            <Link href={`/chapters/${ch.id}` as never} className="block">
+              <Card className="gap-2 py-4 transition-colors hover:border-foreground/40">
+                <CardHeader className="px-4">
+                  <CardTitle>{ch.name}</CardTitle>
+                  <CardDescription>
+                    {[ch.city, ch.region].filter(Boolean).join(" · ")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-4">
+                  <p className="text-xs text-muted-foreground">
+                    {ch.memberCount} verified member{ch.memberCount === 1 ? "" : "s"}
+                  </p>
+                </CardContent>
+              </Card>
             </Link>
           </li>
         ))}

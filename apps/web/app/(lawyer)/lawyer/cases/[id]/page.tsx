@@ -9,6 +9,8 @@ import {
   type Engagement,
   type Note,
 } from "@/app/_components/case-detail";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 async function load<T>(path: string): Promise<T | null> {
   try {
@@ -47,18 +49,21 @@ export default async function LawyerCasePage({
         activities={actsRes?.items ?? []}
       />
       {canInvoice ? (
-        <section className="mt-10 rounded border border-neutral-200 p-4">
-          <h2 className="font-medium">Billing</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            Create an invoice for time + expenses on this case.
-          </p>
-          <Link
-            href={`/lawyer/invoices/new?case=${head.case.id}` as never}
-            className="mt-3 inline-block rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white"
-          >
-            New invoice
-          </Link>
-        </section>
+        <Card className="mt-10 gap-2 py-4">
+          <CardHeader className="px-4">
+            <CardTitle className="text-base">Billing</CardTitle>
+            <CardDescription>
+              Create an invoice for time + expenses on this case.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4">
+            <Button asChild size="sm">
+              <Link href={`/lawyer/invoices/new?case=${head.case.id}` as never}>
+                New invoice
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
     </main>
   );

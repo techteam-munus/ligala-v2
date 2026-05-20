@@ -27,15 +27,17 @@ export default async function AdminKycPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">KYC inbox</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Pending submissions awaiting a manual decision (IDMeta fallback / admin override).
       </p>
       {items.length === 0 ? (
-        <p className="mt-8 text-sm text-neutral-500">Nothing pending — IDMeta is on top of it.</p>
+        <p className="mt-8 text-sm text-muted-foreground">
+          Nothing pending — IDMeta is on top of it.
+        </p>
       ) : (
         <KycInbox items={items} />
       )}
-      <p className="mt-8 text-xs text-neutral-500">
+      <p className="mt-8 text-xs text-muted-foreground">
         <Link href="/admin/dashboard" className="underline">← Admin dashboard</Link>
       </p>
     </main>

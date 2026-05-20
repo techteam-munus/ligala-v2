@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { saveClientProfile } from "@/lib/actions/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Initial = {
   displayName: string;
@@ -10,6 +13,9 @@ type Initial = {
   region: string;
   preferredLanguage: string;
 };
+
+const SELECT_CLASS =
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 export function ClientProfileForm({ initial }: { initial: Initial }) {
   const [form, setForm] = useState(initial);
@@ -38,40 +44,32 @@ export function ClientProfileForm({ initial }: { initial: Initial }) {
 
   return (
     <form onSubmit={submit} className="mt-6 space-y-4">
-      <div>
-        <label htmlFor="displayName" className="block text-sm font-medium">
-          Display name
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="displayName">Display name</Label>
+        <Input
           id="displayName"
           value={form.displayName}
           onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           placeholder="What lawyers should call you"
         />
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium">
-            Phone
-          </label>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
             id="phone"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
             placeholder="+63…"
           />
         </div>
-        <div>
-          <label htmlFor="preferredLanguage" className="block text-sm font-medium">
-            Preferred language
-          </label>
+        <div className="space-y-1.5">
+          <Label htmlFor="preferredLanguage">Preferred language</Label>
           <select
             id="preferredLanguage"
             value={form.preferredLanguage}
             onChange={(e) => setForm({ ...form, preferredLanguage: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+            className={SELECT_CLASS}
           >
             <option value="en">English</option>
             <option value="fil">Filipino</option>
@@ -80,41 +78,31 @@ export function ClientProfileForm({ initial }: { initial: Initial }) {
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="city" className="block text-sm font-medium">
-            City
-          </label>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="city">City</Label>
+          <Input
             id="city"
             value={form.city}
             onChange={(e) => setForm({ ...form, city: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           />
         </div>
-        <div>
-          <label htmlFor="region" className="block text-sm font-medium">
-            Region
-          </label>
-          <input
+        <div className="space-y-1.5">
+          <Label htmlFor="region">Region</Label>
+          <Input
             id="region"
             value={form.region}
             onChange={(e) => setForm({ ...form, region: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           />
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
+        <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save profile"}
-        </button>
+        </Button>
         {savedAt ? (
           <span className="text-xs text-green-700">Saved at {savedAt}</span>
         ) : null}
-        {error ? <span className="text-xs text-red-700">{error}</span> : null}
+        {error ? <span className="text-xs text-destructive">{error}</span> : null}
       </div>
     </form>
   );

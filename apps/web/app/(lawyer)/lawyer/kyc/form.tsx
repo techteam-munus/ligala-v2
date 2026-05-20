@@ -3,6 +3,9 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { submitKyc } from "@/lib/actions/lawyer";
 import type { KycSubmissionInput } from "@ligala/shared/schemas";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type DocKind = KycSubmissionInput["documents"][number]["kind"];
 
@@ -75,7 +78,7 @@ export function KycForm({ allowResubmit }: { allowResubmit: boolean }) {
 
   if (!allowResubmit) {
     return (
-      <p className="mt-6 text-sm text-neutral-500">
+      <p className="mt-6 text-sm text-muted-foreground">
         Submission is in review. You&apos;ll be able to resubmit if it&apos;s rejected.
       </p>
     );
@@ -84,30 +87,31 @@ export function KycForm({ allowResubmit }: { allowResubmit: boolean }) {
   return (
     <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
       {KINDS.map((k) => (
-        <label key={k.value} className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">{k.label}</span>
+        <div key={k.value} className="space-y-1.5">
+          <Label htmlFor={`file-${k.value}`}>{k.label}</Label>
           <input
+            id={`file-${k.value}`}
             type="file"
             accept="image/*,application/pdf"
             onChange={(e) => onFile(k.value, e)}
-            className="text-sm"
+            className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-secondary/80"
           />
           {docs[k.value] && (
-            <span className="text-xs text-emerald-700">Uploaded: {docs[k.value].split("/").pop()}</span>
+            <p className="text-xs text-emerald-700">Uploaded: {docs[k.value].split("/").pop()}</p>
           )}
-        </label>
+        </div>
       ))}
 
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       {result && <p className="text-sm text-emerald-700">{result}</p>}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="self-start rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      <Button type="submit" disabled={isPending} className="self-start">
         {isPending ? "Submitting..." : "Submit for verification"}
-      </button>
+      </Button>
     </form>
   );
 }

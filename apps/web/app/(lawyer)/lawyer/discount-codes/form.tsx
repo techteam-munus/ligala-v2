@@ -2,6 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { createDiscountCode } from "@/lib/actions/billing";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+const SELECT_CLASS =
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 export function DiscountCodesForm() {
   const [form, setForm] = useState({
@@ -49,105 +56,91 @@ export function DiscountCodesForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mt-6 rounded border border-neutral-200 p-4">
-      <h2 className="font-medium">Create a code</h2>
-      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div>
-          <label htmlFor="code" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Code
-          </label>
-          <input
-            id="code"
-            required
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-mono uppercase"
-            placeholder="LAUNCH10"
-          />
-        </div>
-        <div>
-          <label htmlFor="kind" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Kind
-          </label>
-          <select
-            id="kind"
-            value={form.kind}
-            onChange={(e) => setForm({ ...form, kind: e.target.value as "percent" | "fixed" })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-          >
-            <option value="percent">Percent off</option>
-            <option value="fixed">Fixed amount off</option>
-          </select>
-        </div>
-        {form.kind === "percent" ? (
-          <div>
-            <label htmlFor="percent" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Percent
-            </label>
-            <input
-              id="percent"
-              required
-              type="number"
-              min={0.01}
-              max={100}
-              step={0.01}
-              value={form.percent}
-              onChange={(e) => setForm({ ...form, percent: e.target.value })}
-              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-            />
+    <Card className="mt-6 gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Create a code</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <form onSubmit={submit}>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="code">Code</Label>
+              <Input
+                id="code"
+                required
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                className="font-mono uppercase"
+                placeholder="LAUNCH10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="kind">Kind</Label>
+              <select
+                id="kind"
+                value={form.kind}
+                onChange={(e) => setForm({ ...form, kind: e.target.value as "percent" | "fixed" })}
+                className={SELECT_CLASS}
+              >
+                <option value="percent">Percent off</option>
+                <option value="fixed">Fixed amount off</option>
+              </select>
+            </div>
+            {form.kind === "percent" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="percent">Percent</Label>
+                <Input
+                  id="percent"
+                  required
+                  type="number"
+                  min={0.01}
+                  max={100}
+                  step={0.01}
+                  value={form.percent}
+                  onChange={(e) => setForm({ ...form, percent: e.target.value })}
+                />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="fixed">Amount (PHP)</Label>
+                <Input
+                  id="fixed"
+                  required
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={form.fixed}
+                  onChange={(e) => setForm({ ...form, fixed: e.target.value })}
+                />
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="max">Max redemptions (optional)</Label>
+              <Input
+                id="max"
+                type="number"
+                min={1}
+                value={form.maxRedemptions}
+                onChange={(e) => setForm({ ...form, maxRedemptions: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="until">Valid until (optional)</Label>
+              <Input
+                id="until"
+                type="date"
+                value={form.validUntil}
+                onChange={(e) => setForm({ ...form, validUntil: e.target.value })}
+              />
+            </div>
           </div>
-        ) : (
-          <div>
-            <label htmlFor="fixed" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Amount (PHP)
-            </label>
-            <input
-              id="fixed"
-              required
-              type="number"
-              min={0.01}
-              step={0.01}
-              value={form.fixed}
-              onChange={(e) => setForm({ ...form, fixed: e.target.value })}
-              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-            />
-          </div>
-        )}
-        <div>
-          <label htmlFor="max" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Max redemptions (optional)
-          </label>
-          <input
-            id="max"
-            type="number"
-            min={1}
-            value={form.maxRedemptions}
-            onChange={(e) => setForm({ ...form, maxRedemptions: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="until" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-            Valid until (optional)
-          </label>
-          <input
-            id="until"
-            type="date"
-            value={form.validUntil}
-            onChange={(e) => setForm({ ...form, validUntil: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-          />
-        </div>
-      </div>
-      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="mt-3 text-sm text-green-700">Created.</p> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-4 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {pending ? "Creating…" : "Create code"}
-      </button>
-    </form>
+          {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+          {success ? <p className="mt-3 text-sm text-green-700">Created.</p> : null}
+          <Button type="submit" disabled={pending} className="mt-4">
+            {pending ? "Creating…" : "Create code"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

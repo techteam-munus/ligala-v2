@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
 
 type CaseRow = {
   id: string;
@@ -20,7 +21,6 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
 export default async function LawyerCasesPage() {
   const { items } = await safe<{ items: CaseRow[] }>("/cases", { items: [] });
 
-  // Split incoming pending from everything else for a clear inbox feel.
   const pending = items.filter((c) => c.status === "pending");
   const open = items.filter((c) => ["accepted", "active"].includes(c.status));
   const closed = items.filter((c) =>
@@ -49,30 +49,31 @@ function Bucket({
 }) {
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+      <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
         {title} ({items.length})
       </h2>
       {items.length === 0 ? (
-        <p className="mt-2 text-sm text-neutral-500">{emptyHint}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{emptyHint}</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {items.map((c) => (
             <li key={c.id}>
-              <Link
-                href={`/lawyer/cases/${c.id}` as never}
-                className="block rounded border border-neutral-200 p-3 hover:border-neutral-400"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{c.title}</p>
-                    <p className="mt-1 text-xs uppercase tracking-wide text-neutral-500">
-                      {c.type} · {c.status}
-                    </p>
-                  </div>
-                  <span className="text-xs text-neutral-500">
-                    {new Date(c.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
+              <Link href={`/lawyer/cases/${c.id}` as never} className="block">
+                <Card className="gap-0 py-3 transition-colors hover:border-foreground/40">
+                  <CardContent className="px-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{c.title}</p>
+                        <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                          {c.type} · {c.status}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(c.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             </li>
           ))}

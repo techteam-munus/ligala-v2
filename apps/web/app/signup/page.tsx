@@ -2,8 +2,20 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -11,12 +23,19 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const mismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
     setSubmitting(true);
     const result = await signUp.email({ name, email, password });
     setSubmitting(false);
@@ -24,74 +43,138 @@ export default function SignupPage() {
       setError(result.error.message ?? "Sign up failed");
       return;
     }
-    // New accounts default to role=client, so /dashboard is correct.
     router.push("/dashboard");
     router.refresh();
   }
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 px-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-        <p className="mt-1 text-sm text-neutral-600">
-          Already have one?{" "}
-          <Link href="/login" className="font-medium underline">
-            Sign in
-          </Link>
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-[#eef6f3] p-6 md:p-10">
+      <div className="flex w-full max-w-md flex-col gap-6">
+        <Link href="/" className="flex items-center gap-2 self-center">
+          <Image
+            src="/ligala-logo.svg"
+            alt=""
+            aria-hidden
+            width={25}
+            height={16}
+            priority
+            className="h-7 w-auto shrink-0"
+          />
+          <Image
+            src="/ligala-text.svg"
+            alt="Ligala"
+            width={68}
+            height={22}
+            priority
+            className="h-6 w-auto"
+          />
+        </Link>
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Create your account</CardTitle>
+            <CardDescription>
+              Enter your email below to create your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={onSubmit} className="grid gap-6">
+              <div className="grid gap-3">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  required
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-3">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="m@example.com"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      required
+                      autoComplete="new-password"
+                      minLength={8}
+                      aria-invalid={mismatch || undefined}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {mismatch ? (
+                  <p className="text-sm text-destructive">
+                    Passwords do not match.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Must be at least 8 characters long.
+                  </p>
+                )}
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={submitting || mismatch}
+              >
+                {submitting ? "Creating account…" : "Create Account"}
+              </Button>
+
+              <div className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+        <p className="text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-foreground">
+          By clicking continue, you agree to our{" "}
+          <Link href="/terms">Terms of Service</Link> and{" "}
+          <Link href="/privacy">Privacy Policy</Link>.
         </p>
       </div>
-
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Name</span>
-          <input
-            type="text"
-            required
-            autoComplete="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="rounded border border-neutral-300 px-3 py-2"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-neutral-300 px-3 py-2"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Password</span>
-          <input
-            type="password"
-            required
-            autoComplete="new-password"
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-neutral-300 px-3 py-2"
-          />
-          <span className="text-xs text-neutral-500">At least 8 characters.</span>
-        </label>
-
-        {error && (
-          <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {submitting ? "Creating account..." : "Create account"}
-        </button>
-      </form>
-    </main>
+    </div>
   );
 }

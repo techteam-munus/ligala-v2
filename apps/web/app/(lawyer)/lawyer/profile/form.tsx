@@ -2,6 +2,12 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { saveLawyerProfile } from "@/lib/actions/lawyer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Ref = { id: string; name: string };
 
@@ -15,6 +21,9 @@ type Initial = {
   probonoAvailable: boolean;
   probonoStatement: string;
 };
+
+const SELECT_CLASS =
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 export function LawyerProfileForm({
   initial,
@@ -74,36 +83,35 @@ export function LawyerProfileForm({
 
   return (
     <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Public URL slug</span>
-        <input
-          type="text"
+      <div className="space-y-1.5">
+        <Label htmlFor="slug">Public URL slug</Label>
+        <Input
+          id="slug"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           placeholder="juan-dela-cruz"
-          className="rounded border border-neutral-300 px-3 py-2"
         />
-        <span className="text-xs text-neutral-500">
+        <p className="text-xs text-muted-foreground">
           Lowercase letters, digits, hyphens.
-        </span>
-      </label>
+        </p>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Bar number</span>
-        <input
-          type="text"
+      <div className="space-y-1.5">
+        <Label htmlFor="barNumber">Bar number</Label>
+        <Input
+          id="barNumber"
           value={barNumber}
           onChange={(e) => setBarNumber(e.target.value)}
-          className="rounded border border-neutral-300 px-3 py-2"
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">IBP chapter</span>
+      <div className="space-y-1.5">
+        <Label htmlFor="ibpChapterId">IBP chapter</Label>
         <select
+          id="ibpChapterId"
           value={ibpChapterId}
           onChange={(e) => setIbpChapterId(e.target.value)}
-          className="rounded border border-neutral-300 px-3 py-2"
+          className={SELECT_CLASS}
         >
           <option value="">— select —</option>
           {ibpChapters.map((ch) => (
@@ -112,17 +120,17 @@ export function LawyerProfileForm({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Bio</span>
-        <textarea
+      <div className="space-y-1.5">
+        <Label htmlFor="bio">Bio</Label>
+        <Textarea
+          id="bio"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           rows={4}
-          className="rounded border border-neutral-300 px-3 py-2"
         />
-      </label>
+      </div>
 
       <fieldset>
         <legend className="text-sm font-medium">Practice areas</legend>
@@ -133,6 +141,7 @@ export function LawyerProfileForm({
                 type="checkbox"
                 checked={practiceAreaIds.has(pa.id)}
                 onChange={() => toggle(practiceAreaIds, setPracticeAreaIds, pa.id)}
+                className="h-4 w-4 rounded border-input"
               />
               {pa.name}
             </label>
@@ -149,6 +158,7 @@ export function LawyerProfileForm({
                 type="checkbox"
                 checked={jurisdictionIds.has(j.id)}
                 onChange={() => toggle(jurisdictionIds, setJurisdictionIds, j.id)}
+                className="h-4 w-4 rounded border-input"
               />
               {j.name}
             </label>
@@ -156,41 +166,46 @@ export function LawyerProfileForm({
         </div>
       </fieldset>
 
-      <fieldset className="rounded border border-neutral-200 p-3">
-        <legend className="px-1 text-sm font-medium">Pro bono</legend>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={probonoAvailable}
-            onChange={(e) => setProbonoAvailable(e.target.checked)}
-          />
-          I&apos;m open to pro bono cases.
-        </label>
-        <label className="mt-3 flex flex-col gap-1 text-sm">
-          <span className="font-medium">Pro bono note (public)</span>
-          <textarea
-            value={probonoStatement}
-            onChange={(e) => setProbonoStatement(e.target.value)}
-            rows={2}
-            placeholder="Eligibility, hours per month, etc."
-            className="rounded border border-neutral-300 px-3 py-2"
-            disabled={!probonoAvailable}
-          />
-        </label>
-      </fieldset>
+      <Card>
+        <CardHeader className="px-4">
+          <CardTitle className="text-base">Pro bono</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={probonoAvailable}
+              onChange={(e) => setProbonoAvailable(e.target.checked)}
+              className="h-4 w-4 rounded border-input"
+            />
+            I&apos;m open to pro bono cases.
+          </label>
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="probonoStatement">Pro bono note (public)</Label>
+            <Textarea
+              id="probonoStatement"
+              value={probonoStatement}
+              onChange={(e) => setProbonoStatement(e.target.value)}
+              rows={2}
+              placeholder="Eligibility, hours per month, etc."
+              disabled={!probonoAvailable}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       {savedAt && !error && (
         <p className="text-sm text-emerald-700">Saved at {savedAt}.</p>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="self-start rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      <Button type="submit" disabled={isPending} className="self-start">
         {isPending ? "Saving..." : "Save profile"}
-      </button>
+      </Button>
     </form>
   );
 }

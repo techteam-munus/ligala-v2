@@ -1,0 +1,42 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Ligala" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e5]
+      - img "Ligala" [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: Welcome back
+        - generic [ref=e10]: Login with your Apple or Google account
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - button "Login with Apple" [disabled]:
+            - img
+            - text: Login with Apple
+          - button "Login with Google" [disabled]:
+            - img
+            - text: Login with Google
+        - generic [ref=e14]: Or continue with
+        - generic [ref=e16]:
+          - generic [ref=e17]: Email
+          - textbox "Email" [ref=e18]:
+            - /placeholder: m@example.com
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - generic [ref=e21]: Password
+            - button "Forgot your password?" [disabled] [ref=e22]
+          - textbox "Password" [ref=e23]
+        - button "Login" [ref=e24]
+        - generic [ref=e25]:
+          - text: Don't have an account?
+          - link "Sign up" [ref=e26] [cursor=pointer]:
+            - /url: /signup
+    - paragraph [ref=e27]:
+      - text: By clicking continue, you agree to our
+      - link "Terms of Service" [ref=e28] [cursor=pointer]:
+        - /url: /terms
+      - text: and
+      - link "Privacy Policy" [ref=e29] [cursor=pointer]:
+        - /url: /privacy
+      - text: .
+  - region "Notifications alt+T"

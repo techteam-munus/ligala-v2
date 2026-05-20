@@ -2,6 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { createReferral } from "@/lib/actions/referral";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function OutboundForm() {
   const [slug, setSlug] = useState("");
@@ -33,52 +38,55 @@ export function OutboundForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-6 rounded border border-neutral-200 p-4">
-      <h2 className="font-medium">Refer a case</h2>
-      <p className="mt-1 text-xs text-neutral-500">
-        Recipient must be a KYC-verified lawyer. Attach a case id to hand off
-        the case on acceptance.
-      </p>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Recipient lawyer slug</span>
-          <input
-            required
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="atty-final"
-            className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Case id (optional)</span>
-          <input
-            value={caseId}
-            onChange={(e) => setCaseId(e.target.value)}
-            placeholder="uuid…"
-            className="rounded border border-neutral-300 px-2 py-1.5 text-sm font-mono"
-          />
-        </label>
-      </div>
-      <label className="mt-3 flex flex-col gap-1 text-sm">
-        <span className="font-medium">Note (optional)</span>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-          className="rounded border border-neutral-300 px-3 py-2 text-sm"
-          placeholder="Why this lawyer, what's been discussed already…"
-        />
-      </label>
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      {okAt ? <p className="mt-2 text-sm text-green-700">Referral sent at {okAt}.</p> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-4 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {pending ? "Sending…" : "Send referral"}
-      </button>
-    </form>
+    <Card className="mt-6 gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Refer a case</CardTitle>
+        <CardDescription>
+          Recipient must be a KYC-verified lawyer. Attach a case id to hand off
+          the case on acceptance.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-4">
+        <form onSubmit={onSubmit}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="ref-slug">Recipient lawyer slug</Label>
+              <Input
+                id="ref-slug"
+                required
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="atty-final"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ref-case">Case id (optional)</Label>
+              <Input
+                id="ref-case"
+                value={caseId}
+                onChange={(e) => setCaseId(e.target.value)}
+                placeholder="uuid…"
+                className="font-mono"
+              />
+            </div>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="ref-note">Note (optional)</Label>
+            <Textarea
+              id="ref-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder="Why this lawyer, what's been discussed already…"
+            />
+          </div>
+          {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+          {okAt ? <p className="mt-2 text-sm text-green-700">Referral sent at {okAt}.</p> : null}
+          <Button type="submit" disabled={pending} className="mt-4">
+            {pending ? "Sending…" : "Send referral"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

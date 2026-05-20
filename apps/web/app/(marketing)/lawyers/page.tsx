@@ -1,6 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Find a lawyer · Ligala",
@@ -45,6 +50,9 @@ function qs(params: Record<string, string | undefined>): string {
   const s = sp.toString();
   return s ? `?${s}` : "";
 }
+
+const SELECT_CLASS =
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
 export default async function LawyersDirectoryPage({
   searchParams,
@@ -93,169 +101,149 @@ export default async function LawyersDirectoryPage({
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Find a lawyer</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         {results.total} verified {results.total === 1 ? "lawyer" : "lawyers"} on Ligala.
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-[260px_1fr]">
         <aside>
-          <form className="space-y-4 rounded border border-neutral-200 p-4">
-            <div>
-              <label htmlFor="q" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Name or bio
-              </label>
-              <input
-                id="q"
-                name="q"
-                defaultValue={q}
-                className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-                placeholder="e.g. Cruz"
-              />
-            </div>
-            <div>
-              <label htmlFor="practiceAreaId" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Practice area
-              </label>
-              <select
-                id="practiceAreaId"
-                name="practiceAreaId"
-                defaultValue={practiceAreaId}
-                className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {practice.items.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="jurisdictionId" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Jurisdiction
-              </label>
-              <select
-                id="jurisdictionId"
-                name="jurisdictionId"
-                defaultValue={jurisdictionId}
-                className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {jurisdictions.items.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {j.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="city" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-                City
-              </label>
-              <input
-                id="city"
-                name="city"
-                defaultValue={city}
-                className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-                placeholder="e.g. Makati"
-              />
-            </div>
-            <div>
-              <label htmlFor="chapterId" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
-                IBP chapter
-              </label>
-              <select
-                id="chapterId"
-                name="chapterId"
-                defaultValue={chapterId}
-                className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-              >
-                <option value="">All</option>
-                {chapters.items.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="probono"
-                value="true"
-                defaultChecked={probono === "true"}
-              />
-              Accepts pro bono
-            </label>
-            <button
-              type="submit"
-              className="w-full rounded bg-neutral-900 px-3 py-2 text-sm font-medium text-white"
-            >
-              Search
-            </button>
-            <Link
-              href="/lawyers"
-              className="block text-center text-xs text-neutral-500 underline"
-            >
-              Reset
-            </Link>
-          </form>
+          <Card>
+            <CardContent className="px-4">
+              <form className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="q">Name or bio</Label>
+                  <Input id="q" name="q" defaultValue={q} placeholder="e.g. Cruz" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="practiceAreaId">Practice area</Label>
+                  <select
+                    id="practiceAreaId"
+                    name="practiceAreaId"
+                    defaultValue={practiceAreaId}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="">All</option>
+                    {practice.items.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="jurisdictionId">Jurisdiction</Label>
+                  <select
+                    id="jurisdictionId"
+                    name="jurisdictionId"
+                    defaultValue={jurisdictionId}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="">All</option>
+                    {jurisdictions.items.map((j) => (
+                      <option key={j.id} value={j.id}>
+                        {j.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="city">City</Label>
+                  <Input id="city" name="city" defaultValue={city} placeholder="e.g. Makati" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="chapterId">IBP chapter</Label>
+                  <select
+                    id="chapterId"
+                    name="chapterId"
+                    defaultValue={chapterId}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="">All</option>
+                    {chapters.items.map((ch) => (
+                      <option key={ch.id} value={ch.id}>
+                        {ch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="probono"
+                    value="true"
+                    defaultChecked={probono === "true"}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  Accepts pro bono
+                </label>
+                <Button type="submit" className="w-full">
+                  Search
+                </Button>
+                <Link
+                  href="/lawyers"
+                  className="block text-center text-xs text-muted-foreground underline"
+                >
+                  Reset
+                </Link>
+              </form>
+            </CardContent>
+          </Card>
         </aside>
 
         <section>
           {results.items.length === 0 ? (
-            <p className="rounded border border-dashed border-neutral-300 p-8 text-center text-neutral-500">
-              No lawyers match these filters yet.
-            </p>
+            <Card className="border-dashed">
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No lawyers match these filters yet.
+              </CardContent>
+            </Card>
           ) : (
             <ul className="space-y-3">
               {results.items.map((l) => (
-                <li
-                  key={l.slug}
-                  className="rounded border border-neutral-200 p-4 hover:border-neutral-400"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <Link
-                        href={`/lawyers/${l.slug}` as never}
-                        className="text-lg font-medium hover:underline"
-                      >
-                        {l.name}
-                      </Link>
-                      {l.city || l.region ? (
-                        <p className="text-sm text-neutral-500">
-                          {[l.city, l.region].filter(Boolean).join(", ")}
-                        </p>
-                      ) : null}
-                      {l.bio ? (
-                        <p className="mt-2 line-clamp-2 text-sm text-neutral-700">{l.bio}</p>
-                      ) : null}
-                      {l.practiceAreas.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {l.practiceAreas.slice(0, 4).map((p) => (
-                            <span
-                              key={p.id}
-                              className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700"
-                            >
-                              {p.name}
-                            </span>
-                          ))}
+                <li key={l.slug}>
+                  <Card className="gap-2 py-4 transition-colors hover:border-foreground/40">
+                    <CardContent className="px-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <Link
+                            href={`/lawyers/${l.slug}` as never}
+                            className="text-lg font-medium hover:underline"
+                          >
+                            {l.name}
+                          </Link>
+                          {l.city || l.region ? (
+                            <p className="text-sm text-muted-foreground">
+                              {[l.city, l.region].filter(Boolean).join(", ")}
+                            </p>
+                          ) : null}
+                          {l.bio ? (
+                            <p className="mt-2 line-clamp-2 text-sm">{l.bio}</p>
+                          ) : null}
+                          {l.practiceAreas.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap gap-1">
+                              {l.practiceAreas.slice(0, 4).map((p) => (
+                                <Badge key={p.id} variant="secondary">
+                                  {p.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {l.verified ? (
-                        <span className="rounded-full border border-green-600 px-2 py-0.5 text-xs font-medium text-green-700">
-                          Verified
-                        </span>
-                      ) : null}
-                      {l.probonoAvailable ? (
-                        <span className="rounded-full border border-amber-600 px-2 py-0.5 text-xs font-medium text-amber-700">
-                          Pro bono
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          {l.verified ? (
+                            <Badge variant="outline" className="border-green-600 text-green-700">
+                              Verified
+                            </Badge>
+                          ) : null}
+                          {l.probonoAvailable ? (
+                            <Badge variant="outline" className="border-amber-600 text-amber-700">
+                              Pro bono
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </li>
               ))}
             </ul>
@@ -263,21 +251,23 @@ export default async function LawyersDirectoryPage({
 
           {totalPages > 1 ? (
             <nav className="mt-6 flex items-center justify-between text-sm">
-              <Link
-                href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, probono, chapterId, page: String(Math.max(1, page - 1)) })}` as never}
-                className={page <= 1 ? "pointer-events-none text-neutral-300" : "text-neutral-700 underline"}
-              >
-                ← Previous
-              </Link>
-              <span className="text-neutral-500">
+              <Button asChild variant="ghost" size="sm" disabled={page <= 1}>
+                <Link
+                  href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, probono, chapterId, page: String(Math.max(1, page - 1)) })}` as never}
+                >
+                  ← Previous
+                </Link>
+              </Button>
+              <span className="text-muted-foreground">
                 Page {page} of {totalPages}
               </span>
-              <Link
-                href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, probono, chapterId, page: String(Math.min(totalPages, page + 1)) })}` as never}
-                className={page >= totalPages ? "pointer-events-none text-neutral-300" : "text-neutral-700 underline"}
-              >
-                Next →
-              </Link>
+              <Button asChild variant="ghost" size="sm" disabled={page >= totalPages}>
+                <Link
+                  href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, probono, chapterId, page: String(Math.min(totalPages, page + 1)) })}` as never}
+                >
+                  Next →
+                </Link>
+              </Button>
             </nav>
           ) : null}
         </section>

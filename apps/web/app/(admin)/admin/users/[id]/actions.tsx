@@ -2,6 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { setUserRole, setUserStatus } from "@/lib/actions/admin";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Status = "active" | "paused" | "banned";
 type Role = "client" | "lawyer" | "admin";
@@ -59,61 +63,71 @@ export function UserActions({
   }
 
   return (
-    <section className="mt-6 rounded border border-neutral-200 p-4">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
-        Actions
-      </h2>
-      <label className="mt-3 flex flex-col gap-1 text-sm">
-        <span className="font-medium">Reason (required for any change)</span>
-        <input
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Why is this change being made?"
-          className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-        />
-      </label>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={pending || currentStatus === "active"}
-          onClick={() => changeStatus("active")}
-          className="rounded border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-40"
-        >
-          Restore
-        </button>
-        <button
-          type="button"
-          disabled={pending || currentStatus === "paused"}
-          onClick={() => changeStatus("paused")}
-          className="rounded border border-amber-500 px-3 py-1.5 text-sm text-amber-700 disabled:opacity-40"
-        >
-          Pause (writes blocked)
-        </button>
-        <button
-          type="button"
-          disabled={pending || currentStatus === "banned"}
-          onClick={() => changeStatus("banned")}
-          className="rounded border border-red-500 px-3 py-1.5 text-sm text-red-700 disabled:opacity-40"
-        >
-          Ban (all access blocked)
-        </button>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-xs uppercase tracking-wide text-neutral-500">Role:</span>
-        {(["client", "lawyer", "admin"] as Role[]).map((r) => (
-          <button
-            key={r}
+    <Card className="mt-6 gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Actions
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="reason">Reason (required for any change)</Label>
+          <Input
+            id="reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Why is this change being made?"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
             type="button"
-            disabled={pending || r === currentRole}
-            onClick={() => changeRole(r)}
-            className="rounded border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-40"
+            variant="outline"
+            size="sm"
+            disabled={pending || currentStatus === "active"}
+            onClick={() => changeStatus("active")}
           >
-            {r}
-          </button>
-        ))}
-      </div>
-      {err ? <p className="mt-2 text-sm text-red-700">{err}</p> : null}
-      {ok ? <p className="mt-2 text-sm text-green-700">{ok}</p> : null}
-    </section>
+            Restore
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending || currentStatus === "paused"}
+            onClick={() => changeStatus("paused")}
+            className="border-amber-500 text-amber-700 hover:text-amber-800"
+          >
+            Pause (writes blocked)
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending || currentStatus === "banned"}
+            onClick={() => changeStatus("banned")}
+            className="border-destructive text-destructive hover:text-destructive"
+          >
+            Ban (all access blocked)
+          </Button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">Role:</span>
+          {(["client", "lawyer", "admin"] as Role[]).map((r) => (
+            <Button
+              key={r}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pending || r === currentRole}
+              onClick={() => changeRole(r)}
+            >
+              {r}
+            </Button>
+          ))}
+        </div>
+        {err ? <p className="mt-2 text-sm text-destructive">{err}</p> : null}
+        {ok ? <p className="mt-2 text-sm text-green-700">{ok}</p> : null}
+      </CardContent>
+    </Card>
   );
 }

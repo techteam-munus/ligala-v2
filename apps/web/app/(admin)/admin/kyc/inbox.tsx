@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { decideOnKyc } from "@/lib/actions/admin";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 type Row = {
   submission: {
@@ -45,43 +48,49 @@ function Item({ row }: { row: Row }) {
   }
 
   return (
-    <li className="rounded border border-neutral-200 p-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium">{row.lawyerName}</p>
-          <p className="text-xs text-neutral-500">{row.lawyerEmail}</p>
-        </div>
-        <p className="text-xs text-neutral-500">
-          {new Date(row.submission.createdAt).toLocaleString()}
-        </p>
-      </div>
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason (required for reject)"
-          className="rounded border border-neutral-300 px-2 py-1.5 text-sm sm:flex-1"
-        />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => decide("approve")}
-            className="rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => decide("reject")}
-            className="rounded border border-red-500 px-3 py-1.5 text-sm text-red-700 disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
-      </div>
-      {err ? <p className="mt-2 text-sm text-red-700">{err}</p> : null}
+    <li>
+      <Card className="gap-2 py-3">
+        <CardContent className="px-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{row.lawyerName}</p>
+              <p className="text-xs text-muted-foreground">{row.lawyerEmail}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {new Date(row.submission.createdAt).toLocaleString()}
+            </p>
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Reason (required for reject)"
+              className="sm:flex-1"
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending}
+                onClick={() => decide("approve")}
+              >
+                Approve
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => decide("reject")}
+                className="border-destructive text-destructive hover:text-destructive"
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+          {err ? <p className="mt-2 text-sm text-destructive">{err}</p> : null}
+        </CardContent>
+      </Card>
     </li>
   );
 }

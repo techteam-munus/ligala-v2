@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { NewCaseForm } from "./form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Ref = { id: string; name: string };
 type RefList = { items: Ref[] };
@@ -35,9 +36,6 @@ export default async function NewCasePage({
   const lawyerSlugParam = pick("lawyer");
   const refSlug = pick("ref")?.toUpperCase();
 
-  // If a referral link is supplied, look it up first — if it binds to a
-  // lawyer, use that as the default (the client can still override by
-  // editing the lawyer slug).
   const refLookup = refSlug
     ? await safe<ReferralLinkLookup | null>(
         `/directory/referral-links/${encodeURIComponent(refSlug)}`,
@@ -60,19 +58,23 @@ export default async function NewCasePage({
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Open a case</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Share the basics. The lawyer reviews and accepts or declines.
       </p>
       {lawyer ? (
-        <p className="mt-4 rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm">
-          Engaging <strong>{lawyer.profile.name}</strong>
-        </p>
+        <Alert className="mt-4">
+          <AlertDescription>
+            Engaging <strong>{lawyer.profile.name}</strong>
+          </AlertDescription>
+        </Alert>
       ) : null}
       {refLookup ? (
-        <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          Referred via <span className="font-mono">{refLookup.slug}</span>
-          {refLookup.label ? ` (${refLookup.label})` : ""}.
-        </p>
+        <Alert className="mt-2 border-amber-200 bg-amber-50 text-amber-900">
+          <AlertDescription className="text-xs">
+            Referred via <span className="font-mono">{refLookup.slug}</span>
+            {refLookup.label ? ` (${refLookup.label})` : ""}.
+          </AlertDescription>
+        </Alert>
       ) : null}
       <NewCaseForm
         lawyerSlug={lawyer?.profile.slug ?? lawyerSlug ?? ""}

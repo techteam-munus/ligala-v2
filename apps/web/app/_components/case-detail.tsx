@@ -9,6 +9,13 @@ import {
   decideOnEngagement,
   sendEngagement,
 } from "@/lib/actions/case";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 export type CaseRow = {
   id: string;
@@ -61,6 +68,17 @@ export type Activity = {
   createdAt: string;
 };
 
+const SELECT_CLASS =
+  "flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
+function statusBadgeClasses(status: string): string {
+  if (status === "active") return "border-green-600 text-green-700";
+  if (status === "closed") return "border-neutral-400 text-muted-foreground";
+  if (status === "declined" || status === "cancelled")
+    return "border-destructive text-destructive";
+  return "border-amber-600 text-amber-700";
+}
+
 export function CaseDetail({
   viewerRole,
   caseRow,
@@ -109,10 +127,7 @@ export function CaseDetail({
         viewerRole={viewerRole}
         initial={initialNotes}
       />
-      <AttachmentsSection
-        caseId={caseRow.id}
-        initial={initialAttachments}
-      />
+      <AttachmentsSection caseId={caseRow.id} initial={initialAttachments} />
       <ActivitySection items={initialActivities} />
     </div>
   );
@@ -126,42 +141,29 @@ function CaseHeader({
   viewerRole: "client" | "lawyer";
 }) {
   return (
-    <header className="border-b border-neutral-200 pb-4">
+    <header className="pb-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{caseRow.title}</h1>
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-700">
+        <Badge variant="secondary" className="uppercase">
           {caseRow.type}
-        </span>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs uppercase tracking-wide ${
-            caseRow.status === "active"
-              ? "bg-green-100 text-green-800"
-              : caseRow.status === "closed"
-                ? "bg-neutral-200 text-neutral-700"
-                : caseRow.status === "declined" || caseRow.status === "cancelled"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-yellow-100 text-yellow-800"
-          }`}
-        >
+        </Badge>
+        <Badge variant="outline" className={`uppercase ${statusBadgeClasses(caseRow.status)}`}>
           {caseRow.status}
-        </span>
+        </Badge>
       </div>
-      <p className="mt-3 whitespace-pre-line text-sm text-neutral-700">
-        {caseRow.description}
-      </p>
+      <p className="mt-3 whitespace-pre-line text-sm">{caseRow.description}</p>
       {caseRow.declineReason ? (
-        <p className="mt-3 text-sm text-red-700">
+        <p className="mt-3 text-sm text-destructive">
           Declined: {caseRow.declineReason}
         </p>
       ) : null}
       {caseRow.closeReason ? (
-        <p className="mt-3 text-sm text-neutral-500">
+        <p className="mt-3 text-sm text-muted-foreground">
           {caseRow.status === "cancelled" ? "Cancelled" : "Closed"}: {caseRow.closeReason}
         </p>
       ) : null}
-      <p className="mt-2 text-xs text-neutral-500">
-        Viewing as {viewerRole}
-      </p>
+      <p className="mt-2 text-xs text-muted-foreground">Viewing as {viewerRole}</p>
+      <Separator className="mt-4" />
     </header>
   );
 }
@@ -183,38 +185,44 @@ function LawyerDecision({ caseId }: { caseId: string }) {
   }
 
   return (
-    <section className="rounded border border-yellow-300 bg-yellow-50 p-4">
-      <h2 className="font-medium">Decide</h2>
-      <p className="mt-1 text-sm text-neutral-700">
-        Accept to start a paid engagement (you&apos;ll send terms next) or to begin pro bono work.
-      </p>
-      <input
-        type="text"
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Optional reason (shown to client on decline)"
-        className="mt-3 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-      />
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => go("accept")}
-          className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Accept
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => go("decline")}
-          className="rounded border border-red-700 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50"
-        >
-          Decline
-        </button>
-      </div>
-    </section>
+    <Card className="gap-2 border-amber-300 bg-amber-50/50 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Decide</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <p className="text-sm">
+          Accept to start a paid engagement (you&apos;ll send terms next) or to begin pro bono work.
+        </p>
+        <Input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Optional reason (shown to client on decline)"
+          className="mt-3"
+        />
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        <div className="mt-3 flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={pending}
+            onClick={() => go("accept")}
+            className="bg-green-700 hover:bg-green-800"
+          >
+            Accept
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => go("decline")}
+            className="border-destructive text-destructive hover:text-destructive"
+          >
+            Decline
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -257,99 +265,86 @@ function SendEngagement({ caseId }: { caseId: string }) {
   }
 
   return (
-    <section className="rounded border border-blue-300 bg-blue-50 p-4">
-      <h2 className="font-medium">Send engagement terms</h2>
-      <form onSubmit={submit} className="mt-3 space-y-3">
-        <div>
-          <label htmlFor="rateType" className="block text-xs font-medium uppercase tracking-wide text-neutral-600">
-            Rate type
-          </label>
-          <select
-            id="rateType"
-            value={form.rateType}
-            onChange={(e) =>
-              setForm({ ...form, rateType: e.target.value as typeof form.rateType })
-            }
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-          >
-            <option value="hourly">Hourly</option>
-            <option value="flat">Flat fee</option>
-            <option value="contingency">Contingency</option>
-          </select>
-        </div>
-        {form.rateType === "hourly" ? (
-          <div>
-            <label htmlFor="hourlyCents" className="block text-xs font-medium uppercase tracking-wide text-neutral-600">
-              Hourly rate (cents)
-            </label>
-            <input
-              id="hourlyCents"
-              type="number"
-              min={0}
-              value={form.hourlyCents}
-              onChange={(e) => setForm({ ...form, hourlyCents: e.target.value })}
-              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-              placeholder="e.g. 250000 = ₱2,500/hr"
+    <Card className="gap-2 border-blue-300 bg-blue-50/50 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Send engagement terms</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <form onSubmit={submit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="rateType">Rate type</Label>
+            <select
+              id="rateType"
+              value={form.rateType}
+              onChange={(e) =>
+                setForm({ ...form, rateType: e.target.value as typeof form.rateType })
+              }
+              className={`w-full ${SELECT_CLASS}`}
+            >
+              <option value="hourly">Hourly</option>
+              <option value="flat">Flat fee</option>
+              <option value="contingency">Contingency</option>
+            </select>
+          </div>
+          {form.rateType === "hourly" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="hourlyCents">Hourly rate (cents)</Label>
+              <Input
+                id="hourlyCents"
+                type="number"
+                min={0}
+                value={form.hourlyCents}
+                onChange={(e) => setForm({ ...form, hourlyCents: e.target.value })}
+                placeholder="e.g. 250000 = ₱2,500/hr"
+              />
+            </div>
+          ) : null}
+          {form.rateType === "flat" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="flatCents">Flat fee (cents)</Label>
+              <Input
+                id="flatCents"
+                type="number"
+                min={0}
+                value={form.flatCents}
+                onChange={(e) => setForm({ ...form, flatCents: e.target.value })}
+              />
+            </div>
+          ) : null}
+          {form.rateType === "contingency" ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="contingencyBps">Contingency (basis points; 1% = 100)</Label>
+              <Input
+                id="contingencyBps"
+                type="number"
+                min={0}
+                max={10000}
+                value={form.contingencyBps}
+                onChange={(e) => setForm({ ...form, contingencyBps: e.target.value })}
+                placeholder="e.g. 3000 = 30%"
+              />
+            </div>
+          ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="termsMd">Terms</Label>
+            <Textarea
+              id="termsMd"
+              required
+              minLength={10}
+              rows={6}
+              value={form.termsMd}
+              onChange={(e) => setForm({ ...form, termsMd: e.target.value })}
+              className="font-mono"
+              placeholder="Scope, payment schedule, termination clauses…"
             />
           </div>
-        ) : null}
-        {form.rateType === "flat" ? (
-          <div>
-            <label htmlFor="flatCents" className="block text-xs font-medium uppercase tracking-wide text-neutral-600">
-              Flat fee (cents)
-            </label>
-            <input
-              id="flatCents"
-              type="number"
-              min={0}
-              value={form.flatCents}
-              onChange={(e) => setForm({ ...form, flatCents: e.target.value })}
-              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-            />
-          </div>
-        ) : null}
-        {form.rateType === "contingency" ? (
-          <div>
-            <label htmlFor="contingencyBps" className="block text-xs font-medium uppercase tracking-wide text-neutral-600">
-              Contingency (basis points; 1% = 100)
-            </label>
-            <input
-              id="contingencyBps"
-              type="number"
-              min={0}
-              max={10000}
-              value={form.contingencyBps}
-              onChange={(e) => setForm({ ...form, contingencyBps: e.target.value })}
-              className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-              placeholder="e.g. 3000 = 30%"
-            />
-          </div>
-        ) : null}
-        <div>
-          <label htmlFor="termsMd" className="block text-xs font-medium uppercase tracking-wide text-neutral-600">
-            Terms
-          </label>
-          <textarea
-            id="termsMd"
-            required
-            minLength={10}
-            rows={6}
-            value={form.termsMd}
-            onChange={(e) => setForm({ ...form, termsMd: e.target.value })}
-            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm font-mono"
-            placeholder="Scope, payment schedule, termination clauses…"
-          />
-        </div>
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {pending ? "Sending…" : "Send to client"}
-        </button>
-      </form>
-    </section>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <Button type="submit" size="sm" disabled={pending}>
+            {pending ? "Sending…" : "Send to client"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -387,64 +382,68 @@ function EngagementSection({
         ? `${engagement.flatCents}¢ flat`
         : `${((engagement.contingencyBps ?? 0) / 100).toFixed(2)}% contingency`;
 
+  const engagementStatusClass =
+    engagement.status === "signed"
+      ? "border-green-600 text-green-700"
+      : engagement.status === "declined"
+        ? "border-destructive text-destructive"
+        : "border-amber-600 text-amber-700";
+
   return (
-    <section className="rounded border border-neutral-300 p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-medium">Engagement terms</h2>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs uppercase tracking-wide ${
-            engagement.status === "signed"
-              ? "bg-green-100 text-green-800"
-              : engagement.status === "declined"
-                ? "bg-red-100 text-red-800"
-                : "bg-yellow-100 text-yellow-800"
-          }`}
-        >
-          {engagement.status}
-        </span>
-      </div>
-      <p className="mt-1 text-sm text-neutral-700">
-        <span className="text-neutral-500">Rate:</span> {rateLabel}
-      </p>
-      <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50 p-3 text-xs">
-        {engagement.termsMd}
-      </pre>
-      {viewerRole === "client" && engagement.status === "sent" ? (
-        <div className="mt-3">
-          <input
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Optional reason (shown to lawyer on decline)"
-            className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-          />
-          {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => go("sign")}
-              className="rounded bg-green-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Sign and start
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => go("decline")}
-              className="rounded border border-red-700 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50"
-            >
-              Decline terms
-            </button>
-          </div>
+    <Card className="gap-2 py-4">
+      <CardHeader className="px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Engagement terms</CardTitle>
+          <Badge variant="outline" className={`uppercase ${engagementStatusClass}`}>
+            {engagement.status}
+          </Badge>
         </div>
-      ) : null}
-      {engagement.declineReason ? (
-        <p className="mt-2 text-sm text-red-700">
-          Declined: {engagement.declineReason}
+      </CardHeader>
+      <CardContent className="px-4">
+        <p className="text-sm">
+          <span className="text-muted-foreground">Rate:</span> {rateLabel}
         </p>
-      ) : null}
-    </section>
+        <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/50 p-3 text-xs">
+          {engagement.termsMd}
+        </pre>
+        {viewerRole === "client" && engagement.status === "sent" ? (
+          <div className="mt-3 space-y-2">
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Optional reason (shown to lawyer on decline)"
+            />
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending}
+                onClick={() => go("sign")}
+                className="bg-green-700 hover:bg-green-800"
+              >
+                Sign and start
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => go("decline")}
+                className="border-destructive text-destructive hover:text-destructive"
+              >
+                Decline terms
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {engagement.declineReason ? (
+          <p className="mt-2 text-sm text-destructive">
+            Declined: {engagement.declineReason}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -478,27 +477,30 @@ function CloseOrCancel({
   if (!canCancel && !canClose) return null;
 
   return (
-    <section className="rounded border border-neutral-300 p-4">
-      <h2 className="font-medium">{canClose ? "Close case" : "Cancel case"}</h2>
-      <input
-        type="text"
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Optional reason"
-        className="mt-3 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-      />
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <div className="mt-3">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => go(canClose ? "close" : "cancel")}
-          className="rounded border border-neutral-400 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          {canClose ? "Close case" : "Cancel case"}
-        </button>
-      </div>
-    </section>
+    <Card className="gap-2 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">{canClose ? "Close case" : "Cancel case"}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <Input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Optional reason"
+        />
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        <div className="mt-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => go(canClose ? "close" : "cancel")}
+          >
+            {canClose ? "Close case" : "Cancel case"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -533,26 +535,29 @@ function NotesSection({
     <section>
       <h2 className="text-xl font-semibold">Notes</h2>
       {initial.length === 0 ? (
-        <p className="mt-2 text-sm text-neutral-500">No notes yet.</p>
+        <p className="mt-2 text-sm text-muted-foreground">No notes yet.</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {initial.map((n) => (
-            <li key={n.id} className="rounded border border-neutral-200 p-3 text-sm">
-              <p className="text-xs uppercase tracking-wide text-neutral-500">
-                {n.visibility} · {new Date(n.createdAt).toLocaleString()}
-              </p>
-              <p className="mt-1 whitespace-pre-line">{n.body}</p>
+            <li key={n.id}>
+              <Card className="gap-1 py-3">
+                <CardContent className="px-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {n.visibility} · {new Date(n.createdAt).toLocaleString()}
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-sm">{n.body}</p>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>
       )}
       <form onSubmit={submit} className="mt-4 space-y-2">
-        <textarea
+        <Textarea
           required
           rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           placeholder="Add a note…"
         />
         <div className="flex items-center gap-3">
@@ -561,20 +566,16 @@ function NotesSection({
             onChange={(e) =>
               setVisibility(e.target.value as "shared" | "lawyer" | "client")
             }
-            className="rounded border border-neutral-300 px-2 py-1 text-sm"
+            className={SELECT_CLASS}
           >
             <option value="shared">Shared</option>
             {viewerRole === "lawyer" ? <option value="lawyer">Lawyer only</option> : null}
             {viewerRole === "client" ? <option value="client">Private (you)</option> : null}
           </select>
-          <button
-            type="submit"
-            disabled={pending}
-            className="rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
+          <Button type="submit" size="sm" disabled={pending}>
             {pending ? "Adding…" : "Add note"}
-          </button>
-          {error ? <span className="text-sm text-red-700">{error}</span> : null}
+          </Button>
+          {error ? <span className="text-sm text-destructive">{error}</span> : null}
         </div>
       </form>
     </section>
@@ -597,7 +598,6 @@ function AttachmentsSection({
     setError(null);
     start(async () => {
       try {
-        // Presign via the same dev proxy used by KYC uploads.
         const presignRes = await fetch("/api/files/presign-proxy", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -629,25 +629,31 @@ function AttachmentsSection({
     <section>
       <h2 className="text-xl font-semibold">Attachments</h2>
       {initial.length === 0 ? (
-        <p className="mt-2 text-sm text-neutral-500">No files attached yet.</p>
+        <p className="mt-2 text-sm text-muted-foreground">No files attached yet.</p>
       ) : (
         <ul className="mt-3 space-y-2 text-sm">
           {initial.map((a) => (
-            <li key={a.id} className="flex items-center justify-between rounded border border-neutral-200 p-2">
-              <span className="truncate">{a.filename}</span>
-              <span className="text-xs text-neutral-500">
-                {a.mime} · {a.sizeBytes ? `${Math.round(a.sizeBytes / 1024)} KB` : ""}
-              </span>
+            <li key={a.id}>
+              <Card className="gap-0 py-2">
+                <CardContent className="px-3">
+                  <div className="flex items-center justify-between">
+                    <span className="truncate">{a.filename}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {a.mime} · {a.sizeBytes ? `${Math.round(a.sizeBytes / 1024)} KB` : ""}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </li>
           ))}
         </ul>
       )}
       <div className="mt-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-neutral-300 px-3 py-1.5 text-sm">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground">
           <input type="file" className="hidden" onChange={onFile} disabled={pending} />
           {pending ? "Uploading…" : "Attach file"}
         </label>
-        {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
       </div>
     </section>
   );
@@ -659,18 +665,22 @@ function ActivitySection({ items }: { items: Activity[] }) {
       <h2 className="text-xl font-semibold">Activity</h2>
       <ol className="mt-3 space-y-2 text-sm">
         {items.map((a) => (
-          <li key={a.id} className="rounded border border-neutral-200 p-3">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">
-              {new Date(a.createdAt).toLocaleString()}
-            </p>
-            <p className="mt-1">
-              <strong>{a.kind}</strong>
-              {a.payload && Object.keys(a.payload).length > 0 ? (
-                <span className="ml-2 text-neutral-500">
-                  {JSON.stringify(a.payload)}
-                </span>
-              ) : null}
-            </p>
+          <li key={a.id}>
+            <Card className="gap-1 py-3">
+              <CardContent className="px-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {new Date(a.createdAt).toLocaleString()}
+                </p>
+                <p className="mt-1">
+                  <strong>{a.kind}</strong>
+                  {a.payload && Object.keys(a.payload).length > 0 ? (
+                    <span className="ml-2 text-muted-foreground">
+                      {JSON.stringify(a.payload)}
+                    </span>
+                  ) : null}
+                </p>
+              </CardContent>
+            </Card>
           </li>
         ))}
       </ol>

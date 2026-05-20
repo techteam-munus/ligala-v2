@@ -1,4 +1,6 @@
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type Referral = {
   id: string;
@@ -19,39 +21,44 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
+function statusVariant(status: Referral["status"]) {
+  if (status === "completed" || status === "accepted") return "default" as const;
+  if (status === "declined") return "destructive" as const;
+  return "secondary" as const;
+}
+
 export default async function AdminReferralsPage() {
   const { items } = await safe<{ items: Referral[] }>("/admin/referrals", { items: [] });
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Referrals</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Read-only graph (most recent 200). Forced re-decisions live on the individual
         case detail page if needed.
       </p>
-      <ul className="mt-6 divide-y divide-neutral-200 rounded border border-neutral-200 text-sm">
-        {items.map((r) => (
-          <li key={r.id} className="flex items-center justify-between px-3 py-2">
-            <div>
-              <p className="font-medium">{r.kind}</p>
-              <p className="text-xs text-neutral-500 font-mono">
-                {r.fromLawyerId.slice(0, 6)} → {r.toLawyerId.slice(0, 6)}
-                {r.caseId ? ` · case ${r.caseId.slice(0, 8)}` : ""}
-              </p>
-            </div>
-            <span
-              className={`rounded-full border px-2 py-0.5 text-xs ${
-                r.status === "completed" || r.status === "accepted"
-                  ? "border-green-600 text-green-700"
-                  : r.status === "declined"
-                    ? "border-red-500 text-red-700"
-                    : "border-amber-600 text-amber-700"
-              }`}
-            >
-              {r.status}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <Card className="mt-6 gap-0 py-0">
+        <CardContent className="px-0">
+          <ul className="divide-y">
+            {items.map((r) => (
+              <li key={r.id} className="flex items-center justify-between px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">{r.kind}</p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {r.fromLawyerId.slice(0, 6)} → {r.toLawyerId.slice(0, 6)}
+                    {r.caseId ? ` · case ${r.caseId.slice(0, 8)}` : ""}
+                  </p>
+                </div>
+                <Badge variant={statusVariant(r.status)}>{r.status}</Badge>
+              </li>
+            ))}
+            {items.length === 0 ? (
+              <li className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No referrals yet.
+              </li>
+            ) : null}
+          </ul>
+        </CardContent>
+      </Card>
     </main>
   );
 }

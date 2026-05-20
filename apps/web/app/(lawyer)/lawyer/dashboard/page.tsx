@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type CaseRow = { id: string; status: string };
 type ReferralRow = {
@@ -35,44 +36,37 @@ export default async function LawyerDashboard() {
   ).length;
   const linkSignups = linkItems.reduce((acc, l) => acc + l.signups, 0);
 
+  const tiles = [
+    { href: "/lawyer/cases", title: "Cases", sub: `${pending} awaiting · ${active} active` },
+    { href: "/lawyer/invoices", title: "Invoices", sub: "Bills, payments, ledger." },
+    { href: "/lawyer/referrals", title: "Referrals", sub: `${inboundPending} inbound pending` },
+    {
+      href: "/lawyer/referral-links",
+      title: "Referral links",
+      sub: `${linkItems.length} link${linkItems.length === 1 ? "" : "s"} · ${linkSignups} signups`,
+    },
+    { href: "/lawyer/profile", title: "Public profile", sub: "Bio, pro bono, practice areas." },
+    { href: "/lawyer/office", title: "Office", sub: "Address, schedule, FAQs." },
+  ];
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Lawyer dashboard</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Signed in as <strong>{session?.user.email}</strong>.
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href="/lawyer/cases" className="rounded border border-neutral-300 p-4 hover:border-neutral-500">
-          <h2 className="font-medium">Cases</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            {pending} awaiting · {active} active
-          </p>
-        </Link>
-        <Link href="/lawyer/invoices" className="rounded border border-neutral-300 p-4 hover:border-neutral-500">
-          <h2 className="font-medium">Invoices</h2>
-          <p className="mt-1 text-sm text-neutral-600">Bills, payments, ledger.</p>
-        </Link>
-        <Link href="/lawyer/referrals" className="rounded border border-neutral-300 p-4 hover:border-neutral-500">
-          <h2 className="font-medium">Referrals</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            {inboundPending} inbound pending
-          </p>
-        </Link>
-        <Link href="/lawyer/referral-links" className="rounded border border-neutral-300 p-4 hover:border-neutral-500">
-          <h2 className="font-medium">Referral links</h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            {linkItems.length} link{linkItems.length === 1 ? "" : "s"} · {linkSignups} signups
-          </p>
-        </Link>
-        <Link href="/lawyer/profile" className="rounded border border-neutral-300 p-4 hover:border-neutral-500">
-          <h2 className="font-medium">Public profile</h2>
-          <p className="mt-1 text-sm text-neutral-600">Bio, pro bono, practice areas.</p>
-        </Link>
-        <Link href="/lawyer/office" className="rounded border border-neutral-300 p-4 hover:border-neutral-500">
-          <h2 className="font-medium">Office</h2>
-          <p className="mt-1 text-sm text-neutral-600">Address, schedule, FAQs.</p>
-        </Link>
+        {tiles.map((t) => (
+          <Link key={t.href} href={t.href as never} className="block">
+            <Card className="gap-2 py-4 transition-colors hover:border-foreground/40">
+              <CardHeader className="px-4">
+                <CardTitle>{t.title}</CardTitle>
+                <CardDescription>{t.sub}</CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        ))}
       </div>
     </main>
   );

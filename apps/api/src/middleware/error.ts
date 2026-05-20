@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { captureException } from "../lib/sentry";
 
 export function errorHandler(err: Error, c: Context) {
   if (err instanceof HTTPException) {
@@ -9,6 +10,10 @@ export function errorHandler(err: Error, c: Context) {
     );
   }
   console.error("[api] unhandled error", err);
-  // TODO Phase 0 — forward to Sentry once SENTRY_DSN is wired.
+  captureException(err, {
+    method: c.req.method,
+    path: c.req.path,
+    requestId: c.req.header("x-amzn-requestid") ?? c.req.header("x-request-id"),
+  });
   return c.json({ error: "internal_error" }, 500);
 }

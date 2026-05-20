@@ -2,6 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { api, ApiError } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 type ProfileResponse = {
   profile: {
@@ -108,58 +113,58 @@ export default async function PublicLawyerProfile({
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
-      <header className="border-b border-neutral-200 pb-6">
+      <header className="pb-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-semibold tracking-tight">{profile.name}</h1>
-          <span className="rounded-full border border-green-600 px-2 py-0.5 text-xs font-medium text-green-700">
+          <Badge variant="outline" className="border-green-600 text-green-700">
             Verified
-          </span>
+          </Badge>
           {profile.probonoAvailable ? (
-            <span className="rounded-full border border-amber-600 px-2 py-0.5 text-xs font-medium text-amber-700">
+            <Badge variant="outline" className="border-amber-600 text-amber-700">
               Accepts pro bono
-            </span>
+            </Badge>
           ) : null}
         </div>
         {profile.barNumber ? (
-          <p className="mt-2 text-sm text-neutral-500">PH Bar No. {profile.barNumber}</p>
+          <p className="mt-2 text-sm text-muted-foreground">PH Bar No. {profile.barNumber}</p>
         ) : null}
         {ibpChapter ? (
-          <p className="text-sm text-neutral-500">IBP {ibpChapter.name}</p>
+          <p className="text-sm text-muted-foreground">IBP {ibpChapter.name}</p>
         ) : null}
         {profile.bio ? (
-          <p className="mt-4 max-w-2xl text-neutral-700">{profile.bio}</p>
+          <p className="mt-4 max-w-2xl text-foreground/90">{profile.bio}</p>
         ) : null}
         {profile.probonoAvailable && profile.probonoStatement ? (
-          <p className="mt-3 max-w-2xl rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <span className="font-medium">Pro bono note: </span>
-            {profile.probonoStatement}
-          </p>
+          <Alert className="mt-3 max-w-2xl border-amber-200 bg-amber-50 text-amber-900">
+            <AlertDescription>
+              <span className="font-medium">Pro bono note: </span>
+              {profile.probonoStatement}
+            </AlertDescription>
+          </Alert>
         ) : null}
         <div className="mt-6">
-          <Link
-            href={`/cases/new?lawyer=${encodeURIComponent(profile.slug)}` as never}
-            className="inline-block rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
-          >
-            Engage this lawyer
-          </Link>
+          <Button asChild>
+            <Link href={`/cases/new?lawyer=${encodeURIComponent(profile.slug)}` as never}>
+              Engage this lawyer
+            </Link>
+          </Button>
         </div>
       </header>
 
+      <Separator />
+
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Practice areas
           </h2>
           {practiceAreas.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-500">Not specified.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Not specified.</p>
           ) : (
             <ul className="mt-2 flex flex-wrap gap-1">
               {practiceAreas.map((p) => (
-                <li
-                  key={p.id}
-                  className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700"
-                >
-                  {p.name}
+                <li key={p.id}>
+                  <Badge variant="secondary">{p.name}</Badge>
                 </li>
               ))}
             </ul>
@@ -167,19 +172,16 @@ export default async function PublicLawyerProfile({
         </section>
 
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Jurisdictions
           </h2>
           {jurisdictions.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-500">Not specified.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Not specified.</p>
           ) : (
             <ul className="mt-2 flex flex-wrap gap-1">
               {jurisdictions.map((j) => (
-                <li
-                  key={j.id}
-                  className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700"
-                >
-                  {j.name}
+                <li key={j.id}>
+                  <Badge variant="secondary">{j.name}</Badge>
                 </li>
               ))}
             </ul>
@@ -191,7 +193,7 @@ export default async function PublicLawyerProfile({
         <section className="mt-12">
           <h2 className="text-xl font-semibold">{office.name}</h2>
           <div className="mt-3 grid grid-cols-1 gap-8 md:grid-cols-[1fr_1.4fr]">
-            <div className="space-y-1 text-sm text-neutral-700">
+            <div className="space-y-1 text-sm">
               {office.addressLine1 ? <p>{office.addressLine1}</p> : null}
               {office.addressLine2 ? <p>{office.addressLine2}</p> : null}
               {office.city || office.region || office.postalCode ? (
@@ -199,10 +201,10 @@ export default async function PublicLawyerProfile({
                   {[office.city, office.region, office.postalCode].filter(Boolean).join(", ")}
                 </p>
               ) : null}
-              <p className="text-neutral-500">{office.country}</p>
+              <p className="text-muted-foreground">{office.country}</p>
               {office.phone ? (
                 <p className="mt-3">
-                  <span className="text-neutral-500">Phone: </span>
+                  <span className="text-muted-foreground">Phone: </span>
                   <a href={`tel:${office.phone}`} className="underline">
                     {office.phone}
                   </a>
@@ -210,7 +212,7 @@ export default async function PublicLawyerProfile({
               ) : null}
               {office.email ? (
                 <p>
-                  <span className="text-neutral-500">Email: </span>
+                  <span className="text-muted-foreground">Email: </span>
                   <a href={`mailto:${office.email}`} className="underline">
                     {office.email}
                   </a>
@@ -218,7 +220,7 @@ export default async function PublicLawyerProfile({
               ) : null}
               {office.website ? (
                 <p>
-                  <span className="text-neutral-500">Website: </span>
+                  <span className="text-muted-foreground">Website: </span>
                   <a
                     href={office.website}
                     target="_blank"
@@ -232,7 +234,7 @@ export default async function PublicLawyerProfile({
             </div>
 
             {mapSrc ? (
-              <div className="overflow-hidden rounded border border-neutral-200">
+              <div className="overflow-hidden rounded-md border">
                 <iframe
                   title={`${office.name} location`}
                   src={mapSrc}
@@ -246,26 +248,30 @@ export default async function PublicLawyerProfile({
 
           {schedule.length > 0 ? (
             <div className="mt-6">
-              <h3 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+              <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
                 Schedule
               </h3>
-              <ul className="mt-2 divide-y divide-neutral-200 rounded border border-neutral-200 text-sm">
-                {DAYS.map((day, i) => {
-                  const entry = schedule.find((s) => s.dayOfWeek === i);
-                  return (
-                    <li key={i} className="flex items-center justify-between px-3 py-2">
-                      <span className="font-medium">{day}</span>
-                      <span className="text-neutral-600">
-                        {!entry || entry.isClosed
-                          ? "Closed"
-                          : entry.opensAt && entry.closesAt
-                            ? `${entry.opensAt.slice(0, 5)} – ${entry.closesAt.slice(0, 5)}`
-                            : "By appointment"}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <Card className="mt-2 gap-0 py-0">
+                <CardContent className="px-0">
+                  <ul className="divide-y text-sm">
+                    {DAYS.map((day, i) => {
+                      const entry = schedule.find((s) => s.dayOfWeek === i);
+                      return (
+                        <li key={i} className="flex items-center justify-between px-3 py-2">
+                          <span className="font-medium">{day}</span>
+                          <span className="text-muted-foreground">
+                            {!entry || entry.isClosed
+                              ? "Closed"
+                              : entry.opensAt && entry.closesAt
+                                ? `${entry.opensAt.slice(0, 5)} – ${entry.closesAt.slice(0, 5)}`
+                                : "By appointment"}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </CardContent>
+              </Card>
             </div>
           ) : null}
         </section>
@@ -276,10 +282,12 @@ export default async function PublicLawyerProfile({
           <h2 className="text-xl font-semibold">FAQ</h2>
           <dl className="mt-3 space-y-4">
             {faqs.map((f) => (
-              <div key={f.id} className="rounded border border-neutral-200 p-4">
-                <dt className="font-medium">{f.question}</dt>
-                <dd className="mt-1 text-sm text-neutral-700 whitespace-pre-line">{f.answer}</dd>
-              </div>
+              <Card key={f.id} className="gap-2 py-4">
+                <CardContent className="px-4">
+                  <dt className="font-medium">{f.question}</dt>
+                  <dd className="mt-1 text-sm whitespace-pre-line">{f.answer}</dd>
+                </CardContent>
+              </Card>
             ))}
           </dl>
         </section>

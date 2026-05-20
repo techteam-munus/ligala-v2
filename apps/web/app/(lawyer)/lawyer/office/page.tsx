@@ -39,7 +39,7 @@ export default async function OfficePage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Office</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Where clients reach you and when. Add an office to enable scheduling and FAQs.
       </p>
       <OfficeSection initial={data} />

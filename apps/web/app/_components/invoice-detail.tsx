@@ -8,6 +8,20 @@ import {
   sendInvoice,
   voidInvoice,
 } from "@/lib/actions/billing";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 
 export type InvoiceRow = {
   id: string;
@@ -84,84 +98,95 @@ export function InvoiceDetail({
 }) {
   return (
     <div className="space-y-8">
-      <header className="border-b border-neutral-200 pb-4">
+      <header className="pb-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {invoice.number}
-          </h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{invoice.number}</h1>
           <StatusChip status={invoice.status} />
         </div>
         {invoice.dueAt ? (
-          <p className="mt-2 text-sm text-neutral-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             Due {new Date(invoice.dueAt).toLocaleDateString()}
           </p>
         ) : null}
+        <Separator className="mt-4" />
       </header>
 
       <section>
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Line items
         </h2>
-        <table className="mt-3 w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-wide text-neutral-500">
-              <th className="py-1">Description</th>
-              <th className="py-1 text-right">Qty</th>
-              <th className="py-1 text-right">Unit</th>
-              <th className="py-1 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="mt-3">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Description</TableHead>
+              <TableHead className="text-right">Qty</TableHead>
+              <TableHead className="text-right">Unit</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {lines.map((l) => (
-              <tr key={l.id} className="border-t border-neutral-200">
-                <td className="py-2">{l.description}</td>
-                <td className="py-2 text-right">{(l.qtyThousandths / 1000).toFixed(3)}</td>
-                <td className="py-2 text-right">{money(l.unitAmountCents, invoice.currency)}</td>
-                <td className="py-2 text-right">{money(l.lineTotalCents, invoice.currency)}</td>
-              </tr>
+              <TableRow key={l.id}>
+                <TableCell>{l.description}</TableCell>
+                <TableCell className="text-right">
+                  {(l.qtyThousandths / 1000).toFixed(3)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {money(l.unitAmountCents, invoice.currency)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {money(l.lineTotalCents, invoice.currency)}
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-neutral-300 text-sm">
-              <td className="py-2 text-right" colSpan={3}>
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell className="text-right" colSpan={3}>
                 Subtotal
-              </td>
-              <td className="py-2 text-right">{money(invoice.subtotalCents, invoice.currency)}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="text-right">
+                {money(invoice.subtotalCents, invoice.currency)}
+              </TableCell>
+            </TableRow>
             {invoice.discountCents > 0 ? (
-              <tr>
-                <td className="py-1 text-right text-neutral-500" colSpan={3}>
+              <TableRow>
+                <TableCell className="text-right text-muted-foreground" colSpan={3}>
                   Discount{appliedCode ? ` (${appliedCode.code})` : ""}
-                </td>
-                <td className="py-1 text-right text-neutral-500">
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">
                   −{money(invoice.discountCents, invoice.currency)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : null}
-            <tr className="border-t border-neutral-300 text-base font-semibold">
-              <td className="py-2 text-right" colSpan={3}>
+            <TableRow className="text-base font-semibold">
+              <TableCell className="text-right" colSpan={3}>
                 Total
-              </td>
-              <td className="py-2 text-right">{money(invoice.totalCents, invoice.currency)}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="text-right">
+                {money(invoice.totalCents, invoice.currency)}
+              </TableCell>
+            </TableRow>
             {invoice.paidCents > 0 ? (
-              <tr className="text-sm text-green-700">
-                <td className="py-1 text-right" colSpan={3}>
+              <TableRow className="text-sm text-green-700">
+                <TableCell className="text-right" colSpan={3}>
                   Paid
-                </td>
-                <td className="py-1 text-right">{money(invoice.paidCents, invoice.currency)}</td>
-              </tr>
+                </TableCell>
+                <TableCell className="text-right">
+                  {money(invoice.paidCents, invoice.currency)}
+                </TableCell>
+              </TableRow>
             ) : null}
-          </tfoot>
-        </table>
+          </TableFooter>
+        </Table>
       </section>
 
       {invoice.notesMd ? (
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Notes
           </h2>
-          <pre className="mt-2 whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50 p-3 text-sm">
+          <pre className="mt-2 whitespace-pre-wrap rounded-md border bg-muted/50 p-3 text-sm">
             {invoice.notesMd}
           </pre>
         </section>
@@ -185,19 +210,22 @@ export function InvoiceDetail({
 
       {payments.length > 0 ? (
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Payments
           </h2>
           <ul className="mt-2 space-y-1 text-sm">
             {payments.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between rounded border border-neutral-200 p-2"
-              >
-                <span>
-                  {p.provider} · {p.status}
-                </span>
-                <span>{money(p.amountCents, p.currency)}</span>
+              <li key={p.id}>
+                <Card className="gap-0 py-2">
+                  <CardContent className="px-3">
+                    <div className="flex items-center justify-between">
+                      <span>
+                        {p.provider} · {p.status}
+                      </span>
+                      <span>{money(p.amountCents, p.currency)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
               </li>
             ))}
           </ul>
@@ -206,20 +234,23 @@ export function InvoiceDetail({
 
       {transactions.length > 0 ? (
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Transactions
           </h2>
           <ul className="mt-2 space-y-1 text-sm">
             {transactions.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between rounded border border-neutral-200 p-2"
-              >
-                <span>
-                  {t.kind} · {t.direction}
-                  {t.note ? ` · ${t.note}` : ""}
-                </span>
-                <span>{money(t.amountCents, t.currency)}</span>
+              <li key={t.id}>
+                <Card className="gap-0 py-2">
+                  <CardContent className="px-3">
+                    <div className="flex items-center justify-between">
+                      <span>
+                        {t.kind} · {t.direction}
+                        {t.note ? ` · ${t.note}` : ""}
+                      </span>
+                      <span>{money(t.amountCents, t.currency)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
               </li>
             ))}
           </ul>
@@ -227,11 +258,11 @@ export function InvoiceDetail({
       ) : null}
 
       {viewerRole === "lawyer" ? (
-        <Link href="/lawyer/invoices" className="block text-sm text-neutral-700 underline">
+        <Link href="/lawyer/invoices" className="block text-sm underline">
           ← All invoices
         </Link>
       ) : (
-        <Link href="/invoices" className="block text-sm text-neutral-700 underline">
+        <Link href="/invoices" className="block text-sm underline">
           ← All invoices
         </Link>
       )}
@@ -242,16 +273,16 @@ export function InvoiceDetail({
 function StatusChip({ status }: { status: string }) {
   const cls =
     status === "paid"
-      ? "bg-green-100 text-green-800"
+      ? "border-green-600 text-green-700"
       : status === "void"
-        ? "bg-neutral-200 text-neutral-700"
+        ? "border-neutral-400 text-muted-foreground"
         : status === "sent" || status === "partially_paid"
-          ? "bg-blue-100 text-blue-800"
-          : "bg-yellow-100 text-yellow-800";
+          ? "border-blue-500 text-blue-700"
+          : "border-amber-600 text-amber-700";
   return (
-    <span className={`rounded-full px-2 py-0.5 text-xs uppercase tracking-wide ${cls}`}>
+    <Badge variant="outline" className={`uppercase ${cls}`}>
       {status}
-    </span>
+    </Badge>
   );
 }
 
@@ -259,30 +290,32 @@ function LawyerActions({ invoice }: { invoice: InvoiceRow }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
-    <section className="rounded border border-blue-300 bg-blue-50 p-4">
-      <h2 className="font-medium">Send to client</h2>
-      <p className="mt-1 text-sm text-neutral-700">
-        Once sent, line items become immutable.
-      </p>
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <button
-        type="button"
-        disabled={pending || invoice.totalCents <= 0}
-        onClick={() => {
-          setError(null);
-          start(async () => {
-            try {
-              await sendInvoice(invoice.id);
-            } catch (err) {
-              setError(err instanceof Error ? err.message : "Failed");
-            }
-          });
-        }}
-        className="mt-3 rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {pending ? "Sending…" : "Send invoice"}
-      </button>
-    </section>
+    <Card className="gap-2 border-blue-300 bg-blue-50/50 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Send to client</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <p className="text-sm">Once sent, line items become immutable.</p>
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        <Button
+          type="button"
+          disabled={pending || invoice.totalCents <= 0}
+          onClick={() => {
+            setError(null);
+            start(async () => {
+              try {
+                await sendInvoice(invoice.id);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed");
+              }
+            });
+          }}
+          className="mt-3"
+        >
+          {pending ? "Sending…" : "Send invoice"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -291,33 +324,38 @@ function VoidSection({ invoice }: { invoice: InvoiceRow }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
-    <section className="rounded border border-neutral-300 p-4">
-      <h2 className="font-medium">Void invoice</h2>
-      <input
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Reason (required)"
-        className="mt-3 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
-      />
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <button
-        type="button"
-        disabled={pending || reason.length < 3}
-        onClick={() => {
-          setError(null);
-          start(async () => {
-            try {
-              await voidInvoice(invoice.id, { reason });
-            } catch (err) {
-              setError(err instanceof Error ? err.message : "Failed");
-            }
-          });
-        }}
-        className="mt-3 rounded border border-red-700 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50"
-      >
-        {pending ? "Voiding…" : "Void"}
-      </button>
-    </section>
+    <Card className="gap-2 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Void invoice</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <Input
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason (required)"
+        />
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending || reason.length < 3}
+          onClick={() => {
+            setError(null);
+            start(async () => {
+              try {
+                await voidInvoice(invoice.id, { reason });
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed");
+              }
+            });
+          }}
+          className="mt-3 border-destructive text-destructive hover:text-destructive"
+        >
+          {pending ? "Voiding…" : "Void"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -326,36 +364,40 @@ function DiscountSection({ invoice }: { invoice: InvoiceRow }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
-    <section className="rounded border border-neutral-300 p-4">
-      <h2 className="font-medium">Apply discount code</h2>
-      <div className="mt-3 flex gap-2">
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="CODE"
-          className="flex-1 rounded border border-neutral-300 px-2 py-1.5 text-sm font-mono uppercase"
-        />
-        <button
-          type="button"
-          disabled={pending || code.length < 3}
-          onClick={() => {
-            setError(null);
-            start(async () => {
-              try {
-                await applyDiscount(invoice.id, { code });
-                setCode("");
-              } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed");
-              }
-            });
-          }}
-          className="rounded border border-neutral-400 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          Apply
-        </button>
-      </div>
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-    </section>
+    <Card className="gap-2 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Apply discount code</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <div className="flex gap-2">
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="CODE"
+            className="flex-1 font-mono uppercase"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending || code.length < 3}
+            onClick={() => {
+              setError(null);
+              start(async () => {
+                try {
+                  await applyDiscount(invoice.id, { code });
+                  setCode("");
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Failed");
+                }
+              });
+            }}
+          >
+            Apply
+          </Button>
+        </div>
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -368,9 +410,6 @@ function PayWidget({ invoice }: { invoice: InvoiceRow }) {
     start(async () => {
       try {
         const res = await checkoutInvoice(invoice.id, { provider });
-        // In dev: POST the checkout URL directly (it's the dev simulate
-        // endpoint). In prod: window.location.href = res.checkoutUrl to
-        // redirect to the provider's hosted page.
         if (provider === "dev_simulate") {
           const r = await fetch(res.checkoutUrl, { method: "POST" });
           if (!r.ok) throw new Error(`simulate ${r.status}`);
@@ -385,38 +424,41 @@ function PayWidget({ invoice }: { invoice: InvoiceRow }) {
   }
 
   return (
-    <section className="rounded border border-green-300 bg-green-50 p-4">
-      <h2 className="font-medium">Pay invoice</h2>
-      <p className="mt-1 text-sm text-neutral-700">
-        Remaining: <strong>{money(invoice.totalCents - invoice.paidCents, invoice.currency)}</strong>
-      </p>
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => pay("paymongo")}
-          className="rounded bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          PayMongo
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => pay("paypal")}
-          className="rounded border border-neutral-400 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          PayPal
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => pay("dev_simulate")}
-          className="rounded border border-dashed border-neutral-400 px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          Dev: simulate
-        </button>
-      </div>
-    </section>
+    <Card className="gap-2 border-green-300 bg-green-50/50 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="text-base">Pay invoice</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4">
+        <p className="text-sm">
+          Remaining:{" "}
+          <strong>{money(invoice.totalCents - invoice.paidCents, invoice.currency)}</strong>
+        </p>
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button type="button" size="sm" disabled={pending} onClick={() => pay("paymongo")}>
+            PayMongo
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => pay("paypal")}
+          >
+            PayPal
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => pay("dev_simulate")}
+            className="border-dashed"
+          >
+            Dev: simulate
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

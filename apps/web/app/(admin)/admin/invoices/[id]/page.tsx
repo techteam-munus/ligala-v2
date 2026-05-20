@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import { RefundForm } from "./refund-form";
+import { Card, CardContent } from "@/components/ui/card";
 
 type Invoice = {
   id: string;
@@ -60,44 +61,48 @@ export default async function AdminInvoiceDetail({
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <h1 className="font-mono text-2xl font-semibold">{invoice.number}</h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-muted-foreground">
         status: {invoice.status} · {(invoice.paidCents / 100).toFixed(2)} /{" "}
         {(invoice.totalCents / 100).toFixed(2)} {invoice.currency} paid
       </p>
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Payments ({payments.length})
         </h2>
         {payments.length === 0 ? (
-          <p className="mt-2 text-sm text-neutral-500">No payments yet.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No payments yet.</p>
         ) : (
           <ul className="mt-3 space-y-3">
             {payments.map((p) => {
               const remaining = p.amountCents - p.refundedCents;
               return (
-                <li key={p.id} className="rounded border border-neutral-200 p-3 text-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{p.provider}</p>
-                      <p className="text-xs text-neutral-500 font-mono">
-                        {p.providerPaymentId}
-                      </p>
-                      <p className="mt-1 text-xs">
-                        {(p.amountCents / 100).toFixed(2)} {p.currency} ·{" "}
-                        refunded {(p.refundedCents / 100).toFixed(2)} ·{" "}
-                        remaining {(remaining / 100).toFixed(2)} · status {p.status}
-                      </p>
-                    </div>
-                  </div>
-                  {p.status === "succeeded" && remaining > 0 ? (
-                    <RefundForm
-                      invoiceId={invoice.id}
-                      paymentId={p.id}
-                      remainingCents={remaining}
-                      currency={p.currency}
-                    />
-                  ) : null}
+                <li key={p.id}>
+                  <Card className="gap-2 py-3">
+                    <CardContent className="px-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{p.provider}</p>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {p.providerPaymentId}
+                          </p>
+                          <p className="mt-1 text-xs">
+                            {(p.amountCents / 100).toFixed(2)} {p.currency} ·{" "}
+                            refunded {(p.refundedCents / 100).toFixed(2)} ·{" "}
+                            remaining {(remaining / 100).toFixed(2)} · status {p.status}
+                          </p>
+                        </div>
+                      </div>
+                      {p.status === "succeeded" && remaining > 0 ? (
+                        <RefundForm
+                          invoiceId={invoice.id}
+                          paymentId={p.id}
+                          remainingCents={remaining}
+                          currency={p.currency}
+                        />
+                      ) : null}
+                    </CardContent>
+                  </Card>
                 </li>
               );
             })}
@@ -106,24 +111,28 @@ export default async function AdminInvoiceDetail({
       </section>
 
       <section className="mt-8">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Ledger
         </h2>
-        <ul className="mt-3 divide-y divide-neutral-200 rounded border border-neutral-200 text-sm">
-          {transactions.map((t) => (
-            <li key={t.id} className="flex items-center justify-between px-3 py-2">
-              <span>
-                {t.kind} ({t.direction})
-              </span>
-              <span className="font-mono">
-                {(t.amountCents / 100).toFixed(2)} {t.currency}
-              </span>
-              <span className="text-xs text-neutral-500">
-                {new Date(t.createdAt).toLocaleString()}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <Card className="mt-3 gap-0 py-0">
+          <CardContent className="px-0">
+            <ul className="divide-y text-sm">
+              {transactions.map((t) => (
+                <li key={t.id} className="flex items-center justify-between px-4 py-2">
+                  <span>
+                    {t.kind} ({t.direction})
+                  </span>
+                  <span className="font-mono">
+                    {(t.amountCents / 100).toFixed(2)} {t.currency}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(t.createdAt).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </section>
     </main>
   );

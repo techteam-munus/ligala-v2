@@ -1,0 +1,100 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e31]:
+    - generic [ref=e34]:
+      - list [ref=e36]:
+        - listitem [ref=e37]:
+          - link "Ligala" [ref=e38] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e39]
+            - img "Ligala" [ref=e40]
+      - list [ref=e44]:
+        - listitem [ref=e45]:
+          - link "Dashboard" [ref=e46] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e47]
+            - generic [ref=e52]: Dashboard
+        - listitem [ref=e53]:
+          - link "Cases" [ref=e54] [cursor=pointer]:
+            - /url: /cases
+            - img [ref=e55]
+            - generic [ref=e58]: Cases
+        - listitem [ref=e59]:
+          - link "Invoices" [ref=e60] [cursor=pointer]:
+            - /url: /invoices
+            - img [ref=e61]
+            - generic [ref=e64]: Invoices
+        - listitem [ref=e65]:
+          - link "Profile" [ref=e66] [cursor=pointer]:
+            - /url: /profile
+            - img [ref=e67]
+            - generic [ref=e70]: Profile
+        - listitem [ref=e71]:
+          - link "Find a lawyer" [ref=e72] [cursor=pointer]:
+            - /url: /lawyers
+            - img [ref=e73]
+            - generic [ref=e76]: Find a lawyer
+        - listitem [ref=e77]:
+          - link "IBP chapters" [ref=e78] [cursor=pointer]:
+            - /url: /chapters
+            - img [ref=e79]
+            - generic [ref=e83]: IBP chapters
+      - list [ref=e85]:
+        - listitem [ref=e86]:
+          - button "C crumbtest crumbtest@example.com" [ref=e87]:
+            - generic [ref=e88]: C
+            - generic [ref=e89]:
+              - generic [ref=e90]: crumbtest
+              - generic [ref=e91]: crumbtest@example.com
+            - img [ref=e92]
+    - main [ref=e95]:
+      - generic [ref=e96]:
+        - button "Toggle Sidebar" [ref=e97]:
+          - img
+          - generic [ref=e98]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e99]:
+          - list [ref=e100]:
+            - listitem [ref=e101]:
+              - link "Dashboard" [disabled] [ref=e102]
+      - main [ref=e103]:
+        - heading "Welcome back" [level=1] [ref=e104]
+        - paragraph [ref=e105]:
+          - text: Signed in as
+          - strong [ref=e106]: crumbtest@example.com
+          - text: "(role:"
+          - code [ref=e107]: client
+          - text: ).
+        - generic [ref=e108]:
+          - link "Find a lawyer Browse verified Philippine lawyers." [ref=e109] [cursor=pointer]:
+            - /url: /lawyers
+            - generic [ref=e111]:
+              - generic [ref=e112]: Find a lawyer
+              - generic [ref=e113]: Browse verified Philippine lawyers.
+          - link "Pro bono lawyers Lawyers accepting pro bono cases." [ref=e114] [cursor=pointer]:
+            - /url: /lawyers?probono=true
+            - generic [ref=e116]:
+              - generic [ref=e117]: Pro bono lawyers
+              - generic [ref=e118]: Lawyers accepting pro bono cases.
+          - link "IBP chapters Browse by local bar chapter." [ref=e119] [cursor=pointer]:
+            - /url: /chapters
+            - generic [ref=e121]:
+              - generic [ref=e122]: IBP chapters
+              - generic [ref=e123]: Browse by local bar chapter.
+          - link "Your cases Engagements, signing, activity." [ref=e124] [cursor=pointer]:
+            - /url: /cases
+            - generic [ref=e126]:
+              - generic [ref=e127]: Your cases
+              - generic [ref=e128]: Engagements, signing, activity.
+          - link "Invoices Pay bills, see history." [ref=e129] [cursor=pointer]:
+            - /url: /invoices
+            - generic [ref=e131]:
+              - generic [ref=e132]: Invoices
+              - generic [ref=e133]: Pay bills, see history.
+          - link "Your profile Contact info." [ref=e134] [cursor=pointer]:
+            - /url: /profile
+            - generic [ref=e136]:
+              - generic [ref=e137]: Your profile
+              - generic [ref=e138]: Contact info.
+        - link "I'm a lawyer — list my practice" [ref=e140] [cursor=pointer]:
+          - /url: /become-a-lawyer
+  - region "Notifications alt+T"
+  - alert [ref=e30]

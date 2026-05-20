@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(pnpm dlx *)",
+      "Bash(grep -E \"\\\\.sql$\")",
+      "Bash(findstr env *)",
+      "Bash(pnpm --filter @ligala/web typecheck)",
+      "Bash(pnpm dlx *)",
+      "Bash(pnpm --filter @ligala/web lint)",
+      "Bash(pnpm install *)",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).dependencies['next-themes'] || 'NOT INSTALLED'\\)\")",
+      "Bash(node *)",
+      "Read(//c/Users/dejes/munus/**)",
+      "Bash(ls .claude/skills/)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(curl -s -o /dev/null -w \"web:%{http_code}\\\\n\" http://localhost:3000/login --max-time 3)",
+      "Bash(curl -s -o /dev/null -w \"api:%{http_code}\\\\n\" http://localhost:8787/healthz --max-time 3)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login)",
+      "mcp__plugin_playwright_playwright__browser_network_requests",
+      "mcp__plugin_playwright_playwright__browser_console_messages"
+    ]
+  }
+}

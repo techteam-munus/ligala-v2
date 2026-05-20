@@ -22,8 +22,6 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
 
 export default async function ReferralLinksPage() {
   const { items } = await safe<{ items: Link[] }>("/referrals/links", { items: [] });
-  // Build the absolute origin once on the server so the copy widget shows
-  // the same URL the client would land on.
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? "http";
@@ -32,7 +30,7 @@ export default async function ReferralLinksPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Referral links</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Share these on social, email, your own site. Anyone who starts a case
         via the link gets attributed to you in the referrals dashboard.
       </p>

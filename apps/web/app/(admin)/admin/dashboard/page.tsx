@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type Stats = {
   users: { role: string; status: string; count: number }[];
@@ -37,7 +39,7 @@ export default async function AdminDashboard() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Admin</h1>
-      <p className="mt-2 text-neutral-600">
+      <p className="mt-2 text-muted-foreground">
         Signed in as <strong>{session?.user.email}</strong>.
       </p>
 
@@ -75,10 +77,12 @@ export default async function AdminDashboard() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded border border-neutral-200 p-4">
-      <p className="text-xs uppercase tracking-wide text-neutral-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-    </div>
+    <Card className="gap-2 py-4">
+      <CardContent className="px-4">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="mt-1 text-2xl font-semibold">{value}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -94,14 +98,16 @@ function Tile({
   accent?: boolean;
 }) {
   return (
-    <Link
-      href={href as never}
-      className={`rounded border p-4 hover:border-neutral-500 ${
-        accent ? "border-amber-400 bg-amber-50" : "border-neutral-300"
-      }`}
-    >
-      <h2 className="font-medium">{title}</h2>
-      <p className="mt-1 text-sm text-neutral-600">{sub}</p>
+    <Link href={href as never} className="block">
+      <Card className="gap-2 py-4 transition-colors hover:border-foreground/40">
+        <CardHeader className="px-4">
+          <CardTitle className="flex items-center justify-between">
+            {title}
+            {accent ? <Badge variant="destructive">action needed</Badge> : null}
+          </CardTitle>
+          <CardDescription>{sub}</CardDescription>
+        </CardHeader>
+      </Card>
     </Link>
   );
 }

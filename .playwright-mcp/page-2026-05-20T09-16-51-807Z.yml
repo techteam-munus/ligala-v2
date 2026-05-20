@@ -1,0 +1,105 @@
+- generic [ref=e1]:
+  - generic [ref=e36]:
+    - generic [ref=e39]:
+      - list [ref=e41]:
+        - listitem [ref=e42]:
+          - link "L Ligala" [ref=e43] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e44]: L
+            - generic [ref=e45]: Ligala
+      - list [ref=e49]:
+        - listitem [ref=e50]:
+          - link "Dashboard" [ref=e51] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e52]
+            - generic [ref=e57]: Dashboard
+        - listitem [ref=e58]:
+          - link "Cases" [ref=e59] [cursor=pointer]:
+            - /url: /cases
+            - img [ref=e60]
+            - generic [ref=e63]: Cases
+        - listitem [ref=e64]:
+          - link "Invoices" [ref=e65] [cursor=pointer]:
+            - /url: /invoices
+            - img [ref=e66]
+            - generic [ref=e69]: Invoices
+        - listitem [ref=e70]:
+          - link "Profile" [ref=e71] [cursor=pointer]:
+            - /url: /profile
+            - img [ref=e72]
+            - generic [ref=e75]: Profile
+        - listitem [ref=e76]:
+          - link "Find a lawyer" [ref=e77] [cursor=pointer]:
+            - /url: /lawyers
+            - img [ref=e78]
+            - generic [ref=e81]: Find a lawyer
+        - listitem [ref=e82]:
+          - link "IBP chapters" [ref=e83] [cursor=pointer]:
+            - /url: /chapters
+            - img [ref=e84]
+            - generic [ref=e88]: IBP chapters
+      - list [ref=e90]:
+        - listitem [ref=e91]:
+          - button "V verify-signout-20260520@test.local client" [ref=e92]:
+            - generic [ref=e93]: V
+            - generic [ref=e94]:
+              - generic [ref=e95]: verify-signout-20260520@test.local
+              - generic [ref=e96]: client
+        - listitem [ref=e97]:
+          - button "Sign out" [active] [ref=e98]:
+            - img [ref=e99]
+            - generic [ref=e102]: Sign out
+    - main [ref=e103]:
+      - button "Toggle Sidebar" [ref=e105]:
+        - img
+        - generic [ref=e106]: Toggle Sidebar
+      - main [ref=e107]:
+        - heading "Welcome back" [level=1] [ref=e108]
+        - paragraph [ref=e109]:
+          - text: Signed in as
+          - strong [ref=e110]: verify-signout-20260520@test.local
+          - text: "(role:"
+          - code [ref=e111]: client
+          - text: ).
+        - generic [ref=e112]:
+          - link "Find a lawyer Browse verified Philippine lawyers." [ref=e113] [cursor=pointer]:
+            - /url: /lawyers
+            - generic [ref=e115]:
+              - generic [ref=e116]: Find a lawyer
+              - generic [ref=e117]: Browse verified Philippine lawyers.
+          - link "Pro bono lawyers Lawyers accepting pro bono cases." [ref=e118] [cursor=pointer]:
+            - /url: /lawyers?probono=true
+            - generic [ref=e120]:
+              - generic [ref=e121]: Pro bono lawyers
+              - generic [ref=e122]: Lawyers accepting pro bono cases.
+          - link "IBP chapters Browse by local bar chapter." [ref=e123] [cursor=pointer]:
+            - /url: /chapters
+            - generic [ref=e125]:
+              - generic [ref=e126]: IBP chapters
+              - generic [ref=e127]: Browse by local bar chapter.
+          - link "Your cases Engagements, signing, activity." [ref=e128] [cursor=pointer]:
+            - /url: /cases
+            - generic [ref=e130]:
+              - generic [ref=e131]: Your cases
+              - generic [ref=e132]: Engagements, signing, activity.
+          - link "Invoices Pay bills, see history." [ref=e133] [cursor=pointer]:
+            - /url: /invoices
+            - generic [ref=e135]:
+              - generic [ref=e136]: Invoices
+              - generic [ref=e137]: Pay bills, see history.
+          - link "Your profile Contact info." [ref=e138] [cursor=pointer]:
+            - /url: /profile
+            - generic [ref=e140]:
+              - generic [ref=e141]: Your profile
+              - generic [ref=e142]: Contact info.
+        - link "I'm a lawyer — list my practice" [ref=e144] [cursor=pointer]:
+          - /url: /become-a-lawyer
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e157]:
+        - generic [ref=e158]:
+          - generic [ref=e159]: Sign out?
+          - generic [ref=e160]: You'll need to sign in again to come back.
+        - button "Cancel" [ref=e161] [cursor=pointer]
+        - button "Sign out" [ref=e162] [cursor=pointer]
+  - alert [ref=e35]

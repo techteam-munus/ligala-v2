@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { refundInvoice } from "@/lib/actions/admin";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function RefundForm({
   invoiceId,
@@ -55,36 +58,42 @@ export function RefundForm({
   return (
     <form
       onSubmit={submit}
-      className="mt-3 flex flex-col gap-2 rounded border border-neutral-200 bg-neutral-50 p-3 sm:flex-row sm:items-end"
+      className="mt-3 flex flex-col gap-2 rounded-md border bg-muted/40 p-3 sm:flex-row sm:items-end"
     >
-      <label className="text-xs">
-        <span className="block uppercase tracking-wide text-neutral-500">Amount {currency}</span>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="refund-amount" className="text-xs uppercase tracking-wide text-muted-foreground">
+          Amount {currency}
+        </Label>
+        <Input
+          id="refund-amount"
           type="number"
           min={0.01}
           step={0.01}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="mt-1 w-32 rounded border border-neutral-300 px-2 py-1 text-sm"
+          className="w-32"
         />
-      </label>
-      <label className="text-xs sm:flex-1">
-        <span className="block uppercase tracking-wide text-neutral-500">Reason</span>
-        <input
+      </div>
+      <div className="space-y-1.5 sm:flex-1">
+        <Label htmlFor="refund-reason" className="text-xs uppercase tracking-wide text-muted-foreground">
+          Reason
+        </Label>
+        <Input
+          id="refund-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Customer satisfaction"
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1 text-sm"
         />
-      </label>
-      <button
+      </div>
+      <Button
         type="submit"
+        variant="outline"
         disabled={pending}
-        className="rounded border border-red-500 px-3 py-1.5 text-sm text-red-700 disabled:opacity-50"
+        className="border-destructive text-destructive hover:text-destructive"
       >
         {pending ? "Refunding…" : "Refund"}
-      </button>
-      {err ? <p className="text-xs text-red-700 sm:basis-full">{err}</p> : null}
+      </Button>
+      {err ? <p className="text-xs text-destructive sm:basis-full">{err}</p> : null}
       {ok ? <p className="text-xs text-green-700 sm:basis-full">{ok}</p> : null}
     </form>
   );

@@ -1,0 +1,115 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Ligala" [ref=e9] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e10]
+            - img "Ligala" [ref=e11]
+      - list [ref=e15]:
+        - listitem [ref=e16]:
+          - link "Dashboard" [ref=e17] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e18]
+            - generic [ref=e23]: Dashboard
+        - listitem [ref=e24]:
+          - link "Cases" [ref=e25] [cursor=pointer]:
+            - /url: /cases
+            - img [ref=e26]
+            - generic [ref=e29]: Cases
+        - listitem [ref=e30]:
+          - link "Invoices" [ref=e31] [cursor=pointer]:
+            - /url: /invoices
+            - img [ref=e32]
+            - generic [ref=e35]: Invoices
+        - listitem [ref=e36]:
+          - link "Profile" [ref=e37] [cursor=pointer]:
+            - /url: /profile
+            - img [ref=e38]
+            - generic [ref=e41]: Profile
+        - listitem [ref=e42]:
+          - link "Find a lawyer" [ref=e43] [cursor=pointer]:
+            - /url: /lawyers
+            - img [ref=e44]
+            - generic [ref=e47]: Find a lawyer
+        - listitem [ref=e48]:
+          - link "IBP chapters" [ref=e49] [cursor=pointer]:
+            - /url: /chapters
+            - img [ref=e50]
+            - generic [ref=e54]: IBP chapters
+      - list [ref=e56]:
+        - listitem [ref=e57]:
+          - button "C crumbtest crumbtest@example.com" [ref=e58]:
+            - generic [ref=e59]: C
+            - generic [ref=e60]:
+              - generic [ref=e61]: crumbtest
+              - generic [ref=e62]: crumbtest@example.com
+            - img [ref=e63]
+    - main [ref=e66]:
+      - generic [ref=e67]:
+        - button "Toggle Sidebar" [ref=e68]:
+          - img
+          - generic [ref=e69]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e70]:
+          - list [ref=e71]:
+            - listitem [ref=e72]:
+              - link "Cases" [ref=e73] [cursor=pointer]:
+                - /url: /cases
+            - listitem [ref=e74]:
+              - img [ref=e75]
+            - listitem [ref=e77]:
+              - link "New" [disabled] [ref=e78]
+      - main [ref=e79]:
+        - heading "Open a case" [level=1] [ref=e80]
+        - paragraph [ref=e81]: Share the basics. The lawyer reviews and accepts or declines.
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - generic [ref=e84]: Type
+            - combobox "Type" [ref=e85]:
+              - option "Paid engagement" [selected]
+              - option "Pro bono request"
+          - generic [ref=e86]:
+            - generic [ref=e87]: Title
+            - textbox "Title" [ref=e88]:
+              - /placeholder: One-line summary
+          - generic [ref=e89]:
+            - generic [ref=e90]: Description
+            - textbox "Description" [ref=e91]:
+              - /placeholder: Background, what you need help with, timeline.
+          - generic [ref=e92]:
+            - generic [ref=e93]:
+              - generic [ref=e94]: Practice area
+              - combobox "Practice area" [ref=e95]:
+                - option "— Not sure —" [selected]
+                - option "Civil Law"
+                - option "Criminal Law"
+                - option "Family Law"
+                - option "Labor Law"
+                - option "Taxation"
+                - option "Corporate Law"
+                - option "Banking & Finance"
+                - option "Intellectual Property"
+                - option "Real Estate & Property"
+                - option "Immigration"
+                - option "Estate Planning"
+                - option "Election Law"
+                - option "Maritime Law"
+                - option "Environmental Law"
+                - option "Litigation"
+            - generic [ref=e96]:
+              - generic [ref=e97]: Jurisdiction
+              - combobox "Jurisdiction" [ref=e98]:
+                - option "— Not sure —" [selected]
+                - option "Supreme Court"
+                - option "Court of Appeals"
+                - option "Sandiganbayan"
+                - option "Court of Tax Appeals"
+                - option "Regional Trial Court"
+                - option "Metropolitan Trial Court"
+                - option "Municipal Trial Court in Cities"
+                - option "Municipal Trial Court"
+                - option "Sharia District Court"
+                - option "Sharia Circuit Court"
+          - button "Submit case" [ref=e99]
+  - region "Notifications alt+T"

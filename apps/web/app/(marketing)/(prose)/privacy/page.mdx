@@ -1,0 +1,72 @@
+export const metadata = {
+  title: "Privacy Policy",
+  description: "What data Ligala collects and how we use it.",
+};
+
+# Privacy Policy
+
+_Last updated: 20 May 2026._
+
+This policy explains what data Ligala Inc. ("Ligala") collects, how we use it, and
+what your rights are under the Philippine Data Privacy Act of 2012 (R.A. 10173).
+
+## What we collect
+
+**Account data.** Name, email, password (hashed), role (client or lawyer), account
+status.
+
+**Lawyer-only data.** IBP chapter, practice areas, jurisdictions, office location,
+schedule, FAQs, profile photo, pro bono availability statement.
+
+**KYC data.** Identity documents and selfie verification submitted to IDMeta for
+verification. Documents are stored in private S3 and access-controlled to the
+submitting lawyer and Ligala administrators.
+
+**Case data.** Case descriptions, notes, attachments, activity history, engagement
+terms, invoices, payments, and transactions you create on the Platform.
+
+**Usage data.** Request logs, page views, basic analytics needed to operate and
+secure the service.
+
+## How we use it
+
+- To operate the Platform and let you discover, engage, and bill lawyers.
+- To verify lawyer identity through IDMeta and surface only verified lawyers.
+- To process payments through PayMongo and PayPal.
+- To detect abuse, troubleshoot bugs, and improve the service.
+- To send transactional emails (account, KYC, invoices) via Amazon SES.
+
+We do **not** sell your data.
+
+## Who can see what
+
+- **Clients** can see verified lawyers' public profile data and their own cases,
+  engagements, invoices, and payments.
+- **Lawyers** can see their own profile, the cases assigned to them, notes filed to
+  them, and invoices they have issued.
+- **Administrators** at Ligala have access to all account data necessary to operate
+  the service, moderate the directory, and respond to abuse reports. Every
+  administrator mutation is recorded in an audit log.
+
+## Your rights
+
+Under the Data Privacy Act you have the right to access, correct, or request
+deletion of your personal data, and to object to processing. Email
+privacy@ligala.ph and we will respond within the timelines required by law.
+
+## Data retention
+
+Account data is retained for as long as your account is active. Case, engagement,
+invoice, and ledger data is retained as long as the Platform operates so both
+parties have an authoritative record. If you ask us to delete personal data tied to
+a paid case, we will redact identifying fields in place rather than destroying the
+underlying case record.
+
+## Security
+
+All traffic is encrypted in transit (TLS). Passwords are hashed via Better Auth's
+default scheme. KYC documents are stored in private S3 with server-side encryption.
+
+## Contact
+
+For privacy questions or to exercise your rights, email privacy@ligala.ph.

@@ -5,10 +5,18 @@ import { getSessionCookie } from "better-auth/cookies";
 // happens in each route group's layout (server component, can hit the DB).
 //
 // Public paths anyone can hit:
-const PUBLIC_PATHS = new Set(["/", "/login", "/signup", "/forgot-password"]);
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/about",
+  "/pricing",
+  "/terms",
+  "/privacy",
+]);
 const isPublic = (pathname: string) =>
   PUBLIC_PATHS.has(pathname) ||
-  pathname.startsWith("/about") ||
   // Public lawyer directory + profile pages (SSR for SEO; no auth required).
   pathname === "/lawyers" ||
   pathname.startsWith("/lawyers/") ||
@@ -42,7 +50,9 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip Next internals, the auth API (Better Auth handles its own routes),
-    // the health probe, and static assets.
-    "/((?!_next/static|_next/image|favicon.ico|api/auth|api/health).*)",
+    // the health probe, and any path that looks like a static asset (anything
+    // with a file extension — /public files like ligala-logo.svg must not
+    // 302 to /login when unauthenticated).
+    "/((?!_next/static|_next/image|favicon.ico|api/auth|api/health|.*\\..*).*)",
   ],
 };

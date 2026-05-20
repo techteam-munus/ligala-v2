@@ -2,6 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { createInvoice } from "@/lib/actions/billing";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Line = { description: string; qty: string; unit: string };
 
@@ -63,7 +67,7 @@ export function NewInvoiceForm({ caseId }: { caseId: string }) {
   return (
     <form onSubmit={submit} className="mt-6 space-y-4">
       <div className="space-y-2">
-        <div className="grid grid-cols-[1fr_80px_120px_32px] gap-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <div className="grid grid-cols-[1fr_80px_120px_32px] gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           <span>Description</span>
           <span>Qty</span>
           <span>Unit (PHP)</span>
@@ -71,70 +75,62 @@ export function NewInvoiceForm({ caseId }: { caseId: string }) {
         </div>
         {lines.map((l, i) => (
           <div key={i} className="grid grid-cols-[1fr_80px_120px_32px] gap-2">
-            <input
+            <Input
               required
               value={l.description}
               onChange={(e) => update(i, { description: e.target.value })}
-              className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
               placeholder="e.g. Contract review"
             />
-            <input
+            <Input
               required
               type="number"
               step="0.001"
               min={0}
               value={l.qty}
               onChange={(e) => update(i, { qty: e.target.value })}
-              className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
             />
-            <input
+            <Input
               required
               type="number"
               step="0.01"
               min={0}
               value={l.unit}
               onChange={(e) => update(i, { unit: e.target.value })}
-              className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={() => removeLine(i)}
               disabled={lines.length === 1}
-              className="rounded border border-neutral-300 text-sm disabled:opacity-30"
+              className="h-9 w-9"
             >
               ×
-            </button>
+            </Button>
           </div>
         ))}
-        <button type="button" onClick={addLine} className="text-sm underline">
+        <Button type="button" variant="ghost" size="sm" onClick={addLine} className="px-0">
           + add line
-        </button>
+        </Button>
       </div>
       <div className="text-right text-sm">
-        <span className="text-neutral-500">Subtotal: </span>
+        <span className="text-muted-foreground">Subtotal: </span>
         <strong>{(subtotal() / 100).toFixed(2)} PHP</strong>
       </div>
-      <div>
-        <label htmlFor="notes" className="block text-sm font-medium">
-          Notes (Markdown)
-        </label>
-        <textarea
+      <div className="space-y-1.5">
+        <Label htmlFor="notes">Notes (Markdown)</Label>
+        <Textarea
           id="notes"
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
           placeholder="Payment terms, references, etc."
         />
       </div>
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create draft"}
-      </button>
+      </Button>
     </form>
   );
 }

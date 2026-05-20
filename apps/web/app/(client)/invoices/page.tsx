@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
 
 type InvoiceRow = {
   id: string;
@@ -32,24 +33,29 @@ export default async function ClientInvoicesPage() {
     <main className="mx-auto max-w-3xl px-6 py-12">
       <h1 className="text-3xl font-semibold tracking-tight">Invoices</h1>
       {items.length === 0 ? (
-        <p className="mt-8 rounded border border-dashed border-neutral-300 p-8 text-center text-neutral-500">
-          You have no invoices yet.
-        </p>
+        <Card className="mt-8 border-dashed">
+          <CardContent className="py-8 text-center text-muted-foreground">
+            You have no invoices yet.
+          </CardContent>
+        </Card>
       ) : (
         <ul className="mt-8 space-y-2">
           {items.map((inv) => (
             <li key={inv.id}>
-              <Link
-                href={`/invoices/${inv.id}` as never}
-                className="flex items-center justify-between rounded border border-neutral-200 p-3 hover:border-neutral-400"
-              >
-                <div>
-                  <p className="font-medium">{inv.number}</p>
-                  <p className="text-xs uppercase tracking-wide text-neutral-500">
-                    {inv.status}
-                  </p>
-                </div>
-                <span className="font-medium">{money(inv.totalCents, inv.currency)}</span>
+              <Link href={`/invoices/${inv.id}` as never} className="block">
+                <Card className="gap-0 py-3 transition-colors hover:border-foreground/40">
+                  <CardContent className="px-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{inv.number}</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {inv.status}
+                        </p>
+                      </div>
+                      <span className="font-medium">{money(inv.totalCents, inv.currency)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             </li>
           ))}
