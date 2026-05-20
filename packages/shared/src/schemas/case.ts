@@ -20,6 +20,14 @@ export const caseCreateInput = z.object({
   description: z.string().min(10).max(8000),
   practiceAreaId: z.string().max(64).optional().nullable(),
   jurisdictionId: z.string().max(64).optional().nullable(),
+  // Phase 6 — attribution + pro bono eligibility statement.
+  referralLinkSlug: z
+    .string()
+    .min(4)
+    .max(40)
+    .regex(/^[A-Z0-9]+$/)
+    .optional(),
+  probonoReason: z.string().max(2000).optional(),
 });
 export type CaseCreateInput = z.infer<typeof caseCreateInput>;
 

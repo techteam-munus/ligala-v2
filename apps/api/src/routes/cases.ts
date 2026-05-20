@@ -96,6 +96,35 @@ export const cases = new Hono()
       throw new HTTPException(409, { message: "lawyer_not_verified" });
     }
 
+    // Resolve referral link if supplied. The link's lawyer is recorded as
+    // the referral source even when the client ultimately picks a different
+    // lawyer — that's the attribution model. Inactive links 404.
+    let referralId: string | null = null;
+    if (input.referralLinkSlug) {
+      const link = await conn.query.referralLinks.findFirst({
+        where: eq(schema.referralLinks.slug, input.referralLinkSlug),
+      });
+      if (!link || !link.active) {
+        throw new HTTPException(404, { message: "referral_link_not_found" });
+      }
+      const id = newId();
+      await conn.insert(schema.referrals).values({
+        id,
+        kind: "link_signup",
+        fromLawyerId: link.lawyerId,
+        toLawyerId: profile.userId,
+        linkId: link.id,
+        status: "completed",
+        payload: { lawyerSlug: input.lawyerSlug, type: input.type },
+        decidedAt: new Date(),
+      });
+      await conn
+        .update(schema.referralLinks)
+        .set({ signups: link.signups + 1 })
+        .where(eq(schema.referralLinks.id, link.id));
+      referralId = id;
+    }
+
     const id = newId();
     const [created] = await conn
       .insert(schema.cases)
@@ -109,9 +138,15 @@ export const cases = new Hono()
         description: input.description,
         practiceAreaId: input.practiceAreaId ?? null,
         jurisdictionId: input.jurisdictionId ?? null,
+        referralId,
+        probonoReason:
+          input.type === "probono" ? (input.probonoReason ?? null) : null,
       })
       .returning();
-    await logActivity(id, user.id, "created", { type: input.type });
+    await logActivity(id, user.id, "created", {
+      type: input.type,
+      referralId,
+    });
     return c.json({ case: created }, 201);
   })
 

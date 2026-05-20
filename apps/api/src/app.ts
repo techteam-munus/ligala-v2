@@ -9,7 +9,7 @@ import { directory } from "./routes/directory";
 import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
 import { billing, discountCodesRouter } from "./routes/billing";
-import { referrals } from "./routes/referrals";
+import { referrals, referralLinksPublic } from "./routes/referrals";
 import { files } from "./routes/files";
 import { references } from "./routes/references";
 import { integrations } from "./routes/integrations";
@@ -39,6 +39,7 @@ export function createApp() {
   app.route("/billing", billing);
   app.route("/billing/discount-codes", discountCodesRouter);
   app.route("/referrals", referrals);
+  app.route("/directory/referral-links", referralLinksPublic);
   app.route("/files", files);
   app.route("/references", references);
   app.route("/integrations", integrations);

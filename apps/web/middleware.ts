@@ -11,7 +11,10 @@ const isPublic = (pathname: string) =>
   pathname.startsWith("/about") ||
   // Public lawyer directory + profile pages (SSR for SEO; no auth required).
   pathname === "/lawyers" ||
-  pathname.startsWith("/lawyers/");
+  pathname.startsWith("/lawyers/") ||
+  // Public IBP chapter index + chapter pages.
+  pathname === "/chapters" ||
+  pathname.startsWith("/chapters/");
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

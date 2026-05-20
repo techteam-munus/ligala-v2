@@ -36,6 +36,13 @@
       "when": 1779249113883,
       "tag": "0004_fresh_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779249949700,
+      "tag": "0005_phase6_referrals",
+      "breakpoints": true
     }
   ]
 }

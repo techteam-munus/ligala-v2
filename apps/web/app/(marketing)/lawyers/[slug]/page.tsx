@@ -10,6 +10,8 @@ type ProfileResponse = {
     bio: string | null;
     barNumber: string | null;
     verified: boolean;
+    probonoAvailable: boolean;
+    probonoStatement: string | null;
   };
   ibpChapter: { id: string; name: string; region: string; city: string | null } | null;
   practiceAreas: { id: string; name: string }[];
@@ -112,6 +114,11 @@ export default async function PublicLawyerProfile({
           <span className="rounded-full border border-green-600 px-2 py-0.5 text-xs font-medium text-green-700">
             Verified
           </span>
+          {profile.probonoAvailable ? (
+            <span className="rounded-full border border-amber-600 px-2 py-0.5 text-xs font-medium text-amber-700">
+              Accepts pro bono
+            </span>
+          ) : null}
         </div>
         {profile.barNumber ? (
           <p className="mt-2 text-sm text-neutral-500">PH Bar No. {profile.barNumber}</p>
@@ -121,6 +128,12 @@ export default async function PublicLawyerProfile({
         ) : null}
         {profile.bio ? (
           <p className="mt-4 max-w-2xl text-neutral-700">{profile.bio}</p>
+        ) : null}
+        {profile.probonoAvailable && profile.probonoStatement ? (
+          <p className="mt-3 max-w-2xl rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <span className="font-medium">Pro bono note: </span>
+            {profile.probonoStatement}
+          </p>
         ) : null}
         <div className="mt-6">
           <Link

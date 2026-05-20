@@ -7,10 +7,12 @@ type Ref = { id: string; name: string };
 
 export function NewCaseForm({
   lawyerSlug,
+  referralLinkSlug,
   practiceAreas,
   jurisdictions,
 }: {
   lawyerSlug: string;
+  referralLinkSlug?: string;
   practiceAreas: Ref[];
   jurisdictions: Ref[];
 }) {
@@ -21,6 +23,7 @@ export function NewCaseForm({
     description: "",
     practiceAreaId: "",
     jurisdictionId: "",
+    probonoReason: "",
   });
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,11 @@ export function NewCaseForm({
           description: form.description,
           practiceAreaId: form.practiceAreaId || null,
           jurisdictionId: form.jurisdictionId || null,
+          referralLinkSlug: referralLinkSlug || undefined,
+          probonoReason:
+            form.type === "probono" && form.probonoReason
+              ? form.probonoReason
+              : undefined,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to create case");
@@ -120,6 +128,21 @@ export function NewCaseForm({
           </select>
         </div>
       </div>
+      {form.type === "probono" ? (
+        <div>
+          <label htmlFor="probonoReason" className="block text-sm font-medium">
+            Pro bono eligibility (optional)
+          </label>
+          <textarea
+            id="probonoReason"
+            value={form.probonoReason}
+            onChange={(e) => setForm({ ...form, probonoReason: e.target.value })}
+            rows={3}
+            className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+            placeholder="Indigency, household size, income, or other context."
+          />
+        </div>
+      ) : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <button
         type="submit"

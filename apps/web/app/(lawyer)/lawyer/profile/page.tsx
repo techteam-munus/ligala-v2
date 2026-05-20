@@ -7,6 +7,8 @@ type ProfileResponse = {
     barNumber: string | null;
     ibpChapterId: string | null;
     bio: string | null;
+    probonoAvailable: boolean;
+    probonoStatement: string | null;
   } | null;
   practiceAreaIds: string[];
   jurisdictionIds: string[];
@@ -45,6 +47,8 @@ export default async function LawyerProfilePage() {
           bio: profileRes.profile?.bio ?? "",
           practiceAreaIds: profileRes.practiceAreaIds,
           jurisdictionIds: profileRes.jurisdictionIds,
+          probonoAvailable: profileRes.profile?.probonoAvailable ?? false,
+          probonoStatement: profileRes.profile?.probonoStatement ?? "",
         }}
         ibpChapters={ibp.items}
         practiceAreas={practice.items}

@@ -14,6 +14,10 @@ export const lawyerProfileInput = z.object({
   bio: z.string().max(2000).optional().nullable(),
   practiceAreaIds: z.array(z.string().max(64)).max(20).default([]),
   jurisdictionIds: z.array(z.string().max(64)).max(20).default([]),
+  // Phase 6 pro bono opt-in. probonoCapActive=null means no cap.
+  probonoAvailable: z.boolean().optional(),
+  probonoStatement: z.string().max(1000).optional().nullable(),
+  probonoCapActive: z.number().int().min(0).max(100).optional().nullable(),
 });
 
 export type LawyerProfileInput = z.infer<typeof lawyerProfileInput>;

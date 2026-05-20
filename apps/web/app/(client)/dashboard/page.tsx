@@ -11,13 +11,27 @@ export default async function ClientDashboard() {
         <code>{session?.user.role}</code>).
       </p>
 
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/lawyers"
           className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
         >
           <h2 className="font-medium">Find a lawyer</h2>
           <p className="mt-1 text-sm text-neutral-600">Browse verified Philippine lawyers.</p>
+        </Link>
+        <Link
+          href="/lawyers?probono=true"
+          className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
+        >
+          <h2 className="font-medium">Pro bono lawyers</h2>
+          <p className="mt-1 text-sm text-neutral-600">Lawyers accepting pro bono cases.</p>
+        </Link>
+        <Link
+          href="/chapters"
+          className="rounded border border-neutral-300 p-4 hover:border-neutral-500"
+        >
+          <h2 className="font-medium">IBP chapters</h2>
+          <p className="mt-1 text-sm text-neutral-600">Browse by local bar chapter.</p>
         </Link>
         <Link
           href="/cases"
@@ -41,10 +55,6 @@ export default async function ClientDashboard() {
           <p className="mt-1 text-sm text-neutral-600">Contact info.</p>
         </Link>
       </div>
-
-      <p className="mt-8 text-sm text-neutral-500">
-        Phase 6 adds referrals + pro bono polish.
-      </p>
       <div className="mt-6">
         <Link
           href="/become-a-lawyer"

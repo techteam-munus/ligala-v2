@@ -12,6 +12,8 @@ type Initial = {
   bio: string;
   practiceAreaIds: string[];
   jurisdictionIds: string[];
+  probonoAvailable: boolean;
+  probonoStatement: string;
 };
 
 export function LawyerProfileForm({
@@ -35,6 +37,8 @@ export function LawyerProfileForm({
   const [jurisdictionIds, setJurisdictionIds] = useState<Set<string>>(
     new Set(initial.jurisdictionIds),
   );
+  const [probonoAvailable, setProbonoAvailable] = useState(initial.probonoAvailable);
+  const [probonoStatement, setProbonoStatement] = useState(initial.probonoStatement);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -58,6 +62,8 @@ export function LawyerProfileForm({
           bio: bio || null,
           practiceAreaIds: [...practiceAreaIds],
           jurisdictionIds: [...jurisdictionIds],
+          probonoAvailable,
+          probonoStatement: probonoStatement || null,
         });
         setSavedAt(new Date().toLocaleTimeString());
       } catch (err) {
@@ -148,6 +154,29 @@ export function LawyerProfileForm({
             </label>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset className="rounded border border-neutral-200 p-3">
+        <legend className="px-1 text-sm font-medium">Pro bono</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={probonoAvailable}
+            onChange={(e) => setProbonoAvailable(e.target.checked)}
+          />
+          I&apos;m open to pro bono cases.
+        </label>
+        <label className="mt-3 flex flex-col gap-1 text-sm">
+          <span className="font-medium">Pro bono note (public)</span>
+          <textarea
+            value={probonoStatement}
+            onChange={(e) => setProbonoStatement(e.target.value)}
+            rows={2}
+            placeholder="Eligibility, hours per month, etc."
+            className="rounded border border-neutral-300 px-3 py-2"
+            disabled={!probonoAvailable}
+          />
+        </label>
       </fieldset>
 
       {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

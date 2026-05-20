@@ -7,10 +7,10 @@
 
 ## Current State
 
-- **Active phase:** Phase 5 — Billing **DONE locally** (full 22-step API smoke test passed including invoice CRUD, discount apply, dev-simulate checkout, webhook idempotency, ledger; awaiting browser walkthrough + AWS dev deploy + real provider keys)
+- **Active phase:** Phase 6 — Referrals + pro bono polish + IBP chapter integration **DONE locally** (49-step API + SSR smoke test passed; awaiting browser walkthrough + AWS dev deploy)
 - **Last working session:** 2026-05-20
-- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet. **Playwright MCP intermittent** (briefly online this session, disconnected again before walkthrough could run).
-- **Next action:** browser walkthrough of the billing flow + earlier-phase backlog, OR jump to Phase 6 (referrals + pro bono polish), OR wire real PayMongo + PayPal signature verification.
+- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet. **Playwright MCP intermittent** (came online during this session but disconnected before any walkthrough could run).
+- **Next action:** Phase 7 (admin portal — account oversight, verification approvals, discount + referral moderation, refunds) OR backlog (browser walkthrough sweep, AWS dev deploy, real PayMongo + PayPal signature verification, real S3 presigning).
 - **Blockers:** none
 
 ---
@@ -107,13 +107,55 @@
   - [ ] Real PayMongo Checkout / PayPal Orders v2 redirect URL generation (deferred — wraps `/checkout` handler)
   - [ ] Refunds + partial-refunds (deferred to Phase 7 admin tooling)
   - [ ] Deployed smoke test against dev env
-- [ ] Phase 6 — Referrals + pro bono polish (referral graph, IBP chapter integration)
+- [ ] **Phase 6 — Referrals + pro bono polish** *(49-step API + SSR smoke test passed; browser walkthrough pending)*
+  - [x] Drizzle schema: 2 new tables (`referral`, `referral_link`) + 2 enums (`referral_kind`, `referral_status`); 3 new pro-bono columns on `lawyer_profile` (`probono_available`, `probono_statement`, `probono_cap_active`); 2 new columns on `case` (`referral_id`, `probono_reason`); 3 new `case_activity_kind` values (`referred`, `referral_accepted`, `referral_declined`)
+  - [x] Migration `0005_phase6_referrals.sql` applied; total: 28 tables in dev
+  - [x] Shared Zod: `referral` (`referralCreateInput`, `referralDecisionInput`, `referralLinkInput`, `referralLinkPatch`); lawyer profile gains pro-bono fields; `lawyerSearchQuery` gains `probono` + `chapterId`; `caseCreateInput` gains `referralLinkSlug` + `probonoReason`
+  - [x] Hono `/referrals`: list (auth, role-scoped), POST (lawyer-to-lawyer case_referral with optional caseId), POST/:id/decision (recipient accepts → case reassigned + status reset to pending; declines → declined + activity row), GET/POST/PATCH/DELETE `/links` (per-lawyer share-code CRUD)
+  - [x] Hono `/directory/chapters` GET + `/directory/chapters/:id` GET — public IBP chapter index w/ verified member counts + chapter detail w/ verified-member list
+  - [x] Hono `/directory/referral-links/:slug` — public lookup that bumps the click counter; no auth
+  - [x] Hono `/directory/lawyers` query extensions: `probono=true` + `chapterId=...` filters, `probonoAvailable` flag in result items
+  - [x] Hono `/cases` POST extension: when `referralLinkSlug` is supplied, creates a `link_signup` referral row + bumps `signups` + sets `case.referralId`; pro bono cases persist `probonoReason`
+  - [x] Existing `/lawyers/profile` PATCH accepts the new pro-bono fields through the partial-patch passthrough
+  - [x] Next.js lawyer portal: `/lawyer/referrals` (inbound + outbound list w/ accept/decline buttons + outbound form), `/lawyer/referral-links` (create + copy-link + enable/disable + delete); pro-bono toggle + statement added to `/lawyer/profile`; lawyer dashboard reorganized to 6-tile grid with referral + link counts
+  - [x] Next.js public: `/chapters` (chapter index) + `/chapters/[id]` (chapter detail with member list + "search lawyers in this chapter" CTA); `/lawyers` gains probono checkbox + chapter selector + pro bono badge; `/lawyers/[slug]` shows pro bono badge + public statement
+  - [x] Next.js client portal: `/cases/new` resolves `?ref=<SLUG>` via the public lookup, pre-fills the lawyer, threads `referralLinkSlug` into the create call; pro bono cases gain a "Pro bono eligibility" textarea; client dashboard gains `Pro bono lawyers` + `IBP chapters` tiles
+  - [x] Middleware extended to allow public `/chapters` + `/chapters/[id]`
+  - [x] Full API + SSR smoke (`curl`, 49 checks): two lawyers signed up → both KYC-approved → A patches pro bono on + Manila chapter; B not pro bono + Quezon City chapter → directory `probono=true` returns just A → chapterId filter works → chapter index + detail surface verified members → A creates referral link (auto slug) → public lookup bumps `clicks=1` → client creates a case via the link → `signups=1` + `case.referralId` set → A refers the case to B → B accepts → case reassigned to B + status reset to pending → activity timeline records `referred` + `referral_accepted` → A no longer sees the case (403) → client creates a pro bono case with `probonoReason` → outbound referral with no case (note only) → B declines (409 on duplicate decision) → self-referral 400 → unverified recipient 404 → client cannot create a referral (403 lawyers_only) → patch link → inactive → public lookup 404 → case create via disabled link 404 → delete link 204 → preferred slug `FRIENDS` accepted → duplicate slug 409 → SSR `/chapters`, `/chapters/manila`, `/chapters/nonexistent`, `/lawyers?probono=true`, `/lawyers/atty-a6` all return expected HTTP + render pro-bono badge.
+  - [ ] Browser walkthrough of refer-a-case + referral-link-signup + chapter index (Playwright MCP intermittent)
+  - [ ] Real S3 presigning + real Google Maps Embed API key (deferred — same backlog as Phase 2/3)
+  - [ ] Deployed smoke test against dev env
 - [ ] Phase 7 — Admin portal (account oversight, verification approvals, discount mgmt)
 - [ ] Phase 8 — Hardening (Playwright E2E, observability alarms, load test, marketing MDX)
 
 ---
 
 ## Session Log
+
+### 2026-05-20 — Session 8 (Phase 6 referrals + pro bono + IBP chapters)
+
+- **Did:**
+  - Schema: 2 new aggregates (`referral`, `referral_link`) + 2 enums in `packages/db/src/schema/referrals.ts`; 3 pro-bono columns added to `lawyer_profile`; 2 attribution columns added to `case`; 3 new values appended to `case_activity_kind` enum. Migration `0005_phase6_referrals.sql` applied; 28 tables total in dev.
+  - Shared Zod: `referral.ts` (`referralCreateInput`, `referralDecisionInput`, `referralLinkInput`, `referralLinkPatch`). Extended `lawyer.ts`, `search.ts`, and `case.ts` to accept the new fields. `lawyerSearchQuery.probono` uses a discriminated transform that resolves the `"true"` literal to a boolean and the `"false"`/missing case to `undefined` — keeps the API filter conditional on positive presence, not on every request.
+  - Hono `/referrals`: auth + role-scoped. `case_referral` flow lets a lawyer attach an existing `pending|accepted` case and re-route it on accept; `link_signup` rows are auto-created by `/cases` POST when a `referralLinkSlug` lands. `/referrals/links` is per-lawyer CRUD with auto-generated 8-char ambiguity-free slugs (alphabet matches invoice numbers) and a `preferred slug` override.
+  - Hono `/directory/chapters` + `/directory/chapters/:id` (public). Member counts only count verified lawyers (same gate as `/directory/lawyers`). `/directory/referral-links/:slug` (public) bumps the click counter on lookup; the auth'd `/cases` POST bumps `signups` and creates the attribution row.
+  - Web: `/lawyer/referrals` + `/lawyer/referral-links` (Server Actions for create/patch/delete + a Client Component for the list with inline accept/decline). Public `/chapters` + `/chapters/[id]`. `/lawyers` gains probono checkbox + chapter selector + pro-bono badge per result; `/lawyers/[slug]` shows the pro-bono badge + public statement. `/cases/new` resolves `?ref=<SLUG>` server-side, pre-fills the lawyer, threads the slug into the create call; pro bono cases gain an eligibility textarea. Both dashboards reorganized to 6-tile grids surfacing the new endpoints.
+  - 49-step curl smoke (see Phase Tracker entry for the chain). DB verified.
+- **Did NOT:**
+  - Browser walkthrough (Playwright MCP intermittent; came online during the session but disconnected before any walkthrough could run). Sweep across Phases 1–6 still queued.
+  - Pro bono cap enforcement (`probono_cap_active` column added but unused at the API). Phase 7 admin tooling will surface the cap; for now the column is a hint for the lawyer's own UX.
+  - "Re-open closed case" / "withdraw outbound referral" actions (not needed for the MVP graph).
+  - Click attribution per UTM source / referrer header — just a single per-link click counter today.
+  - Notifications to either side on referral state changes (lands when SES + push wiring lands).
+  - Cross-chapter analytics / chapter officer roles (Phase 7+).
+- **Decisions made:**
+  - Two referral kinds, one table. `case_referral` (sender intent: hand off this case to that lawyer) vs `link_signup` (system intent: this signup came from that lawyer's share code). Same row shape — `caseId` and `linkId` are both nullable; `case_referral` always has `fromLawyerId`+`toLawyerId` filled, `link_signup` always has `linkId` + a `to` that equals whichever lawyer the client ultimately picked. **Why:** keeps a single attribution graph queryable without UNION-ing two specialized tables; the kind enum is the join key. **How to apply:** if a third attribution shape lands (e.g. "lawyer brought client via consult"), add it as another enum value first; only split tables when one shape genuinely has different fields from the others.
+  - Accepting a `case_referral` reassigns the case AND resets `status` to `pending`. **Why:** the recipient has to run their own due diligence + accept/decline decision; piggybacking on the sender's `accepted` would skip Phase 4's lawyer-acceptance gate. **How to apply:** any future "case ownership transfer" path goes through the same reset — never silently flip status when the lawyer changes.
+  - `referralLinkSlug` is normalized server-side to uppercase. **Why:** humans read these aloud and type them; case-insensitive matching avoids "I typed it lowercase" support tickets. Stored upper-cased in the DB so the unique index is straightforward. **How to apply:** any user-typed share code path uses the same alphabet (no I/O/0/1) + uppercase storage; never let users pick free-form punctuation in slugs.
+  - Pro bono opt-in lives on the lawyer (one column). The directory filter is `probono=true → WHERE probono_available = true`. **Why:** simpler than a separate "pro bono submission" table, matches how lawyers actually describe their practice (a stance, not a per-case toggle). Cases still have `type: 'paid' | 'probono'` from Phase 4 — that's about the case, not the lawyer. **How to apply:** if "I take pro bono ONLY for certain practice areas" becomes a thing, add a `lawyer_probono_practice_area` link table; don't overload the boolean.
+  - `case.referralId` is `text` with no FK to the `referral` table. **Why:** the `referral` row references the `case`; the case references the referral. A two-way FK creates a circular cross-file dependency in Drizzle's schema eval order. The API layer joins them by id; data integrity is acceptable because referrals are append-only and the only writer of `case.referralId` is the same handler that creates the referral row. **How to apply:** if a future aggregate needs a strict cycle, prefer "the newer side gets the FK, the older side carries a soft id" — and never break the convention without a migration script.
+  - Click counter is best-effort, no auth. **Why:** rate-limited public attribution endpoint that lets the lawyer see traffic. Anyone can pad numbers, but the signup counter (which IS auth-gated through `/cases` POST) is the source of truth for "did this link bring real cases". **How to apply:** any public-readable counter on a per-user object follows the same split — public bump for vanity metric, auth'd bump for compensation-grade metric.
+- **Open questions:** none — Playwright sweep + AWS deploy are still the standing items.
 
 ### 2026-05-20 — Session 7 (Phase 5 billing)
 
@@ -315,6 +357,12 @@
 - **2026-05-20 — Discount codes are lawyer-namespaced (unique on (lawyerId, code)).** Why: two lawyers can use the same code text with different rates; no admin moderation required at MVP; validation is a single equality query. **How to apply:** if platform-wide codes are needed later, add `lawyerId IS NULL` as a sentinel and OR it into the lookup; preserve uniqueness with a partial index.
 - **2026-05-20 — Invoice numbers are `INV-XXXXXX` (6 alnum, ambiguity-free chars).** Why: must be readable aloud; per-lawyer sequential numbering would need row locks. Retry-on-collision against the unique index handles the rare hit (5 attempts cover 32^6 / 5 birthday probability). **How to apply:** if PH BIR compliance requires monotonic per-lawyer numbering, add a `seq` column populated from a per-lawyer counter; keep `number` as the friendly display.
 - **2026-05-20 — Discount apply allowed in both `draft` AND `sent` states.** Why: lawyers may negotiate post-send; locking at send forces re-issue. Discount lock happens only when the first payment posts (status transitions to paid/partially_paid). **How to apply:** any other "post-send but pre-pay" mutation (memo update, due-date adjustment) should follow the same gate — allowed while `status IN ('draft','sent')`, rejected after first payment.
+- **2026-05-20 — Single `referral` table, two kinds.** `case_referral` vs `link_signup` share one schema with `caseId` and `linkId` both nullable; the `kind` enum is the join key. Why: keeps the attribution graph queryable without UNION-ing specialized tables, and the shape is genuinely the same — from-lawyer, to-lawyer, status, optional case, optional link. **How to apply:** new attribution shapes get a new enum value before considering a separate table; only split when fields actually diverge.
+- **2026-05-20 — Accepting a `case_referral` reassigns the case AND resets status to `pending`.** Why: the recipient must run their own due diligence + Phase 4 accept gate. Piggybacking on the sender's `accepted` would let one lawyer commit another to work without the second lawyer's review. **How to apply:** any future "case ownership transfer" path follows the same reset — never silently propagate the prior status.
+- **2026-05-20 — Referral link slugs are uppercase, ambiguity-free (no I/O/0/1).** Why: humans read these aloud + type them; case-insensitive matching avoids support tickets. Reuses the same alphabet as invoice numbers for a single shared mental model of "a Ligala friendly id." **How to apply:** any future user-typed share code uses the same alphabet + upper-case server-side normalization.
+- **2026-05-20 — Pro bono opt-in is a lawyer-level boolean, not a per-case attribute.** Why: it's a stance ("I take pro bono cases"), not a case-level toggle (that's `case.type`). Simpler than a separate aggregate; the directory filter is a single equality query. **How to apply:** if "pro bono only for tax law" lands, add a `lawyer_probono_practice_area` link table; don't overload the bool with magic values.
+- **2026-05-20 — `case.referralId` is a `text` column with no FK to `referral`.** Why: `referral` already references `case`; adding the reverse FK creates a circular cross-file dependency that breaks Drizzle's schema eval order. The same handler creates both rows, and `referral` is append-only, so the soft id is safe. **How to apply:** if a future aggregate must hold a real cycle, prefer "the newer side gets the FK; the older side carries a soft id" — and write a migration script if you ever break the convention.
+- **2026-05-20 — Click counter on referral links is public + unauthenticated; signup counter is auth-gated.** Why: public bump lets the lawyer see traffic without forcing a login; signup bump runs from inside the authenticated `/cases` POST so it's compensation-grade. **How to apply:** any "vanity vs payable" counter pair on a public object splits the same way — public bump for the engagement metric, auth'd bump for the metric that drives money.
 
 ---
 
@@ -337,7 +385,7 @@
 - **Google Maps Embed API + domain-restricted key** — Currently using the keyless `google.com/maps?q=…&output=embed` URL. Swap `mapsEmbedSrc()` in `apps/web/app/(marketing)/lawyers/[slug]/page.tsx` to the Embed API when the key is provisioned in Secrets Manager.
 - **Public lawyer profile photo** — `lawyer_profile.profile_photo_s3_key` exists in schema but the public profile page doesn't render it yet. Needs read-side S3 presigning (or a CloudFront signed URL) once real S3 is wired.
 - **Geo/distance search** — City filter is plain ILIKE today. PostGIS + lat/lng radius can replace it once we have enough verified lawyers that "near me" is meaningful.
-- **Favorites + saved searches** — Deferred to Phase 6 polish. v1 had "saved lawyers" in StartPage; bring back only if user research shows demand.
+- **Favorites + saved searches** — v1 had "saved lawyers" in StartPage; bring back only if user research shows demand.
 - **Case attachments via real S3 presigning** — Same dev stub as KYC (`/files/presign` returns a localhost upload URL). Flips when CoreStack provisions the uploads bucket.
 - **Reopen / restart closed cases** — Currently terminal. Add a `reopen` activity kind + transition if user research shows demand; ideally rare.
 - **Edit / delete notes + attachments** — Append-only at MVP. Edit-with-history is a Phase 6 polish if anyone asks (need a `case_note_revision` table to keep an audit trail).
@@ -350,6 +398,13 @@
 - **Invoice-on-send email via SES** — Lands with AWS deploy. Template lives in `packages/email/` (currently empty).
 - **Per-case invoice filter on the case detail page** — The list endpoint doesn't accept a `caseId` filter yet; client case page shows all the user's invoices with a note. Add `?caseId=…` query param + filter on Phase 6 polish.
 - **Platform fee / payouts** — Currently money flows lawyer ← client direct via PayMongo/PayPal merchant accounts. When we add a platform take rate, we need split-pay or a clearing account; add `fee` rows to the ledger.
+- **Pro bono cap enforcement** — `lawyer_profile.probono_cap_active` column landed in Phase 6 but no handler counts active pro bono cases against it. Surface in Phase 7 admin tooling or directly on the lawyer's `/lawyer/cases` view; the API needs to reject new pro bono case creation when the lawyer is at cap.
+- **Withdraw outbound referral** — Sender cannot rescind a `pending` referral today. Add `DELETE /referrals/:id` (sender-only, status='pending') if user research shows demand.
+- **UTM / referrer attribution on referral links** — Single per-link click counter today; no source breakdown. Add when lawyers ask "where did this signup come from?"
+- **Referral payouts / bounties** — No notion of compensating the referring lawyer when a link signup converts. If we add lawyer-to-lawyer split-pay or a finder's fee, the `referral` row is the join key; ledger entries (`transaction.kind='adjustment'`) would land on settlement.
+- **Pro bono case routing to IBP chapter pool** — If an IBP chapter wants to triage incoming pro bono requests centrally, we'd need a chapter-level inbox + assignment workflow. Out of MVP scope; revisit if a chapter formally pilots Ligala.
+- **Notifications on referral state changes** — Recipient sees inbound referrals only by visiting `/lawyer/referrals`. Email/push lands with SES + workers.
+- **Chapter officer / curator role** — Phase 6 IBP integration is read-only. If chapters want to feature lawyers or add a chapter bio, we need a new `chapter_officer` link + admin tooling.
 
 ---
 

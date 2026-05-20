@@ -18,7 +18,7 @@ export const directory = new Hono()
    * Query: q, practiceAreaId, jurisdictionId, city, page, pageSize.
    */
   .get("/lawyers", zValidator("query", lawyerSearchQuery), async (c) => {
-    const { q, practiceAreaId, jurisdictionId, city, page, pageSize } =
+    const { q, practiceAreaId, jurisdictionId, city, chapterId, probono, page, pageSize } =
       c.req.valid("query");
     const conn = db();
 
@@ -34,6 +34,14 @@ export const directory = new Hono()
     }
 
     const filters = [inArray(schema.lawyerProfiles.userId, verifiedIds)];
+
+    if (probono) {
+      filters.push(eq(schema.lawyerProfiles.probonoAvailable, true));
+    }
+
+    if (chapterId) {
+      filters.push(eq(schema.lawyerProfiles.ibpChapterId, chapterId));
+    }
 
     if (q && q.trim().length > 0) {
       const like = `%${q.trim()}%`;
@@ -91,6 +99,7 @@ export const directory = new Hono()
         userId: schema.lawyerProfiles.userId,
         name: schema.user.name,
         bio: schema.lawyerProfiles.bio,
+        probonoAvailable: schema.lawyerProfiles.probonoAvailable,
         createdAt: schema.lawyerProfiles.createdAt,
       })
       .from(schema.lawyerProfiles)
@@ -146,6 +155,7 @@ export const directory = new Hono()
       city: officeByLawyer.get(r.userId)?.city ?? null,
       region: officeByLawyer.get(r.userId)?.region ?? null,
       verified: true,
+      probonoAvailable: r.probonoAvailable,
       practiceAreas: paByLawyer.get(r.userId) ?? [],
     }));
 
@@ -229,6 +239,8 @@ export const directory = new Hono()
         bio: profile.bio,
         barNumber: profile.barNumber,
         verified: true,
+        probonoAvailable: profile.probonoAvailable,
+        probonoStatement: profile.probonoStatement,
       },
       ibpChapter,
       practiceAreas: practiceAreaRows,
@@ -237,4 +249,86 @@ export const directory = new Hono()
       schedule,
       faqs,
     });
+  })
+
+  /**
+   * GET /directory/chapters — list every IBP chapter with a verified-lawyer
+   * count, so the public IBP landing page can render a directory of chapters.
+   */
+  .get("/chapters", async (c) => {
+    const conn = db();
+
+    const verifiedIdsRows = await conn
+      .selectDistinct({ lawyerId: schema.kycSubmissions.lawyerId })
+      .from(schema.kycSubmissions)
+      .where(eq(schema.kycSubmissions.status, "approved"));
+    const verifiedIds = new Set(verifiedIdsRows.map((r) => r.lawyerId));
+
+    const chapters = await conn
+      .select()
+      .from(schema.ibpChapters)
+      .orderBy(asc(schema.ibpChapters.sortOrder), asc(schema.ibpChapters.name));
+
+    const allLawyers = await conn
+      .select({
+        userId: schema.lawyerProfiles.userId,
+        chapterId: schema.lawyerProfiles.ibpChapterId,
+      })
+      .from(schema.lawyerProfiles);
+
+    const countByChapter = new Map<string, number>();
+    for (const row of allLawyers) {
+      if (!row.chapterId) continue;
+      if (!verifiedIds.has(row.userId)) continue;
+      countByChapter.set(row.chapterId, (countByChapter.get(row.chapterId) ?? 0) + 1);
+    }
+
+    const items = chapters.map((ch) => ({
+      ...ch,
+      memberCount: countByChapter.get(ch.id) ?? 0,
+    }));
+    return c.json({ items });
+  })
+
+  /**
+   * GET /directory/chapters/:id — chapter detail + its verified members.
+   * The id matches `ibp_chapter.id` (slug-style, e.g. "ibp-makati").
+   */
+  .get("/chapters/:id", async (c) => {
+    const id = c.req.param("id");
+    const conn = db();
+
+    const chapter = await conn.query.ibpChapters.findFirst({
+      where: eq(schema.ibpChapters.id, id),
+    });
+    if (!chapter) throw new HTTPException(404, { message: "chapter_not_found" });
+
+    const verifiedIdsRows = await conn
+      .selectDistinct({ lawyerId: schema.kycSubmissions.lawyerId })
+      .from(schema.kycSubmissions)
+      .where(eq(schema.kycSubmissions.status, "approved"));
+    const verifiedIds = verifiedIdsRows.map((r) => r.lawyerId);
+
+    if (verifiedIds.length === 0) {
+      return c.json({ chapter, members: [] });
+    }
+
+    const members = await conn
+      .select({
+        slug: schema.lawyerProfiles.slug,
+        name: schema.user.name,
+        bio: schema.lawyerProfiles.bio,
+        probonoAvailable: schema.lawyerProfiles.probonoAvailable,
+      })
+      .from(schema.lawyerProfiles)
+      .innerJoin(schema.user, eq(schema.user.id, schema.lawyerProfiles.userId))
+      .where(
+        and(
+          eq(schema.lawyerProfiles.ibpChapterId, id),
+          inArray(schema.lawyerProfiles.userId, verifiedIds),
+        ),
+      )
+      .orderBy(asc(schema.user.name));
+
+    return c.json({ chapter, members });
   });

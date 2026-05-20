@@ -9,6 +9,12 @@ export const lawyerSearchQuery = z.object({
   practiceAreaId: z.string().max(64).optional(),
   jurisdictionId: z.string().max(64).optional(),
   city: z.string().max(80).optional(),
+  chapterId: z.string().max(64).optional(),
+  // Pass probono=true to restrict to lawyers who opted in to pro bono.
+  probono: z
+    .union([z.literal("true"), z.literal("false"), z.boolean()])
+    .optional()
+    .transform((v) => (v === true || v === "true" ? true : undefined)),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });

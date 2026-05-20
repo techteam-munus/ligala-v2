@@ -57,6 +57,17 @@ export const cases = pgTable("case", {
   declineReason: text("decline_reason"),
   closedAt: timestamp("closed_at", { withTimezone: true }),
   closeReason: text("close_reason"),
+  /**
+   * Phase 6 attribution. `referralId` points at the `referral` row when a
+   * case was created via a referral link OR reassigned via case_referral.
+   * `probonoReason` is the client's eligibility statement on pro bono cases.
+   *
+   * Both columns are nullable; we use text references with no FK to the
+   * `referral` table to avoid a circular cross-file dependency at schema
+   * eval time. The API layer is the source of truth for joining the two.
+   */
+  referralId: text("referral_id"),
+  probonoReason: text("probono_reason"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -84,6 +95,9 @@ export const caseActivityKind = pgEnum("case_activity_kind", [
   "attachment_added",
   "closed",
   "cancelled",
+  "referred",
+  "referral_accepted",
+  "referral_declined",
 ]);
 
 export const caseActivities = pgTable("case_activity", {

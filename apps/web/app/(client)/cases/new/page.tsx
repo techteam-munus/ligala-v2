@@ -8,6 +8,12 @@ type LawyerSnippet = {
   profile: { slug: string; name: string };
 };
 
+type ReferralLinkLookup = {
+  slug: string;
+  label: string | null;
+  lawyer: { slug: string };
+};
+
 async function safe<T>(path: string, fallback: T): Promise<T> {
   try {
     return await api<T>(path);
@@ -22,7 +28,23 @@ export default async function NewCasePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const lawyerSlug = Array.isArray(sp.lawyer) ? sp.lawyer[0] : sp.lawyer;
+  const pick = (k: string) => {
+    const v = sp[k];
+    return Array.isArray(v) ? v[0] : v;
+  };
+  const lawyerSlugParam = pick("lawyer");
+  const refSlug = pick("ref")?.toUpperCase();
+
+  // If a referral link is supplied, look it up first — if it binds to a
+  // lawyer, use that as the default (the client can still override by
+  // editing the lawyer slug).
+  const refLookup = refSlug
+    ? await safe<ReferralLinkLookup | null>(
+        `/directory/referral-links/${encodeURIComponent(refSlug)}`,
+        null,
+      )
+    : null;
+  const lawyerSlug = lawyerSlugParam ?? refLookup?.lawyer.slug ?? "";
 
   const [practice, jurisdictions, lawyer] = await Promise.all([
     safe<RefList>("/references/practice-areas", { items: [] }),
@@ -46,8 +68,15 @@ export default async function NewCasePage({
           Engaging <strong>{lawyer.profile.name}</strong>
         </p>
       ) : null}
+      {refLookup ? (
+        <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Referred via <span className="font-mono">{refLookup.slug}</span>
+          {refLookup.label ? ` (${refLookup.label})` : ""}.
+        </p>
+      ) : null}
       <NewCaseForm
         lawyerSlug={lawyer?.profile.slug ?? lawyerSlug ?? ""}
+        referralLinkSlug={refLookup?.slug}
         practiceAreas={practice.items}
         jurisdictions={jurisdictions.items}
       />

@@ -1,4 +1,6 @@
 import {
+  boolean,
+  integer,
   pgTable,
   primaryKey,
   text,
@@ -25,6 +27,16 @@ export const lawyerProfiles = pgTable(
     }),
     bio: text("bio"),
     profilePhotoS3Key: text("profile_photo_s3_key"),
+    /**
+     * Pro bono opt-in (Phase 6). When true the lawyer is willing to take
+     * pro bono cases and surfaces in `/lawyers?probono=true`. The optional
+     * `probonoStatement` is a short note shown on the public profile; the
+     * optional `probonoCapActive` lets a lawyer cap concurrent pro bono
+     * load (NULL = no cap).
+     */
+    probonoAvailable: boolean("probono_available").default(false).notNull(),
+    probonoStatement: text("probono_statement"),
+    probonoCapActive: integer("probono_cap_active"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),

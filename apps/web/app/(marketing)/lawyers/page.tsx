@@ -15,6 +15,7 @@ type Item = {
   city: string | null;
   region: string | null;
   verified: boolean;
+  probonoAvailable: boolean;
   practiceAreas: { id: string; name: string }[];
 };
 
@@ -59,6 +60,8 @@ export default async function LawyersDirectoryPage({
   const practiceAreaId = pick("practiceAreaId") ?? "";
   const jurisdictionId = pick("jurisdictionId") ?? "";
   const city = pick("city") ?? "";
+  const probono = pick("probono") === "true" ? "true" : "";
+  const chapterId = pick("chapterId") ?? "";
   const page = Number.parseInt(pick("page") ?? "1", 10) || 1;
   const pageSize = 20;
 
@@ -67,11 +70,13 @@ export default async function LawyersDirectoryPage({
     practiceAreaId,
     jurisdictionId,
     city,
+    probono,
+    chapterId,
     page: String(page),
     pageSize: String(pageSize),
   });
 
-  const [results, practice, jurisdictions] = await Promise.all([
+  const [results, practice, jurisdictions, chapters] = await Promise.all([
     safe<SearchResponse>(`/directory/lawyers${query}`, {
       items: [],
       total: 0,
@@ -80,6 +85,7 @@ export default async function LawyersDirectoryPage({
     }),
     safe<RefList>("/references/practice-areas", { items: [] }),
     safe<RefList>("/references/jurisdictions", { items: [] }),
+    safe<RefList>("/references/ibp-chapters", { items: [] }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(results.total / pageSize));
@@ -154,6 +160,33 @@ export default async function LawyersDirectoryPage({
                 placeholder="e.g. Makati"
               />
             </div>
+            <div>
+              <label htmlFor="chapterId" className="block text-xs font-medium uppercase tracking-wide text-neutral-500">
+                IBP chapter
+              </label>
+              <select
+                id="chapterId"
+                name="chapterId"
+                defaultValue={chapterId}
+                className="mt-1 w-full rounded border border-neutral-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">All</option>
+                {chapters.items.map((ch) => (
+                  <option key={ch.id} value={ch.id}>
+                    {ch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="probono"
+                value="true"
+                defaultChecked={probono === "true"}
+              />
+              Accepts pro bono
+            </label>
             <button
               type="submit"
               className="w-full rounded bg-neutral-900 px-3 py-2 text-sm font-medium text-white"
@@ -210,11 +243,18 @@ export default async function LawyersDirectoryPage({
                         </div>
                       ) : null}
                     </div>
-                    {l.verified ? (
-                      <span className="shrink-0 rounded-full border border-green-600 px-2 py-0.5 text-xs font-medium text-green-700">
-                        Verified
-                      </span>
-                    ) : null}
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {l.verified ? (
+                        <span className="rounded-full border border-green-600 px-2 py-0.5 text-xs font-medium text-green-700">
+                          Verified
+                        </span>
+                      ) : null}
+                      {l.probonoAvailable ? (
+                        <span className="rounded-full border border-amber-600 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          Pro bono
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </li>
               ))}
@@ -224,7 +264,7 @@ export default async function LawyersDirectoryPage({
           {totalPages > 1 ? (
             <nav className="mt-6 flex items-center justify-between text-sm">
               <Link
-                href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, page: String(Math.max(1, page - 1)) })}` as never}
+                href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, probono, chapterId, page: String(Math.max(1, page - 1)) })}` as never}
                 className={page <= 1 ? "pointer-events-none text-neutral-300" : "text-neutral-700 underline"}
               >
                 ← Previous
@@ -233,7 +273,7 @@ export default async function LawyersDirectoryPage({
                 Page {page} of {totalPages}
               </span>
               <Link
-                href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, page: String(Math.min(totalPages, page + 1)) })}` as never}
+                href={`/lawyers${qs({ q, practiceAreaId, jurisdictionId, city, probono, chapterId, page: String(Math.min(totalPages, page + 1)) })}` as never}
                 className={page >= totalPages ? "pointer-events-none text-neutral-300" : "text-neutral-700 underline"}
               >
                 Next →
