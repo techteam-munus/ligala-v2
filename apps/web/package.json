@@ -27,7 +27,7 @@
     "clsx": "^2.1.1",
     "react-hook-form": "^7.54.0",
     "tailwind-merge": "^2.5.0",
-    "zod": "^3.24.0"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

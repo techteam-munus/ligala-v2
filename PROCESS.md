@@ -10,7 +10,7 @@
 - **Active phase:** Phase 0 — Scaffold & infra
 - **Last working session:** 2026-05-20
 - **Environment status:** dev not yet deployed | staging not yet | prod not yet
-- **Next action:** run `pnpm install` at repo root, then verify `pnpm typecheck` is green
+- **Next action:** run `pnpm build` locally; add ESLint config (deferred from scaffold)
 - **Blockers:** none
 
 ---
@@ -27,8 +27,11 @@
   - [x] infra CDK skeleton (CoreStack + AppStack stubs)
   - [x] workers/ skeleton
   - [x] GitHub Actions CI workflow
-  - [ ] `pnpm install` clean
-  - [ ] `pnpm typecheck && pnpm build` green locally
+  - [x] `pnpm install` clean (no peer warnings — after zod 4 + hono 4.10 bump)
+  - [x] `pnpm typecheck` green locally (9/9 packages, ~3s)
+  - [ ] `pnpm build` green locally
+  - [ ] `pnpm lint` green locally (ESLint config not yet added)
+  - [ ] `pnpm test` green locally (no tests yet)
   - [ ] CDK `synth` clean against dev account
   - [ ] CDK `deploy` to dev env
   - [ ] Sentry DSN wired in both apps
@@ -80,6 +83,7 @@
 - **2026-05-20 — Sign-in methods at launch: email/password + Google OAuth only.** Microsoft OAuth and magic-link deferred to Phase 7+.
 - **2026-05-20 — Sharp in dedicated Lambda layer (carry pattern from v1).** Why: avoids Next.js Image runtime cost for the high-volume KYC upload path.
 - **2026-05-20 — `verbatimModuleSyntax: true` in `tsconfig.base.json`.** Why: forces explicit `import type` everywhere, which Drizzle and Next.js Server Actions are picky about.
+- **2026-05-20 — Pinned zod to `^4.0.0` repo-wide and Hono to `^4.10.0` / `@hono/zod-validator` to `^0.8.0`.** Why: Better Auth's `better-call` requires zod v4, and `@hono/zod-validator@0.8` is the first version with dual zod v3/v4 peer support. Resolves peer-dep warning from initial install. **Migration impact:** `z.string().url()` and `z.string().email()` are deprecated in zod 4 (still work); prefer `z.url()` / `z.email()` in new schemas.
 
 ---
 

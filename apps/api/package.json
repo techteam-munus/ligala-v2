@@ -14,9 +14,9 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "hono": "^4.6.0",
+    "hono": "^4.10.0",
     "@hono/node-server": "^1.13.0",
-    "@hono/zod-validator": "^0.4.0",
+    "@hono/zod-validator": "^0.8.0",
     "@ligala/auth": "workspace:*",
     "@ligala/db": "workspace:*",
     "@ligala/shared": "workspace:*",
@@ -26,7 +26,7 @@
     "@sentry/aws-serverless": "^8.45.0",
     "better-auth": "^1.0.0",
     "ioredis": "^5.4.0",
-    "zod": "^3.24.0"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
