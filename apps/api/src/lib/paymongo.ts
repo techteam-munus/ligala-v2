@@ -129,6 +129,9 @@ export async function createCheckoutSession(
             quantity: 1,
           },
         ],
+        // PayMongo requires this on the request; values must match methods
+        // enabled on the merchant account. These are the standard PH set.
+        payment_method_types: ["card", "gcash", "paymaya", "grab_pay"],
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
         reference_number: input.referenceNumber,

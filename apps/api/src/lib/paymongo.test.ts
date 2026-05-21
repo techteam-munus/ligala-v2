@@ -124,6 +124,12 @@ describe("createCheckoutSession", () => {
         quantity: 1,
       },
     ]);
+    expect(body.data.attributes.payment_method_types).toEqual([
+      "card",
+      "gcash",
+      "paymaya",
+      "grab_pay",
+    ]);
     expect(body.data.attributes.success_url).toBe(
       "http://localhost:3000/lawyer/subscribe?status=success",
     );
