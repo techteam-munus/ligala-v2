@@ -27,7 +27,7 @@ function newId() {
  * Recompute totals from current lines + applied discount and persist on the
  * invoice. Called after every mutation while in draft, and at send time.
  */
-async function recomputeInvoiceTotals(invoiceId: string) {
+export async function recomputeInvoiceTotals(invoiceId: string) {
   const conn = db();
   const lines = await conn
     .select({

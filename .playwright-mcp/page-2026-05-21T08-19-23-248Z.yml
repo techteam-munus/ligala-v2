@@ -1,0 +1,85 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Ligala" [ref=e9] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e10]
+            - img "Ligala" [ref=e11]
+      - list [ref=e15]:
+        - listitem [ref=e16]:
+          - link "Dashboard" [ref=e17] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e18]
+            - generic [ref=e23]: Dashboard
+        - listitem [ref=e24]:
+          - link "Cases" [ref=e25] [cursor=pointer]:
+            - /url: /cases
+            - img [ref=e26]
+            - generic [ref=e29]: Cases
+        - listitem [ref=e30]:
+          - link "Invoices" [ref=e31] [cursor=pointer]:
+            - /url: /invoices
+            - img [ref=e32]
+            - generic [ref=e35]: Invoices
+        - listitem [ref=e36]:
+          - link "Profile" [ref=e37] [cursor=pointer]:
+            - /url: /profile
+            - img [ref=e38]
+            - generic [ref=e41]: Profile
+        - listitem [ref=e42]:
+          - link "Find a lawyer" [ref=e43] [cursor=pointer]:
+            - /url: /lawyers
+            - img [ref=e44]
+            - generic [ref=e47]: Find a lawyer
+        - listitem [ref=e48]:
+          - link "IBP chapters" [ref=e49] [cursor=pointer]:
+            - /url: /chapters
+            - img [ref=e50]
+            - generic [ref=e54]: IBP chapters
+      - list [ref=e56]:
+        - listitem [ref=e57]:
+          - button "C Crumb Test crumbtest@example.com" [ref=e58]:
+            - generic [ref=e60]: C
+            - generic [ref=e61]:
+              - generic [ref=e62]: Crumb Test
+              - generic [ref=e63]: crumbtest@example.com
+            - img [ref=e64]
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - button "Toggle Sidebar" [ref=e69]:
+          - img
+          - generic [ref=e70]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e71]:
+          - list [ref=e72]:
+            - listitem [ref=e73]:
+              - link "Profile" [disabled] [ref=e74]
+      - main [ref=e75]:
+        - heading "Your profile" [level=1] [ref=e76]
+        - paragraph [ref=e77]: Lawyers you engage will see this info to reach you. Keep it current.
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - generic [ref=e80]: Display name
+            - textbox "Display name" [ref=e81]:
+              - /placeholder: What lawyers should call you
+          - generic [ref=e82]:
+            - generic [ref=e83]:
+              - generic [ref=e84]: Phone
+              - textbox "Phone" [ref=e85]:
+                - /placeholder: +63…
+            - generic [ref=e86]:
+              - generic [ref=e87]: Preferred language
+              - combobox "Preferred language" [ref=e88]:
+                - option "English" [selected]
+                - option "Filipino"
+                - option "Cebuano"
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - generic [ref=e91]: City
+              - textbox "City" [ref=e92]
+            - generic [ref=e93]:
+              - generic [ref=e94]: Region
+              - textbox "Region" [ref=e95]
+          - button "Save profile" [ref=e97]
+  - region "Notifications alt+T"

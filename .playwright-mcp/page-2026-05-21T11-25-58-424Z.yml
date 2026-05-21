@@ -1,0 +1,52 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link [ref=e6] [cursor=pointer]:
+            - /url: http://localhost:3000/lawyer/subscribe?status=cancelled
+            - img [ref=e7]
+          - paragraph [ref=e10]: M
+          - paragraph [ref=e11]: munus
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: Reference Number
+          - paragraph [ref=e14]: 8f728839-a45d-4211-9dd7-26c403f40d96
+    - main [ref=e15]:
+      - generic [ref=e17]:
+        - heading "Ligala — Monthly subscription" [level=1] [ref=e18]
+        - paragraph [ref=e19]: ₱ 999.00
+        - paragraph [ref=e20]: Billed to Crumb Test, crumbtest@example.com
+        - paragraph [ref=e22]: Ligala — Monthly subscription
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Subtotal
+          - paragraph [ref=e26]: ₱ 999.00
+          - paragraph [ref=e27]: Fees
+          - generic [ref=e28]: Free
+        - generic [ref=e30]:
+          - paragraph [ref=e31]: Total Paid
+          - paragraph [ref=e32]: ₱ 999.00
+      - generic [ref=e33]:
+        - generic [ref=e898]:
+          - generic [ref=e899]:
+            - img [ref=e900]
+            - heading "Card Payment Received!" [level=1] [ref=e903]
+          - generic [ref=e904]:
+            - link "Return to Merchant" [ref=e905] [cursor=pointer]:
+              - /url: http://localhost:3000/lawyer/subscribe?status=success
+            - paragraph [ref=e906]:
+              - text: You will be redirected in 15 seconds,
+              - button "click to cancel" [ref=e907]
+          - generic [ref=e908]:
+            - generic [ref=e909]:
+              - paragraph [ref=e910]: Payment ID
+              - paragraph [ref=e911]: pay_TqtBVtPniZE1D913V424mWAJ
+            - generic [ref=e913]:
+              - paragraph [ref=e914]: Payment Date
+              - paragraph [ref=e915]: May 21, 2026 at 07:25 PM
+            - generic [ref=e917]:
+              - paragraph [ref=e918]: Payment Method
+              - paragraph [ref=e919]: Card
+        - generic [ref=e66]:
+          - paragraph [ref=e67]: Powered by
+          - img [ref=e68]
+  - alert [ref=e78]

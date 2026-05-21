@@ -4,7 +4,6 @@ import { LawyerProfileForm } from "./form";
 type ProfileResponse = {
   profile: {
     slug: string;
-    barNumber: string | null;
     ibpChapterId: string | null;
     bio: string | null;
     probonoAvailable: boolean;
@@ -42,7 +41,6 @@ export default async function LawyerProfilePage() {
       <LawyerProfileForm
         initial={{
           slug: profileRes.profile?.slug ?? "",
-          barNumber: profileRes.profile?.barNumber ?? "",
           ibpChapterId: profileRes.profile?.ibpChapterId ?? "",
           bio: profileRes.profile?.bio ?? "",
           practiceAreaIds: profileRes.practiceAreaIds,

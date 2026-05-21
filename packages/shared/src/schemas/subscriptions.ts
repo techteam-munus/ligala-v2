@@ -21,7 +21,26 @@ export type LawyerSubscriptionDto = z.infer<typeof lawyerSubscriptionDto>;
 
 export const subscriptionCheckoutInput = z.object({
   provider: z.enum(["paymongo", "paypal", "dev_simulate"]),
+  discountCode: z.string().trim().min(1).max(64).optional(),
 });
 export type SubscriptionCheckoutInput = z.infer<
   typeof subscriptionCheckoutInput
+>;
+
+export const subscriptionDiscountPreviewInput = z.object({
+  code: z.string().trim().min(1).max(64),
+});
+export type SubscriptionDiscountPreviewInput = z.infer<
+  typeof subscriptionDiscountPreviewInput
+>;
+
+export const subscriptionDiscountPreviewDto = z.object({
+  code: z.string(),
+  kind: z.enum(["percent", "fixed"]),
+  discountCents: z.number().int().min(0),
+  originalCents: z.number().int().min(0),
+  totalCents: z.number().int().min(0),
+});
+export type SubscriptionDiscountPreviewDto = z.infer<
+  typeof subscriptionDiscountPreviewDto
 >;

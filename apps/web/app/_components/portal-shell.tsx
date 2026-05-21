@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BadgeCheck,
   Bell,
   Briefcase,
   Building,
@@ -63,12 +62,6 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const ACCOUNT_HREF: Record<Variant, string | null> = {
-  client: "/profile",
-  lawyer: "/lawyer/profile",
-  admin: null,
-};
-
 type Variant = "client" | "lawyer" | "admin";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
@@ -90,18 +83,11 @@ const NAV: Record<Variant, { brandHref: string; items: NavItem[] }> = {
     items: [
       { href: "/lawyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/lawyer/cases", label: "Cases", icon: Briefcase },
-      { href: "/lawyer/invoices", label: "Invoices", icon: Receipt },
       { href: "/lawyer/referrals", label: "Referrals", icon: Share2 },
       { href: "/lawyer/referral-links", label: "Referral links", icon: Link2 },
-      {
-        href: "/lawyer/discount-codes",
-        label: "Discount codes",
-        icon: TicketPercent,
-      },
       { href: "/lawyer/kyc", label: "KYC", icon: ShieldCheck },
       { href: "/lawyer/profile", label: "Public profile", icon: User },
       { href: "/lawyer/office", label: "Office", icon: Building },
-      { href: "/lawyer/subscribe", label: "Subscription", icon: CreditCard },
     ],
   },
   admin: {
@@ -192,7 +178,6 @@ export function PortalShell({
   const [submitting, setSubmitting] = useState(false);
   const signingOut = pending || submitting;
   const { brandHref, items } = NAV[variant];
-  const accountHref = ACCOUNT_HREF[variant];
   const displayName = userName?.trim() || userEmail.split("@")[0] || userEmail;
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -324,23 +309,33 @@ export function PortalShell({
                       Upgrade to Pro
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {accountHref ? (
-                      <DropdownMenuItem asChild>
-                        <Link href={accountHref as never}>
-                          <BadgeCheck />
-                          Account
-                        </Link>
-                      </DropdownMenuItem>
+                    {variant === "lawyer" ? (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href={"/lawyer/subscribe" as never}>
+                            <CreditCard />
+                            Subscription
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={"/lawyer/invoices" as never}>
+                            <Receipt />
+                            Invoices
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={"/lawyer/discount-codes" as never}>
+                            <TicketPercent />
+                            Discount codes
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
                     ) : (
                       <DropdownMenuItem disabled>
-                        <BadgeCheck />
-                        Account
+                        <CreditCard />
+                        Billing
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem disabled>
-                      <CreditCard />
-                      Billing
-                    </DropdownMenuItem>
                     <DropdownMenuItem disabled>
                       <Bell />
                       Notifications

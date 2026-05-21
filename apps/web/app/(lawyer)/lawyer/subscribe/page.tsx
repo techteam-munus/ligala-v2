@@ -106,13 +106,14 @@ export default async function SubscribePage({
         </CardHeader>
         <CardContent className="px-5">
           <SubscribeButton
-            label={
+            actionLabel={
               expired
-                ? `Subscribe (${price} / mo)`
+                ? "Subscribe"
                 : subscription.status === "trialing"
-                  ? `Subscribe now (${price} / mo)`
-                  : `Renew early (${price} / mo)`
+                  ? "Subscribe now"
+                  : "Renew early"
             }
+            priceCents={subscription.priceCents}
           />
           <p className="mt-3 text-xs text-muted-foreground">
             Each payment extends your access by 30 days. No auto-renewal — pay
