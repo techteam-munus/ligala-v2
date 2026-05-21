@@ -25,6 +25,7 @@ type Props = {
 export function PaymentStatusBanner({ status, initialLastPaidAt }: Props) {
   const router = useRouter();
   const [resolved, setResolved] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
   const baseline = useRef(initialLastPaidAt);
 
   useEffect(() => {
@@ -50,7 +51,11 @@ export function PaymentStatusBanner({ status, initialLastPaidAt }: Props) {
       } catch {
         // ignore; we'll retry
       }
-      if (attempts < 5 && !cancelled) setTimeout(tick, 2_000);
+      if (attempts < 5 && !cancelled) {
+        setTimeout(tick, 2_000);
+      } else if (!cancelled) {
+        setGaveUp(true);
+      }
     };
     const id = setTimeout(tick, 2_000);
     return () => {
@@ -61,7 +66,10 @@ export function PaymentStatusBanner({ status, initialLastPaidAt }: Props) {
 
   if (status === "cancelled") {
     return (
-      <div className="mb-6 rounded-md border border-muted bg-muted/30 p-4 text-sm text-muted-foreground">
+      <div
+        role="status"
+        className="mb-6 rounded-md border border-muted bg-muted/30 p-4 text-sm text-muted-foreground"
+      >
         Payment cancelled. You can try again anytime.
       </div>
     );
@@ -69,14 +77,32 @@ export function PaymentStatusBanner({ status, initialLastPaidAt }: Props) {
 
   if (resolved) {
     return (
-      <div className="mb-6 rounded-md border border-emerald-500/30 bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+      <div
+        role="status"
+        className="mb-6 rounded-md border border-emerald-500/30 bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100"
+      >
         Payment received — your subscription is active.
       </div>
     );
   }
 
+  if (gaveUp) {
+    return (
+      <div
+        role="status"
+        className="mb-6 rounded-md border border-amber-500/30 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+      >
+        We haven&apos;t received confirmation yet. Refresh the page in a moment —
+        your payment will be reflected as soon as the provider notifies us.
+      </div>
+    );
+  }
+
   return (
-    <div className="mb-6 rounded-md border border-emerald-500/30 bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100">
+    <div
+      role="status"
+      className="mb-6 rounded-md border border-emerald-500/30 bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100"
+    >
       Processing your payment… this usually takes a few seconds.
     </div>
   );

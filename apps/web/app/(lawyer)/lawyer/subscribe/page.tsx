@@ -45,7 +45,10 @@ export default async function SubscribePage({
   const expired = subscription.daysRemaining < 0;
   const price = money(subscription.priceCents);
   const sp = await searchParams;
-  const arrivedFromBlock = sp.from === "expired";
+  // Suppress the "you got blocked" copy when the user just landed back from a
+  // successful payment — otherwise the page contradictorily says "your access
+  // lapsed" alongside the success banner until the next navigation.
+  const arrivedFromBlock = sp.from === "expired" && sp.status !== "success";
   const status =
     sp.status === "success" || sp.status === "cancelled" ? sp.status : null;
 
