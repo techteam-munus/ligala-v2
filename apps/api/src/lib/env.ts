@@ -9,6 +9,8 @@ const schema = z.object({
   AWS_REGION: z.string().default("ap-southeast-1"),
   S3_UPLOADS_BUCKET: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
+  PAYMONGO_SECRET_KEY: z.string().optional(),
+  PAYMONGO_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
