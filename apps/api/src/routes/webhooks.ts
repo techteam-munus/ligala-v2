@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { idmetaWebhookPayload, paymentWebhookInput } from "@ligala/shared/schemas";
@@ -99,12 +100,15 @@ export const webhooks = new Hono()
     }
 
     const providerPaymentId = resource.id;
-    const amountCents =
+    // Pass undefined (not 0) when PayMongo's event lacks both amount fields,
+    // so applyPaymentWebhook falls back to invoice.totalCents - invoice.paidCents
+    // instead of writing a zero-amount payment row.
+    const amountCents: number | undefined =
       typeof resource.attributes.total_amount === "number"
         ? resource.attributes.total_amount
         : typeof resource.attributes.amount === "number"
           ? resource.attributes.amount
-          : 0;
+          : undefined;
     const status: "succeeded" | "failed" =
       type === "payment.failed" ? "failed" : "succeeded";
     const failureReason =
@@ -112,16 +116,37 @@ export const webhooks = new Hono()
         ? resource.attributes.last_payment_error?.message
         : undefined;
 
-    const result = await applyPaymentWebhook({
-      provider: "paymongo",
-      providerPaymentId,
-      invoiceId,
-      status,
-      amountCents,
-      currency: "PHP",
-      failureReason,
-      rawPayload: event,
-    });
+    let result: Awaited<ReturnType<typeof applyPaymentWebhook>>;
+    try {
+      result = await applyPaymentWebhook({
+        provider: "paymongo",
+        providerPaymentId,
+        invoiceId,
+        status,
+        amountCents,
+        currency: "PHP",
+        failureReason,
+        rawPayload: event,
+      });
+    } catch (err) {
+      if (err instanceof HTTPException && err.status === 404) {
+        // Invoice referenced by metadata.invoiceId doesn't exist in DB.
+        // Acknowledge with 200 so PayMongo stops retrying; loud-log so we
+        // notice if this happens (it shouldn't — our code sets the metadata).
+        console.error("paymongo_webhook_invoice_not_found", {
+          invoiceId,
+          providerPaymentId,
+        });
+        return c.json({ ignored: true, reason: "invoice_not_found" });
+      }
+      throw err;
+    }
+    if (result.idempotent) {
+      console.info("paymongo_webhook_replay", {
+        providerPaymentId,
+        paymentId: result.paymentId,
+      });
+    }
     return c.json(result);
   })
 
