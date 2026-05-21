@@ -18,10 +18,12 @@ export const adminAuditAction = pgEnum("admin_audit_action", [
   "user_status_changed",
   "user_role_changed",
   "kyc_decided",
+  "kyc_force_approved",
   "discount_code_removed",
   "invoice_refunded",
   "invoice_voided",
   "referral_force_decided",
+  "ibp_lawyer_added",
 ]);
 
 export const adminAuditLog = pgTable("admin_audit_log", {

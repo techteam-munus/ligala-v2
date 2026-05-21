@@ -166,6 +166,15 @@ export default function SignupPage() {
                   Sign in
                 </Link>
               </div>
+              <div className="text-center text-sm text-muted-foreground">
+                Are you a lawyer?{" "}
+                <Link
+                  href="/signup/lawyer"
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  Sign up here →
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>

@@ -16,6 +16,7 @@ import {
   LogOut,
   Link2,
   Receipt,
+  Scale,
   ScrollText,
   Search,
   Share2,
@@ -26,8 +27,8 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { signOut } from "@/lib/auth-client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -115,6 +116,7 @@ const NAV: Record<Variant, { brandHref: string; items: NavItem[] }> = {
       },
       { href: "/admin/invoices", label: "Invoices", icon: Receipt },
       { href: "/admin/referrals", label: "Referrals", icon: Share2 },
+      { href: "/admin/ibp-lawyers", label: "IBP lawyers", icon: Scale },
       { href: "/admin/audit-log", label: "Audit log", icon: ScrollText },
     ],
   },
@@ -140,6 +142,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   office: "Office",
   users: "Users",
   "audit-log": "Audit log",
+  "ibp-lawyers": "IBP lawyers",
   new: "New",
 };
 
@@ -171,10 +174,14 @@ function buildCrumbs(
 export function PortalShell({
   variant,
   userEmail,
+  userName,
+  userImage,
   children,
 }: {
   variant: Variant;
   userEmail: string;
+  userName?: string | null;
+  userImage?: string | null;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -184,29 +191,20 @@ export function PortalShell({
   const signingOut = pending || submitting;
   const { brandHref, items } = NAV[variant];
   const accountHref = ACCOUNT_HREF[variant];
-  const displayName = userEmail.split("@")[0] ?? userEmail;
+  const displayName = userName?.trim() || userEmail.split("@")[0] || userEmail;
   const initial = displayName.charAt(0).toUpperCase();
 
-  const confirmSignOut = () => {
-    toast("Sign out?", {
-      description: "You'll need to sign in again to come back.",
-      action: {
-        label: "Sign out",
-        onClick: async () => {
-          setSubmitting(true);
-          try {
-            await signOut();
-          } finally {
-            startTransition(() => {
-              router.replace("/login");
-              router.refresh();
-              setSubmitting(false);
-            });
-          }
-        },
-      },
-      cancel: { label: "Cancel", onClick: () => {} },
-    });
+  const handleSignOut = async () => {
+    setSubmitting(true);
+    try {
+      await signOut();
+    } finally {
+      startTransition(() => {
+        router.replace("/login");
+        router.refresh();
+        setSubmitting(false);
+      });
+    }
   };
 
   return (
@@ -277,9 +275,12 @@ export function PortalShell({
                       size="lg"
                       className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     >
-                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
-                        {initial}
-                      </span>
+                      <Avatar>
+                        {userImage ? <AvatarImage src={userImage} alt={displayName} /> : null}
+                        <AvatarFallback className="text-xs font-medium">
+                          {initial}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-medium">
                           {displayName}
@@ -299,9 +300,12 @@ export function PortalShell({
                   >
                     <DropdownMenuLabel className="p-0 font-normal">
                       <div className="flex items-center gap-2 px-1 py-1.5 text-sm">
-                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-medium text-muted-foreground">
-                          {initial}
-                        </span>
+                        <Avatar>
+                          {userImage ? <AvatarImage src={userImage} alt={displayName} /> : null}
+                          <AvatarFallback className="text-xs font-medium">
+                            {initial}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="grid flex-1 text-left text-sm leading-tight">
                           <span className="truncate font-medium">
                             {displayName}
@@ -344,7 +348,7 @@ export function PortalShell({
                       disabled={signingOut}
                       onSelect={(event) => {
                         event.preventDefault();
-                        confirmSignOut();
+                        void handleSignOut();
                       }}
                     >
                       <LogOut />

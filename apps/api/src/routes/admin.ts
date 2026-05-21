@@ -7,11 +7,15 @@ import {
   adminInvoiceListQuery,
   adminListQuery,
   adminUserRoleInput,
+  forceVerifyLawyerInput,
+  ibpLawyerCreateInput,
+  ibpLawyerListQuery,
   kycAdminDecisionInput,
   refundInput,
   userStatusInput,
 } from "@ligala/shared/schemas";
 import { requireRole } from "../middleware/session";
+import { env } from "../lib/env";
 import { refundPayment } from "./billing";
 
 function newId() {
@@ -197,6 +201,63 @@ export const admin = new Hono()
     return c.json({ ok: true, role });
   })
 
+  // --- Users: force-verify (testing helper, non-prod only) -----------------
+  // Synthesizes an approved kyc_submission so the lawyer surfaces in the
+  // public directory without going through the real KYC flow. Idempotent
+  // when the latest submission is already approved.
+  .post(
+    "/users/:id/force-verify",
+    zValidator("json", forceVerifyLawyerInput),
+    async (c) => {
+      if (env().NODE_ENV === "production") {
+        throw new HTTPException(403, { message: "force_verify_disabled_in_prod" });
+      }
+      const actor = c.get("user");
+      const { reason } = c.req.valid("json");
+      const id = c.req.param("id");
+      const conn = db();
+      const target = await conn.query.user.findFirst({
+        where: eq(schema.user.id, id),
+      });
+      if (!target) throw new HTTPException(404, { message: "user_not_found" });
+      if (target.role !== "lawyer") {
+        throw new HTTPException(400, { message: "not_a_lawyer" });
+      }
+      const profile = await conn.query.lawyerProfiles.findFirst({
+        where: eq(schema.lawyerProfiles.userId, id),
+      });
+      if (!profile) {
+        throw new HTTPException(400, { message: "no_lawyer_profile" });
+      }
+      const latest = await conn.query.kycSubmissions.findFirst({
+        where: eq(schema.kycSubmissions.lawyerId, id),
+        orderBy: (s, { desc }) => [desc(s.createdAt)],
+      });
+      if (latest?.status === "approved") {
+        return c.json({ ok: true, alreadyVerified: true });
+      }
+      const submissionId = newId();
+      const now = new Date();
+      await conn.insert(schema.kycSubmissions).values({
+        id: submissionId,
+        lawyerId: id,
+        status: "approved",
+        submittedAt: now,
+        decidedAt: now,
+        decidedBy: actor.id,
+      });
+      await logAdmin(
+        actor.id,
+        "kyc_force_approved",
+        "user",
+        id,
+        { submissionId, lawyerId: id },
+        reason,
+      );
+      return c.json({ ok: true, submissionId, alreadyVerified: false });
+    },
+  )
+
   // --- KYC: pending inbox + manual decision --------------------------------
   .get("/kyc", async (c) => {
     const conn = db();
@@ -345,6 +406,80 @@ export const admin = new Hono()
       result,
     }, reason);
     return c.json(result);
+  })
+
+  // --- IBP lawyers directory: list + add -----------------------------------
+  .get("/ibp-lawyers", zValidator("query", ibpLawyerListQuery), async (c) => {
+    const { q, page, pageSize } = c.req.valid("query");
+    const conn = db();
+    const filters = [];
+    if (q && q.trim().length > 0) {
+      const like = `%${q.trim()}%`;
+      filters.push(
+        or(
+          ilike(schema.ibpLawyers.firstName, like),
+          ilike(schema.ibpLawyers.middleName, like),
+          ilike(schema.ibpLawyers.lastName, like),
+          ilike(schema.ibpLawyers.rollNumber, like),
+        )!,
+      );
+    }
+    const where = filters.length > 0 ? and(...filters) : undefined;
+
+    const countRows = await conn
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.ibpLawyers)
+      .where(where);
+    const total = countRows[0]?.count ?? 0;
+
+    const rows = await conn
+      .select()
+      .from(schema.ibpLawyers)
+      .where(where)
+      .orderBy(desc(schema.ibpLawyers.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+    return c.json({ items: rows, total, page, pageSize });
+  })
+
+  .post("/ibp-lawyers", zValidator("json", ibpLawyerCreateInput), async (c) => {
+    const actor = c.get("user");
+    const input = c.req.valid("json");
+    const conn = db();
+    const id = newId();
+    // `date` columns expect YYYY-MM-DD strings; trim time off the parsed Date.
+    const rollSignedIso = input.rollSigned.toISOString().slice(0, 10);
+    try {
+      await conn.insert(schema.ibpLawyers).values({
+        id,
+        firstName: input.firstName,
+        middleName: input.middleName ?? null,
+        lastName: input.lastName,
+        address: input.address,
+        rollSigned: rollSignedIso,
+        rollNumber: input.rollNumber,
+      });
+    } catch (err) {
+      const code = (err as { code?: string } | null)?.code;
+      if (code === "23505") {
+        throw new HTTPException(409, { message: "roll_number_taken" });
+      }
+      throw err;
+    }
+    await logAdmin(
+      actor.id,
+      "ibp_lawyer_added",
+      "ibp_lawyer",
+      id,
+      {
+        firstName: input.firstName,
+        middleName: input.middleName ?? null,
+        lastName: input.lastName,
+        rollNumber: input.rollNumber,
+      },
+      input.reason,
+    );
+    return c.json({ ok: true, id });
   })
 
   // --- Audit log read ------------------------------------------------------

@@ -22,7 +22,11 @@ const isPublic = (pathname: string) =>
   pathname.startsWith("/lawyers/") ||
   // Public IBP chapter index + chapter pages.
   pathname === "/chapters" ||
-  pathname.startsWith("/chapters/");
+  pathname.startsWith("/chapters/") ||
+  // Lawyer signup substeps (IBP verify, account create, OAuth completion).
+  // The completion page runs AFTER Better Auth has created the session,
+  // so authenticated users must also be allowed through here.
+  pathname.startsWith("/signup/");
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

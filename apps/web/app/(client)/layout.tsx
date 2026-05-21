@@ -9,7 +9,12 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   if (!session) redirect("/login");
   if (session.user.role !== "client") redirect(roleHome(session.user.role));
   return (
-    <PortalShell variant="client" userEmail={session.user.email}>
+    <PortalShell
+      variant="client"
+      userEmail={session.user.email}
+      userName={session.user.name}
+      userImage={session.user.image}
+    >
       {children}
     </PortalShell>
   );

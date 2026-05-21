@@ -1,10 +1,37 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
-import { clientProfilePatch, roleAssignmentInput } from "@ligala/shared/schemas";
-import { eq } from "drizzle-orm";
+import {
+  claimIbpInput,
+  clientProfilePatch,
+  roleAssignmentInput,
+} from "@ligala/shared/schemas";
+import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { requireSession } from "../middleware/session";
 import { slugify, withRandomSuffix } from "../lib/slug";
+
+async function ensureLawyerProfile(userId: string, fallbackName: string | null) {
+  const conn = db();
+  const existing = await conn.query.lawyerProfiles.findFirst({
+    where: eq(schema.lawyerProfiles.userId, userId),
+  });
+  if (existing) return existing;
+  const base = slugify(fallbackName ?? "lawyer");
+  let slug = base;
+  for (let i = 0; i < 5; i++) {
+    const collision = await conn.query.lawyerProfiles.findFirst({
+      where: eq(schema.lawyerProfiles.slug, slug),
+    });
+    if (!collision) break;
+    slug = withRandomSuffix(base);
+  }
+  const [profile] = await conn
+    .insert(schema.lawyerProfiles)
+    .values({ userId, slug })
+    .returning();
+  return profile;
+}
 
 /**
  * Endpoints for the signed-in user's own account — independent of role.
@@ -28,35 +55,58 @@ export const clients = new Hono()
     if (role === "lawyer") {
       // Ensure the user row reflects the role and a lawyer_profile exists.
       await conn.update(schema.user).set({ role: "lawyer", updatedAt: new Date() }).where(eq(schema.user.id, user.id));
-
-      const existing = await conn.query.lawyerProfiles.findFirst({
-        where: eq(schema.lawyerProfiles.userId, user.id),
-      });
-      if (existing) {
-        return c.json({ user: { ...user, role: "lawyer" }, profile: existing });
-      }
-
-      // Generate a unique slug starting from the user's name.
-      const base = slugify(user.name ?? user.email ?? "lawyer");
-      let slug = base;
-      for (let i = 0; i < 5; i++) {
-        const collision = await conn.query.lawyerProfiles.findFirst({
-          where: eq(schema.lawyerProfiles.slug, slug),
-        });
-        if (!collision) break;
-        slug = withRandomSuffix(base);
-      }
-
-      const [profile] = await conn
-        .insert(schema.lawyerProfiles)
-        .values({ userId: user.id, slug })
-        .returning();
-      return c.json({ user: { ...user, role: "lawyer" }, profile }, 201);
+      const profile = await ensureLawyerProfile(user.id, user.name ?? user.email);
+      return c.json({ user: { ...user, role: "lawyer" }, profile });
     }
 
     // role === "client" — demotion path.
     await conn.update(schema.user).set({ role: "client", updatedAt: new Date() }).where(eq(schema.user.id, user.id));
     return c.json({ user: { ...user, role: "client" } });
+  })
+
+  /**
+   * Claim an IBP directory record for the signed-in user. Consumes the
+   * server-side handle minted by `POST /signup/verify-ibp` (passed by the
+   * web app from a signed cookie). Idempotent if the same user re-claims
+   * their own record. Rejects (409) if another user already claimed it.
+   */
+  .post("/claim-ibp", zValidator("json", claimIbpInput), async (c) => {
+    const user = c.get("user");
+    const { ibpLawyerId } = c.req.valid("json");
+    const conn = db();
+
+    const record = await conn.query.ibpLawyers.findFirst({
+      where: eq(schema.ibpLawyers.id, ibpLawyerId),
+    });
+    if (!record) {
+      throw new HTTPException(404, { message: "ibp_not_found" });
+    }
+    if (record.userId && record.userId !== user.id) {
+      throw new HTTPException(409, { message: "ibp_already_claimed" });
+    }
+
+    if (!record.userId) {
+      // Conditional update guards against a concurrent claim landing between
+      // the read above and this write — only the first writer matches the
+      // `user_id IS NULL` predicate.
+      const claimed = await conn
+        .update(schema.ibpLawyers)
+        .set({ userId: user.id })
+        .where(
+          and(eq(schema.ibpLawyers.id, ibpLawyerId), isNull(schema.ibpLawyers.userId)),
+        )
+        .returning({ id: schema.ibpLawyers.id });
+      if (claimed.length === 0) {
+        throw new HTTPException(409, { message: "ibp_already_claimed" });
+      }
+    }
+
+    await conn
+      .update(schema.user)
+      .set({ role: "lawyer", updatedAt: new Date() })
+      .where(eq(schema.user.id, user.id));
+    const profile = await ensureLawyerProfile(user.id, user.name ?? user.email);
+    return c.json({ ok: true, ibpLawyerId, profile });
   })
 
   /**

@@ -15,6 +15,7 @@ import { references } from "./routes/references";
 import { integrations } from "./routes/integrations";
 import { webhooks } from "./routes/webhooks";
 import { admin } from "./routes/admin";
+import { signup } from "./routes/signup";
 import { errorHandler } from "./middleware/error";
 
 export function createApp() {
@@ -31,6 +32,7 @@ export function createApp() {
 
   app.route("/health", health);
   app.route("/auth", auth);
+  app.route("/signup", signup);
   app.route("/accounts", clients);
   app.route("/lawyers", lawyers);
   app.route("/directory", directory);

@@ -9,7 +9,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!session) redirect("/login");
   if (session.user.role !== "admin") redirect(roleHome(session.user.role));
   return (
-    <PortalShell variant="admin" userEmail={session.user.email}>
+    <PortalShell
+      variant="admin"
+      userEmail={session.user.email}
+      userName={session.user.name}
+      userImage={session.user.image}
+    >
       {children}
     </PortalShell>
   );

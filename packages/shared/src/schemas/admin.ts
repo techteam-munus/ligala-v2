@@ -23,6 +23,16 @@ export const kycAdminDecisionInput = z.object({
 export type KycAdminDecisionInput = z.infer<typeof kycAdminDecisionInput>;
 
 /**
+ * Force-verify a lawyer with no real KYC submission. Testing-only escape hatch;
+ * the API enforces NODE_ENV !== "production". Reason is required so the
+ * admin_audit_log entry is searchable later.
+ */
+export const forceVerifyLawyerInput = z.object({
+  reason: z.string().min(3).max(2000),
+});
+export type ForceVerifyLawyerInput = z.infer<typeof forceVerifyLawyerInput>;
+
+/**
  * Refund — `amountCents` is the partial amount to refund. Caller is expected
  * to verify it's <= (payment.amountCents - payment.refundedCents); the API
  * also re-checks. Reason is mandatory for the audit log.
@@ -50,3 +60,26 @@ export const adminInvoiceListQuery = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 export type AdminInvoiceListQuery = z.infer<typeof adminInvoiceListQuery>;
+
+/**
+ * Add a new IBP lawyer to the admin-managed directory. `rollNumber` is the
+ * Supreme Court roll number and is unique. Reason is required so the
+ * admin_audit_log row is searchable.
+ */
+export const ibpLawyerCreateInput = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  middleName: z.string().trim().max(100).optional(),
+  lastName: z.string().trim().min(1).max(100),
+  address: z.string().trim().min(3).max(500),
+  rollSigned: z.coerce.date(),
+  rollNumber: z.string().trim().min(1).max(50),
+  reason: z.string().min(3).max(2000),
+});
+export type IbpLawyerCreateInput = z.infer<typeof ibpLawyerCreateInput>;
+
+export const ibpLawyerListQuery = z.object({
+  q: z.string().max(200).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+export type IbpLawyerListQuery = z.infer<typeof ibpLawyerListQuery>;

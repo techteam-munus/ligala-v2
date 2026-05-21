@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setUserRole, setUserStatus } from "@/lib/actions/admin";
+import { forceVerifyLawyer, setUserRole, setUserStatus } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,12 @@ export function UserActions({
   userId,
   currentRole,
   currentStatus,
+  forceVerifyEnabled = false,
 }: {
   userId: string;
   currentRole: Role;
   currentStatus: Status;
+  forceVerifyEnabled?: boolean;
 }) {
   const [reason, setReason] = useState("");
   const [pending, start] = useTransition();
@@ -55,6 +57,24 @@ export function UserActions({
       try {
         await setUserRole(userId, { role, reason });
         setOk(`role → ${role}`);
+        setReason("");
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Failed");
+      }
+    });
+  }
+
+  function forceVerify() {
+    setErr(null);
+    setOk(null);
+    if (reason.trim().length < 3) {
+      setErr("Reason is required (min 3 chars).");
+      return;
+    }
+    start(async () => {
+      try {
+        const res = await forceVerifyLawyer(userId, { reason });
+        setOk(res.alreadyVerified ? "already verified — no change" : "force-verified ✓");
         setReason("");
       } catch (e) {
         setErr(e instanceof Error ? e.message : "Failed");
@@ -125,6 +145,23 @@ export function UserActions({
             </Button>
           ))}
         </div>
+        {forceVerifyEnabled && currentRole === "lawyer" ? (
+          <div className="mt-4 border-t pt-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Testing tools (dev/staging)
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={forceVerify}
+              className="mt-2 border-dashed"
+            >
+              Force verify lawyer (no KYC)
+            </Button>
+          </div>
+        ) : null}
         {err ? <p className="mt-2 text-sm text-destructive">{err}</p> : null}
         {ok ? <p className="mt-2 text-sm text-green-700">{ok}</p> : null}
       </CardContent>

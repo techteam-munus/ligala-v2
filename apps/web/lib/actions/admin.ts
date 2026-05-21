@@ -3,10 +3,14 @@
 import { revalidatePath } from "next/cache";
 import {
   adminUserRoleInput,
+  forceVerifyLawyerInput,
+  ibpLawyerCreateInput,
   kycAdminDecisionInput,
   refundInput,
   userStatusInput,
   type AdminUserRoleInput,
+  type ForceVerifyLawyerInput,
+  type IbpLawyerCreateInput,
   type KycAdminDecisionInput,
   type RefundInput,
   type UserStatusInput,
@@ -41,6 +45,30 @@ export async function decideOnKyc(submissionId: string, input: KycAdminDecisionI
   revalidatePath("/admin/kyc");
 }
 
+export type ForceVerifyLawyerResult = {
+  ok: true;
+  alreadyVerified: boolean;
+  submissionId?: string;
+};
+
+export async function forceVerifyLawyer(
+  userId: string,
+  input: ForceVerifyLawyerInput,
+): Promise<ForceVerifyLawyerResult> {
+  const parsed = forceVerifyLawyerInput.parse(input);
+  const res = await api<ForceVerifyLawyerResult>(
+    `/admin/users/${userId}/force-verify`,
+    {
+      method: "POST",
+      body: JSON.stringify(parsed),
+    },
+  );
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/admin/users");
+  revalidatePath("/lawyers");
+  return res;
+}
+
 export async function deleteDiscountCode(codeId: string, reason: string) {
   const q = `?reason=${encodeURIComponent(reason)}`;
   await api(`/admin/discount-codes/${codeId}${q}`, { method: "DELETE" });
@@ -55,4 +83,17 @@ export async function refundInvoice(invoiceId: string, input: RefundInput) {
   });
   revalidatePath(`/admin/invoices/${invoiceId}`);
   revalidatePath(`/admin/invoices`);
+}
+
+export async function createIbpLawyer(input: IbpLawyerCreateInput) {
+  const parsed = ibpLawyerCreateInput.parse(input);
+  const res = await api<{ ok: true; id: string }>("/admin/ibp-lawyers", {
+    method: "POST",
+    body: JSON.stringify({
+      ...parsed,
+      rollSigned: parsed.rollSigned.toISOString().slice(0, 10),
+    }),
+  });
+  revalidatePath("/admin/ibp-lawyers");
+  return res;
 }

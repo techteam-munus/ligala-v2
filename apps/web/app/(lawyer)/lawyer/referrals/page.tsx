@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { ReferralsList } from "./list";
-import { OutboundForm } from "./outbound-form";
+import { OutboundForm, type CaseOption, type LawyerOption } from "./outbound-form";
 
 type Referral = {
   id: string;
@@ -17,6 +17,16 @@ type Referral = {
   createdAt: string;
 };
 
+type DirectoryLawyer = {
+  slug: string;
+  name: string;
+  city: string | null;
+  region: string | null;
+};
+
+type MyProfile = { profile: { slug: string } };
+type CaseRow = { id: string; title: string; status: string; type: string };
+
 async function safe<T>(path: string, fallback: T): Promise<T> {
   try {
     return await api<T>(path);
@@ -28,7 +38,27 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
 export default async function LawyerReferralsPage() {
   const session = await getSession();
   const meId = session?.user.id ?? "";
-  const { items } = await safe<{ items: Referral[] }>("/referrals", { items: [] });
+
+  const [{ items }, directory, myProfile, myCases] = await Promise.all([
+    safe<{ items: Referral[] }>("/referrals", { items: [] }),
+    safe<{ items: DirectoryLawyer[] }>("/directory/lawyers?pageSize=100", { items: [] }),
+    safe<MyProfile | null>("/lawyers/profile", null),
+    safe<{ items: CaseRow[] }>("/cases", { items: [] }),
+  ]);
+
+  const mySlug = myProfile?.profile.slug ?? null;
+  const lawyerOptions: LawyerOption[] = directory.items
+    .filter((l) => l.slug !== mySlug)
+    .map((l) => ({
+      slug: l.slug,
+      name: l.name,
+      location: [l.city, l.region].filter(Boolean).join(", ") || null,
+    }));
+  const caseOptions: CaseOption[] = myCases.items.map((c) => ({
+    id: c.id,
+    title: c.title,
+    status: c.status,
+  }));
 
   const outbound = items.filter((r) => r.fromLawyerId === meId);
   const inbound = items.filter((r) => r.toLawyerId === meId);
@@ -41,7 +71,7 @@ export default async function LawyerReferralsPage() {
         specialty). Also see signups attributed via your referral links.
       </p>
 
-      <OutboundForm />
+      <OutboundForm lawyers={lawyerOptions} cases={caseOptions} />
 
       <section className="mt-10">
         <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">

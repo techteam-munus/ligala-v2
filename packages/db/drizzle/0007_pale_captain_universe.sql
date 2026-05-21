@@ -1,0 +1,1 @@
+ALTER TYPE "public"."admin_audit_action" ADD VALUE 'kyc_force_approved' BEFORE 'discount_code_removed';

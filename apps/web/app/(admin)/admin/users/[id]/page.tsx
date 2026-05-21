@@ -81,7 +81,12 @@ export default async function AdminUserDetail({
         </Badge>
       </div>
 
-      <UserActions userId={user.id} currentRole={user.role} currentStatus={user.status} />
+      <UserActions
+        userId={user.id}
+        currentRole={user.role}
+        currentStatus={user.status}
+        forceVerifyEnabled={process.env.NODE_ENV !== "production"}
+      />
 
       {lawyerProfile ? (
         <section className="mt-10">
