@@ -140,6 +140,7 @@ export const subscriptions = new Hono()
       if (provider === "paymongo") {
         const secretKey = env().PAYMONGO_SECRET_KEY;
         if (!secretKey) {
+          console.warn("paymongo_not_configured: PAYMONGO_SECRET_KEY is unset");
           throw new HTTPException(501, { message: "paymongo_not_configured" });
         }
         const baseUrl = env().BETTER_AUTH_URL;
@@ -165,7 +166,11 @@ export const subscriptions = new Hono()
           });
         } catch (err) {
           if (err instanceof PaymongoApiError) {
-            console.error("paymongo_request_failed", err.status, err.bodyText);
+            console.error(
+              "paymongo_request_failed",
+              err.status,
+              err.bodyText.slice(0, 200),
+            );
             throw new HTTPException(502, { message: "paymongo_request_failed" });
           }
           if (err instanceof PaymongoUnreachableError) {
