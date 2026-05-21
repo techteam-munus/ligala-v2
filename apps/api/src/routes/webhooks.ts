@@ -3,6 +3,11 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { idmetaWebhookPayload, paymentWebhookInput } from "@ligala/shared/schemas";
 import { applyPaymentWebhook } from "./billing";
+import {
+  verifyWebhookSignature,
+  type PaymongoEvent,
+} from "../lib/paymongo";
+import { env } from "../lib/env";
 
 /**
  * Webhook handlers. Real deployments verify signatures and enqueue to SQS;
@@ -53,19 +58,71 @@ export const webhooks = new Hono()
   })
 
   /**
-   * PayMongo webhook. Dev accepts a normalized payload (see paymentWebhookInput).
-   * Production wiring will sign-verify the X-Paymongo-Signature header and
-   * translate PayMongo's `data.attributes.data.attributes.payment_intent.id`
-   * shape into the normalized form before calling applyPaymentWebhook.
+   * PayMongo webhook. Reads the raw body for HMAC verification, then translates
+   * `checkout_session.payment.paid` / `payment.paid` / `payment.failed` into the
+   * normalized `applyPaymentWebhook` shape. Any other event type is acknowledged
+   * (200) but not processed, so PayMongo doesn't retry events we don't care
+   * about. Unknown invoiceId is also 200-acknowledged (with an error log) to
+   * avoid a permanent retry loop on a misconfigured metadata field.
    */
   .post("/paymongo", async (c) => {
-    const body = await c.req.json().catch(() => null);
-    const parsed = paymentWebhookInput.safeParse({ ...body, provider: "paymongo" });
-    if (!parsed.success) {
-      return c.json({ error: "bad_payload", issues: parsed.error.flatten() }, 400);
+    const secret = env().PAYMONGO_WEBHOOK_SECRET;
+    if (!secret) {
+      return c.json({ error: "paymongo_webhook_not_configured" }, 501);
     }
-    const r = await applyPaymentWebhook({ ...parsed.data, rawPayload: body });
-    return c.json(r);
+    const raw = await c.req.raw.text();
+    const header = c.req.header("Paymongo-Signature");
+
+    let event: PaymongoEvent;
+    try {
+      event = verifyWebhookSignature(raw, header, secret);
+    } catch (err) {
+      console.warn("paymongo_webhook_signature_invalid", err);
+      return c.json({ error: "invalid_signature" }, 401);
+    }
+
+    const type = event.data.attributes.type;
+    if (
+      type !== "checkout_session.payment.paid" &&
+      type !== "payment.paid" &&
+      type !== "payment.failed"
+    ) {
+      return c.json({ ignored: true, type });
+    }
+
+    const resource = event.data.attributes.data;
+    const metadata = resource.attributes.metadata ?? {};
+    const invoiceId = metadata.invoiceId;
+    if (!invoiceId) {
+      console.error("paymongo_webhook_missing_invoice_id", { type, resourceId: resource.id });
+      return c.json({ ignored: true, reason: "no_invoice_id" });
+    }
+
+    const providerPaymentId = resource.id;
+    const amountCents =
+      typeof resource.attributes.total_amount === "number"
+        ? resource.attributes.total_amount
+        : typeof resource.attributes.amount === "number"
+          ? resource.attributes.amount
+          : 0;
+    const status: "succeeded" | "failed" =
+      type === "payment.failed" ? "failed" : "succeeded";
+    const failureReason =
+      type === "payment.failed"
+        ? resource.attributes.last_payment_error?.message
+        : undefined;
+
+    const result = await applyPaymentWebhook({
+      provider: "paymongo",
+      providerPaymentId,
+      invoiceId,
+      status,
+      amountCents,
+      currency: "PHP",
+      failureReason,
+      rawPayload: event,
+    });
+    return c.json(result);
   })
 
   /**
