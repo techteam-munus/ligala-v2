@@ -19,7 +19,7 @@
     "seed-admin": "tsx scripts/seed-admin.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rm -rf .turbo"
   },
   "dependencies": {

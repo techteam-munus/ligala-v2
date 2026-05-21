@@ -10,6 +10,12 @@ import {
   SUBSCRIPTION_LINE_DESCRIPTION,
   daysUntil,
 } from "../lib/subscription";
+import {
+  createCheckoutSession,
+  PaymongoApiError,
+  PaymongoUnreachableError,
+} from "../lib/paymongo";
+import { env } from "../lib/env";
 
 function newId() {
   return crypto.randomUUID();
@@ -127,9 +133,56 @@ export const subscriptions = new Hono()
         });
       }
 
-      // Real PayMongo / PayPal integration returns a hosted checkout URL;
-      // dev returns the in-house simulate page (same shape used by the
-      // existing invoice checkout flow at /billing/invoices/:id/checkout).
+      if (provider === "paypal") {
+        throw new HTTPException(501, { message: "paypal_not_enabled" });
+      }
+
+      if (provider === "paymongo") {
+        const secretKey = env().PAYMONGO_SECRET_KEY;
+        if (!secretKey) {
+          console.warn("paymongo_not_configured: PAYMONGO_SECRET_KEY is unset");
+          throw new HTTPException(501, { message: "paymongo_not_configured" });
+        }
+        const baseUrl = env().BETTER_AUTH_URL;
+        try {
+          const session = await createCheckoutSession({
+            secretKey,
+            amountCents: sub.priceCents,
+            currency: "PHP",
+            lineDescription: SUBSCRIPTION_LINE_DESCRIPTION,
+            successUrl: `${baseUrl}/lawyer/subscribe?status=success`,
+            cancelUrl: `${baseUrl}/lawyer/subscribe?status=cancelled`,
+            referenceNumber: invoice.id,
+            metadata: { invoiceId: invoice.id, lawyerId: user.id },
+            customerEmail: user.email,
+          });
+          return c.json({
+            invoiceId: invoice.id,
+            provider,
+            providerPaymentId: session.sessionId,
+            amountCents: sub.priceCents,
+            currency: "PHP",
+            checkoutUrl: session.checkoutUrl,
+          });
+        } catch (err) {
+          if (err instanceof PaymongoApiError) {
+            console.error(
+              "paymongo_request_failed",
+              err.status,
+              err.bodyText.slice(0, 200),
+            );
+            throw new HTTPException(502, { message: "paymongo_request_failed" });
+          }
+          if (err instanceof PaymongoUnreachableError) {
+            console.error("paymongo_unreachable", err.cause);
+            throw new HTTPException(502, { message: "paymongo_unreachable" });
+          }
+          throw err;
+        }
+      }
+
+      // provider === "dev_simulate": unchanged behavior, used by Playwright +
+      // local hand-testing.
       const intentId = `pi_${provider}_${crypto.randomUUID().slice(0, 12)}`;
       const apiOrigin = c.req.url.split(c.req.path)[0];
       return c.json({

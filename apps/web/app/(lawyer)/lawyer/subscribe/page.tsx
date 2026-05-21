@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SubscribeButton } from "./subscribe-button";
+import { PaymentStatusBanner } from "./_components/payment-status-banner";
 
 type SubscriptionDto = {
   lawyerId: string;
@@ -44,7 +45,12 @@ export default async function SubscribePage({
   const expired = subscription.daysRemaining < 0;
   const price = money(subscription.priceCents);
   const sp = await searchParams;
-  const arrivedFromBlock = sp.from === "expired";
+  // Suppress the "you got blocked" copy when the user just landed back from a
+  // successful payment — otherwise the page contradictorily says "your access
+  // lapsed" alongside the success banner until the next navigation.
+  const arrivedFromBlock = sp.from === "expired" && sp.status !== "success";
+  const status =
+    sp.status === "success" || sp.status === "cancelled" ? sp.status : null;
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -58,6 +64,15 @@ export default async function SubscribePage({
               ? "Your Ligala subscription is active."
               : "Your subscription has lapsed."}
       </p>
+
+      {status ? (
+        <div className="mt-6">
+          <PaymentStatusBanner
+            status={status}
+            initialLastPaidAt={subscription.lastPaidAt}
+          />
+        </div>
+      ) : null}
 
       <Card className="mt-8 gap-3 py-5">
         <CardHeader className="px-5">
