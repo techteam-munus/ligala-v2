@@ -29,6 +29,11 @@ export class PaymongoSignatureError extends Error {
   }
 }
 
+/**
+ * Thrown when PayMongo returns a non-2xx response. `bodyText` may contain
+ * PayMongo's error detail including back-echoed input values — only log it
+ * at error level or higher, and never surface it to end users.
+ */
 export class PaymongoApiError extends Error {
   constructor(public status: number, public bodyText: string) {
     super(`paymongo_api_error_${status}`);
@@ -63,6 +68,20 @@ function constantTimeEqualHex(a: string, b: string): boolean {
   return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
+/**
+ * Verify a PayMongo webhook signature and return the parsed event payload.
+ *
+ * Header format: `t=<unix_ts>,te=<test_sig>,li=<live_sig>` where each sig
+ * is HMAC-SHA256 of `${t}.${rawBody}` hex-encoded with `secret`. Either
+ * `te` or `li` matching is sufficient; we accept whichever is present.
+ *
+ * **No timestamp-freshness check by design.** PayMongo retries failed
+ * deliveries with exponential backoff over hours or days. Rejecting old
+ * timestamps would silently break those retries. Replay protection is
+ * enforced one layer up by the DB-level idempotency index on
+ * `(provider, provider_payment_id)` in `applyPaymentWebhook` — a replayed
+ * event resolves to the same `cs_xxx` / `pay_xxx` id and is no-op'd.
+ */
 export function verifyWebhookSignature(
   rawBody: string,
   header: string | undefined,
@@ -143,7 +162,7 @@ export async function createCheckoutSession(
   }
 
   let parsed: {
-    data: { id: string; attributes: { checkout_url: string } };
+    data?: { id?: string; attributes?: { checkout_url?: string } };
   };
   try {
     parsed = JSON.parse(text);
@@ -151,8 +170,11 @@ export async function createCheckoutSession(
     throw new PaymongoApiError(res.status, text);
   }
 
-  return {
-    sessionId: parsed.data.id,
-    checkoutUrl: parsed.data.attributes.checkout_url,
-  };
+  const sessionId = parsed?.data?.id;
+  const checkoutUrl = parsed?.data?.attributes?.checkout_url;
+  if (!sessionId || !checkoutUrl) {
+    throw new PaymongoApiError(res.status, text);
+  }
+
+  return { sessionId, checkoutUrl };
 }

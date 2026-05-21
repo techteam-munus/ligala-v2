@@ -50,6 +50,15 @@ describe("verifyWebhookSignature", () => {
     const ts = Math.floor(Date.now() / 1000);
     expect(() => verifyWebhookSignature("{}", `t=${ts}`, SECRET)).toThrow(PaymongoSignatureError);
   });
+
+  it("accepts a header with only `li` set (no `te`)", () => {
+    const body = JSON.stringify({ data: { attributes: { type: "payment.paid" } } });
+    const ts = Math.floor(Date.now() / 1000);
+    const sig = crypto.createHmac("sha256", SECRET).update(`${ts}.${body}`).digest("hex");
+    const header = `t=${ts},li=${sig}`;
+    const event = verifyWebhookSignature(body, header, SECRET);
+    expect(event.data.attributes.type).toBe("payment.paid");
+  });
 });
 
 describe("createCheckoutSession", () => {
