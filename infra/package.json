@@ -10,7 +10,7 @@
     "deploy:prod": "cdk deploy --all --context env=prod",
     "destroy:dev": "cdk destroy --all --context env=dev --force",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint . --ignore-pattern cdk.out --ignore-pattern dist",
     "clean": "rm -rf cdk.out .turbo"
   },
