@@ -22,9 +22,25 @@ type Props = {
  *
  * `cancelled` → muted "Payment cancelled" line; no polling.
  */
+// If the SSR already saw a payment within this window before render, treat
+// the page as already-resolved — the webhook landed before our HTML was
+// rendered, so polling for "lastPaidAt advances past baseline" would never
+// see a change. 60s comfortably covers the race between PayMongo's
+// redirect and the inline webhook delivery.
+const ALREADY_PAID_WINDOW_MS = 60_000;
+
+function isRecentPayment(iso: string | null): boolean {
+  if (!iso) return false;
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts < ALREADY_PAID_WINDOW_MS;
+}
+
 export function PaymentStatusBanner({ status, initialLastPaidAt }: Props) {
   const router = useRouter();
-  const [resolved, setResolved] = useState(false);
+  const [resolved, setResolved] = useState(() =>
+    status === "success" && isRecentPayment(initialLastPaidAt),
+  );
   const [gaveUp, setGaveUp] = useState(false);
   const baseline = useRef(initialLastPaidAt);
 
