@@ -83,9 +83,15 @@ export const webhooks = new Hono()
     }
 
     const type = event.data.attributes.type;
+    // We deliberately do NOT handle `payment.paid` here even though we're
+    // subscribed to it: for hosted-checkout flows PayMongo also fires
+    // `checkout_session.payment.paid` with the same logical payment but a
+    // different resource id (cs_xxx vs pay_xxx), so dedup misses it and we
+    // end up writing a second payment row + double-extending the period.
+    // `checkout_session.payment.paid` is the authoritative event for our
+    // flow — it carries `total_amount` and our `metadata.invoiceId`.
     if (
       type !== "checkout_session.payment.paid" &&
-      type !== "payment.paid" &&
       type !== "payment.failed"
     ) {
       return c.json({ ignored: true, type });
