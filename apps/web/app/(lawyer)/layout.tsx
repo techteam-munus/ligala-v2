@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { roleHome } from "@/lib/role";
 import { PortalShell } from "@/app/_components/portal-shell";
+import { SubscriptionBanner } from "./_components/subscription-banner";
 
 export default async function LawyerLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
@@ -15,6 +16,7 @@ export default async function LawyerLayout({ children }: { children: ReactNode }
       userName={session.user.name}
       userImage={session.user.image}
     >
+      <SubscriptionBanner />
       {children}
     </PortalShell>
   );

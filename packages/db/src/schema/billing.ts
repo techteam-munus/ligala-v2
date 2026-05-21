@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
+  check,
   integer,
   jsonb,
   pgEnum,
@@ -28,44 +30,61 @@ export const invoiceStatus = pgEnum("invoice_status", [
   "void",
 ]);
 
-export const invoices = pgTable("invoice", {
-  id: text("id").primaryKey(),
-  number: text("number").notNull().unique(),
-  caseId: text("case_id")
-    .notNull()
-    .references(() => cases.id, { onDelete: "restrict" }),
-  engagementId: text("engagement_id").references(() => engagements.id, {
-    onDelete: "set null",
+/**
+ * `case` invoices bill a client for legal work on a specific case (the original
+ * shape). `subscription` invoices charge a lawyer for their Ligala subscription
+ * (no client, no case). The CHECK constraint below keeps the polymorphism
+ * unambiguous: a `case` row has both case_id and client_id, a `subscription`
+ * row has neither.
+ */
+export const invoiceKind = pgEnum("invoice_kind", ["case", "subscription"]);
+
+export const invoices = pgTable(
+  "invoice",
+  {
+    id: text("id").primaryKey(),
+    number: text("number").notNull().unique(),
+    kind: invoiceKind("kind").default("case").notNull(),
+    caseId: text("case_id").references(() => cases.id, { onDelete: "restrict" }),
+    engagementId: text("engagement_id").references(() => engagements.id, {
+      onDelete: "set null",
+    }),
+    clientId: text("client_id").references(() => user.id, {
+      onDelete: "restrict",
+    }),
+    lawyerId: text("lawyer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    status: invoiceStatus("status").default("draft").notNull(),
+    currency: text("currency").default("PHP").notNull(),
+    subtotalCents: integer("subtotal_cents").default(0).notNull(),
+    discountCents: integer("discount_cents").default(0).notNull(),
+    totalCents: integer("total_cents").default(0).notNull(),
+    paidCents: integer("paid_cents").default(0).notNull(),
+    appliedDiscountCodeId: text("applied_discount_code_id").references(
+      () => discountCodes.id,
+      { onDelete: "set null" },
+    ),
+    notesMd: text("notes_md"),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidReason: text("void_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => ({
+    kindConsistency: check(
+      "invoice_kind_consistency",
+      sql`(${t.kind} = 'case' AND ${t.caseId} IS NOT NULL AND ${t.clientId} IS NOT NULL) OR (${t.kind} = 'subscription' AND ${t.caseId} IS NULL AND ${t.clientId} IS NULL)`,
+    ),
   }),
-  clientId: text("client_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "restrict" }),
-  lawyerId: text("lawyer_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "restrict" }),
-  status: invoiceStatus("status").default("draft").notNull(),
-  currency: text("currency").default("PHP").notNull(),
-  subtotalCents: integer("subtotal_cents").default(0).notNull(),
-  discountCents: integer("discount_cents").default(0).notNull(),
-  totalCents: integer("total_cents").default(0).notNull(),
-  paidCents: integer("paid_cents").default(0).notNull(),
-  appliedDiscountCodeId: text("applied_discount_code_id").references(
-    () => discountCodes.id,
-    { onDelete: "set null" },
-  ),
-  notesMd: text("notes_md"),
-  dueAt: timestamp("due_at", { withTimezone: true }),
-  sentAt: timestamp("sent_at", { withTimezone: true }),
-  paidAt: timestamp("paid_at", { withTimezone: true }),
-  voidedAt: timestamp("voided_at", { withTimezone: true }),
-  voidReason: text("void_reason"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .$defaultFn(() => new Date())
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .$defaultFn(() => new Date())
-    .notNull(),
-});
+);
 
 /**
  * One row per billable item. `qtyThousandths` lets hourly bills express

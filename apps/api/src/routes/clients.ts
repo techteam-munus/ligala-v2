@@ -10,6 +10,31 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { requireSession } from "../middleware/session";
 import { slugify, withRandomSuffix } from "../lib/slug";
+import {
+  SUBSCRIPTION_PRICE_CENTS,
+  TRIAL_DAYS,
+  addDays,
+} from "../lib/subscription";
+
+/**
+ * Idempotent: only inserts the row if one doesn't already exist for the
+ * lawyer. Re-claims (or admin role flips back-and-forth) preserve the
+ * original trial dates rather than restarting the clock.
+ */
+async function ensureLawyerSubscription(userId: string) {
+  const conn = db();
+  const trialEnd = addDays(new Date(), TRIAL_DAYS);
+  await conn
+    .insert(schema.lawyerSubscriptions)
+    .values({
+      lawyerId: userId,
+      status: "trialing",
+      trialEndsAt: trialEnd,
+      currentPeriodEndsAt: trialEnd,
+      priceCents: SUBSCRIPTION_PRICE_CENTS,
+    })
+    .onConflictDoNothing({ target: schema.lawyerSubscriptions.lawyerId });
+}
 
 async function ensureLawyerProfile(userId: string, fallbackName: string | null) {
   const conn = db();
@@ -56,6 +81,7 @@ export const clients = new Hono()
       // Ensure the user row reflects the role and a lawyer_profile exists.
       await conn.update(schema.user).set({ role: "lawyer", updatedAt: new Date() }).where(eq(schema.user.id, user.id));
       const profile = await ensureLawyerProfile(user.id, user.name ?? user.email);
+      await ensureLawyerSubscription(user.id);
       return c.json({ user: { ...user, role: "lawyer" }, profile });
     }
 
@@ -106,6 +132,7 @@ export const clients = new Hono()
       .set({ role: "lawyer", updatedAt: new Date() })
       .where(eq(schema.user.id, user.id));
     const profile = await ensureLawyerProfile(user.id, user.name ?? user.email);
+    await ensureLawyerSubscription(user.id);
     return c.json({ ok: true, ibpLawyerId, profile });
   })
 

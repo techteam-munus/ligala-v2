@@ -11,6 +11,7 @@ export * from "./search";
 export * from "./case";
 export * from "./engagement";
 export * from "./billing";
+export * from "./subscriptions";
 export * from "./referral";
 export * from "./admin";
 export * from "./signup";

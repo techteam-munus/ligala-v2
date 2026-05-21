@@ -101,6 +101,7 @@ const NAV: Record<Variant, { brandHref: string; items: NavItem[] }> = {
       { href: "/lawyer/kyc", label: "KYC", icon: ShieldCheck },
       { href: "/lawyer/profile", label: "Public profile", icon: User },
       { href: "/lawyer/office", label: "Office", icon: Building },
+      { href: "/lawyer/subscribe", label: "Subscription", icon: CreditCard },
     ],
   },
   admin: {
@@ -143,6 +144,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   users: "Users",
   "audit-log": "Audit log",
   "ibp-lawyers": "IBP lawyers",
+  subscribe: "Subscription",
   new: "New",
 };
 

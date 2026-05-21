@@ -17,6 +17,7 @@ import {
   computeLineTotalCents,
   newInvoiceNumber,
 } from "../lib/billing";
+import { RENEWAL_DAYS, addDays } from "../lib/subscription";
 
 function newId() {
   return crypto.randomUUID();
@@ -572,6 +573,29 @@ export async function applyPaymentWebhook(input: {
           .update(schema.discountCodes)
           .set({ redemptions: code.redemptions + 1 })
           .where(eq(schema.discountCodes.id, code.id));
+      }
+    }
+
+    // Subscription renewal: extend the lawyer's paid period. The earlier
+    // dedup check on (provider, providerPaymentId) means we only get here
+    // once per provider payment, so the +30 days is never double-applied.
+    if (invoice.kind === "subscription") {
+      const sub = await conn.query.lawyerSubscriptions.findFirst({
+        where: eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId),
+      });
+      if (sub) {
+        // Stack onto the existing period if it hasn't elapsed yet (early
+        // renewal); otherwise start a fresh period from `now`.
+        const base = sub.currentPeriodEndsAt > now ? sub.currentPeriodEndsAt : now;
+        await conn
+          .update(schema.lawyerSubscriptions)
+          .set({
+            status: "active",
+            currentPeriodEndsAt: addDays(base, RENEWAL_DAYS),
+            lastPaidAt: now,
+            updatedAt: now,
+          })
+          .where(eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId));
       }
     }
   }

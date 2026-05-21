@@ -9,6 +9,7 @@ export const ErrorCode = {
   RateLimited: "rate_limited",
   PaymentFailed: "payment_failed",
   KycRequired: "kyc_required",
+  SubscriptionExpired: "subscription_expired",
   Internal: "internal_error",
 } as const;
 
