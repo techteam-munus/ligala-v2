@@ -1,0 +1,84 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Ligala" [ref=e9] [cursor=pointer]:
+            - /url: /lawyer/dashboard
+            - img [ref=e10]
+            - img "Ligala" [ref=e11]
+      - list [ref=e15]:
+        - listitem [ref=e16]:
+          - link "Dashboard" [ref=e17] [cursor=pointer]:
+            - /url: /lawyer/dashboard
+            - img [ref=e18]
+            - generic [ref=e23]: Dashboard
+        - listitem [ref=e24]:
+          - link "Cases" [ref=e25] [cursor=pointer]:
+            - /url: /lawyer/cases
+            - img [ref=e26]
+            - generic [ref=e29]: Cases
+        - listitem [ref=e30]:
+          - link "Referrals" [ref=e31] [cursor=pointer]:
+            - /url: /lawyer/referrals
+            - img [ref=e32]
+            - generic [ref=e38]: Referrals
+        - listitem [ref=e39]:
+          - link "Referral links" [ref=e40] [cursor=pointer]:
+            - /url: /lawyer/referral-links
+            - img [ref=e41]
+            - generic [ref=e44]: Referral links
+        - listitem [ref=e45]:
+          - link "KYC" [ref=e46] [cursor=pointer]:
+            - /url: /lawyer/kyc
+            - img [ref=e47]
+            - generic [ref=e50]: KYC
+        - listitem [ref=e51]:
+          - link "Public profile" [ref=e52] [cursor=pointer]:
+            - /url: /lawyer/profile
+            - img [ref=e53]
+            - generic [ref=e56]: Public profile
+        - listitem [ref=e57]:
+          - link "Office" [ref=e58] [cursor=pointer]:
+            - /url: /lawyer/office
+            - img [ref=e59]
+            - generic [ref=e62]: Office
+      - list [ref=e64]:
+        - listitem [ref=e65]:
+          - button "C Crumb Test crumbtest@example.com" [ref=e66]:
+            - generic [ref=e68]: C
+            - generic [ref=e69]:
+              - generic [ref=e70]: Crumb Test
+              - generic [ref=e71]: crumbtest@example.com
+            - img [ref=e72]
+    - main [ref=e75]:
+      - generic [ref=e76]:
+        - button "Toggle Sidebar" [ref=e77]:
+          - img
+          - generic [ref=e78]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e79]:
+          - list [ref=e80]:
+            - listitem [ref=e81]:
+              - link "Subscription" [disabled] [ref=e82]
+      - main [ref=e83]:
+        - heading "Subscription" [level=1] [ref=e84]
+        - paragraph [ref=e85]: Your Ligala subscription is active.
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - generic [ref=e88]: ₱999.00/ month
+            - generic [ref=e89]:
+              - text: Renews on
+              - strong [ref=e90]: September 18, 2026
+              - text: .
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - group [ref=e93]:
+                - generic [ref=e94]: Discount code (optional)
+                - generic [ref=e95]:
+                  - textbox "Discount code (optional)" [ref=e96]:
+                    - /placeholder: WELCOME50
+                  - button "Apply" [disabled]
+                - paragraph [ref=e97]: Have a promo code? Enter it and click Apply.
+              - button "Renew early (₱999.00 / mo)" [ref=e99]
+            - paragraph [ref=e100]: Each payment extends your access by 30 days. No auto-renewal — pay again when you're ready.
+  - region "Notifications alt+T"

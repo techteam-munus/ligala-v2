@@ -1,0 +1,132 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link [ref=e6] [cursor=pointer]:
+            - /url: http://localhost:3000/lawyer/subscribe?status=cancelled
+            - img [ref=e7]
+          - paragraph [ref=e10]: M
+          - paragraph [ref=e11]: munus
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: Reference Number
+          - paragraph [ref=e14]: d3a73056-10c1-4ab8-91ef-abe6f6a8b3da
+    - main [ref=e15]:
+      - generic [ref=e17]:
+        - heading "Ligala — Monthly subscription" [level=1] [ref=e18]
+        - paragraph [ref=e19]: ₱ 999.00
+        - paragraph [ref=e20]: Billed to crumbtest@example.com
+        - paragraph [ref=e22]: Ligala — Monthly subscription
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Subtotal
+          - paragraph [ref=e26]: ₱ 999.00
+          - paragraph [ref=e27]: Fees
+          - generic [ref=e28]: Free
+        - generic [ref=e30]:
+          - paragraph [ref=e31]: Total Due
+          - paragraph [ref=e32]: ₱ 999.00
+      - generic [ref=e33]:
+        - generic [ref=e35]:
+          - generic [ref=e79]:
+            - generic [ref=e80]:
+              - heading "Customer Information" [level=2] [ref=e81]
+              - generic [ref=e82]:
+                - group [ref=e83]:
+                  - generic [ref=e85]: Name
+                  - group [ref=e86]:
+                    - group [ref=e87]:
+                      - img [ref=e88]
+                    - textbox "Name" [ref=e91]:
+                      - /placeholder: John Doe
+                - group [ref=e92]:
+                  - generic [ref=e94]: Email
+                  - group [ref=e95]:
+                    - group [ref=e96]:
+                      - img [ref=e97]
+                    - textbox "Email" [ref=e100]:
+                      - /placeholder: email@example.com
+                      - text: crumbtest@example.com
+                - group [ref=e101]:
+                  - generic [ref=e103]: Mobile Phone (optional)
+                  - group [ref=e104]:
+                    - group [ref=e105]:
+                      - img [ref=e106]
+                      - paragraph [ref=e108]: "+63"
+                    - textbox "Mobile Phone (optional)" [ref=e109]:
+                      - /placeholder: 917 123 4567
+                - group "Billing Address" [ref=e111]:
+                  - generic [ref=e112]: Billing Address
+                  - group [ref=e113]:
+                    - generic [ref=e115]: Country
+                    - combobox "Country" [ref=e116]:
+                      - generic: Select a country
+                      - img [ref=e117]
+                    - combobox [ref=e119]
+                  - group [ref=e120]:
+                    - generic [ref=e122]: Address Line 1
+                    - group [ref=e123]:
+                      - textbox "Address Line 1" [ref=e124]:
+                        - /placeholder: 123 Main St
+                  - group [ref=e125]:
+                    - generic [ref=e127]: Address Line 2 (optional)
+                    - group [ref=e128]:
+                      - textbox "Address Line 2 (optional)" [ref=e129]:
+                        - /placeholder: Apt 123
+                  - generic [ref=e130]:
+                    - group [ref=e131]:
+                      - generic [ref=e132]: City
+                      - group [ref=e133]:
+                        - textbox "City" [ref=e134]:
+                          - /placeholder: Manila
+                    - group [ref=e135]:
+                      - generic [ref=e136]: State / Province
+                      - group [ref=e137]:
+                        - textbox "State / Province" [ref=e138]:
+                          - /placeholder: Metro Manila
+                  - group [ref=e139]:
+                    - generic [ref=e141]: Postal Code
+                    - group [ref=e142]:
+                      - textbox "Postal Code" [ref=e143]:
+                        - /placeholder: "12345"
+            - generic [ref=e144]:
+              - heading "Card Information" [level=2] [ref=e145]
+              - group [ref=e148]:
+                - group [ref=e149]:
+                  - generic [ref=e151]: Card Number
+                  - group [ref=e152]:
+                    - group [ref=e153]:
+                      - img [ref=e154]
+                    - textbox "Card Number" [ref=e156]:
+                      - /placeholder: 1234 1234 1234 1234
+                - generic [ref=e157]:
+                  - group [ref=e158]:
+                    - generic [ref=e159]: MM
+                    - group [ref=e160]:
+                      - textbox "MM" [ref=e161]:
+                        - /placeholder: "01"
+                  - group [ref=e162]:
+                    - generic [ref=e163]: YY
+                    - group [ref=e164]:
+                      - textbox "YY" [ref=e165]:
+                        - /placeholder: "31"
+                  - group [ref=e166]:
+                    - generic [ref=e167]: CVC
+                    - group [ref=e168]:
+                      - textbox "CVC" [ref=e169]:
+                        - /placeholder: "123"
+                - group [ref=e170]:
+                  - generic [ref=e172]: Full Name
+                  - group [ref=e173]:
+                    - textbox "Full Name" [ref=e174]:
+                      - /placeholder: John Doe
+            - button "Pay ₱ 999.00" [disabled]
+            - button "Use a different payment method" [ref=e175]
+          - paragraph [ref=e64]:
+            - text: By completing your purchase, you agree to PayMongo's
+            - link "Privacy Policy" [ref=e65] [cursor=pointer]:
+              - /url: https://www.paymongo.com/privacy
+            - text: .
+        - generic [ref=e66]:
+          - paragraph [ref=e67]: Powered by
+          - img [ref=e68]
+  - alert [ref=e78]

@@ -1,0 +1,56 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link [ref=e6] [cursor=pointer]:
+            - /url: http://localhost:3000/lawyer/subscribe?status=cancelled
+            - img [ref=e7]
+          - paragraph [ref=e10]: M
+          - paragraph [ref=e11]: munus
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: Reference Number
+          - paragraph [ref=e14]: 8f728839-a45d-4211-9dd7-26c403f40d96
+    - main [ref=e15]:
+      - generic [ref=e17]:
+        - heading "Ligala — Monthly subscription" [level=1] [ref=e18]
+        - paragraph [ref=e19]: ₱ 999.00
+        - paragraph [ref=e20]: Billed to crumbtest@example.com
+        - paragraph [ref=e22]: Ligala — Monthly subscription
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Subtotal
+          - paragraph [ref=e26]: ₱ 999.00
+          - paragraph [ref=e27]: Fees
+          - generic [ref=e28]: Free
+        - generic [ref=e30]:
+          - paragraph [ref=e31]: Total Due
+          - paragraph [ref=e32]: ₱ 999.00
+      - generic [ref=e33]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - heading "Payment Method" [level=2] [ref=e37]
+            - button "Card Mastercard Visa" [ref=e38]:
+              - generic [ref=e39]:
+                - paragraph [ref=e40]: Card
+                - generic [ref=e41]:
+                  - img "Mastercard" [ref=e43]
+                  - img "Visa" [ref=e45]
+            - heading "E-Wallets GCash GrabPay Maya" [level=3] [ref=e48]:
+              - button "E-Wallets GCash GrabPay Maya" [ref=e49]:
+                - generic [ref=e50]:
+                  - paragraph [ref=e51]: E-Wallets
+                  - generic [ref=e52]:
+                    - img "GCash" [ref=e55]
+                    - img "GrabPay" [ref=e58]
+                    - img "Maya" [ref=e61]
+                - img [ref=e62]
+            - button "Continue" [disabled]
+          - paragraph [ref=e64]:
+            - text: By completing your purchase, you agree to PayMongo's
+            - link "Privacy Policy" [ref=e65] [cursor=pointer]:
+              - /url: https://www.paymongo.com/privacy
+            - text: .
+        - generic [ref=e66]:
+          - paragraph [ref=e67]: Powered by
+          - img [ref=e68]
+  - alert [ref=e78]

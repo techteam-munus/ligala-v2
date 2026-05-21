@@ -13,7 +13,6 @@ type Ref = { id: string; name: string };
 
 type Initial = {
   slug: string;
-  barNumber: string;
   ibpChapterId: string;
   bio: string;
   practiceAreaIds: string[];
@@ -37,7 +36,6 @@ export function LawyerProfileForm({
   jurisdictions: Ref[];
 }) {
   const [slug, setSlug] = useState(initial.slug);
-  const [barNumber, setBarNumber] = useState(initial.barNumber);
   const [ibpChapterId, setIbpChapterId] = useState(initial.ibpChapterId);
   const [bio, setBio] = useState(initial.bio);
   const [practiceAreaIds, setPracticeAreaIds] = useState<Set<string>>(
@@ -66,7 +64,6 @@ export function LawyerProfileForm({
       try {
         await saveLawyerProfile({
           slug: slug || undefined,
-          barNumber: barNumber || null,
           ibpChapterId: ibpChapterId || null,
           bio: bio || null,
           practiceAreaIds: [...practiceAreaIds],
@@ -94,15 +91,6 @@ export function LawyerProfileForm({
         <p className="text-xs text-muted-foreground">
           Lowercase letters, digits, hyphens.
         </p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="barNumber">Bar number</Label>
-        <Input
-          id="barNumber"
-          value={barNumber}
-          onChange={(e) => setBarNumber(e.target.value)}
-        />
       </div>
 
       <div className="space-y-1.5">

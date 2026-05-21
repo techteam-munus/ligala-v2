@@ -1,0 +1,104 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Ligala" [ref=e9] [cursor=pointer]:
+            - /url: /lawyer/dashboard
+            - img [ref=e10]
+            - img "Ligala" [ref=e11]
+      - list [ref=e15]:
+        - listitem [ref=e16]:
+          - link "Dashboard" [ref=e17] [cursor=pointer]:
+            - /url: /lawyer/dashboard
+            - img [ref=e18]
+            - generic [ref=e23]: Dashboard
+        - listitem [ref=e24]:
+          - link "Cases" [ref=e25] [cursor=pointer]:
+            - /url: /lawyer/cases
+            - img [ref=e26]
+            - generic [ref=e29]: Cases
+        - listitem [ref=e30]:
+          - link "Referrals" [ref=e31] [cursor=pointer]:
+            - /url: /lawyer/referrals
+            - img [ref=e32]
+            - generic [ref=e38]: Referrals
+        - listitem [ref=e39]:
+          - link "Referral links" [ref=e40] [cursor=pointer]:
+            - /url: /lawyer/referral-links
+            - img [ref=e41]
+            - generic [ref=e44]: Referral links
+        - listitem [ref=e45]:
+          - link "KYC" [ref=e46] [cursor=pointer]:
+            - /url: /lawyer/kyc
+            - img [ref=e47]
+            - generic [ref=e50]: KYC
+        - listitem [ref=e51]:
+          - link "Public profile" [ref=e52] [cursor=pointer]:
+            - /url: /lawyer/profile
+            - img [ref=e53]
+            - generic [ref=e56]: Public profile
+        - listitem [ref=e57]:
+          - link "Office" [ref=e58] [cursor=pointer]:
+            - /url: /lawyer/office
+            - img [ref=e59]
+            - generic [ref=e62]: Office
+      - list [ref=e64]:
+        - listitem [ref=e65]:
+          - button "C Crumb Test crumbtest@example.com" [ref=e66]:
+            - generic [ref=e68]: C
+            - generic [ref=e69]:
+              - generic [ref=e70]: Crumb Test
+              - generic [ref=e71]: crumbtest@example.com
+            - img [ref=e72]
+    - main [ref=e75]:
+      - generic [ref=e76]:
+        - button "Toggle Sidebar" [ref=e77]:
+          - img
+          - generic [ref=e78]: Toggle Sidebar
+        - navigation "breadcrumb" [ref=e79]:
+          - list [ref=e80]:
+            - listitem [ref=e81]:
+              - link "Dashboard" [disabled] [ref=e82]
+      - generic [ref=e83]:
+        - generic [ref=e84]: 29 days left in your free trial.
+        - link "Manage subscription →" [ref=e85] [cursor=pointer]:
+          - /url: /lawyer/subscribe
+      - main [ref=e86]:
+        - heading "Lawyer dashboard" [level=1] [ref=e87]
+        - paragraph [ref=e88]:
+          - text: Signed in as
+          - strong [ref=e89]: crumbtest@example.com
+          - text: .
+        - generic [ref=e90]:
+          - link "Cases 0 awaiting · 0 active" [ref=e91] [cursor=pointer]:
+            - /url: /lawyer/cases
+            - generic [ref=e93]:
+              - generic [ref=e94]: Cases
+              - generic [ref=e95]: 0 awaiting · 0 active
+          - link "Invoices Bills, payments, ledger." [ref=e96] [cursor=pointer]:
+            - /url: /lawyer/invoices
+            - generic [ref=e98]:
+              - generic [ref=e99]: Invoices
+              - generic [ref=e100]: Bills, payments, ledger.
+          - link "Referrals 0 inbound pending" [ref=e101] [cursor=pointer]:
+            - /url: /lawyer/referrals
+            - generic [ref=e103]:
+              - generic [ref=e104]: Referrals
+              - generic [ref=e105]: 0 inbound pending
+          - link "Referral links 0 links · 0 signups" [ref=e106] [cursor=pointer]:
+            - /url: /lawyer/referral-links
+            - generic [ref=e108]:
+              - generic [ref=e109]: Referral links
+              - generic [ref=e110]: 0 links · 0 signups
+          - link "Public profile Bio, pro bono, practice areas." [ref=e111] [cursor=pointer]:
+            - /url: /lawyer/profile
+            - generic [ref=e113]:
+              - generic [ref=e114]: Public profile
+              - generic [ref=e115]: Bio, pro bono, practice areas.
+          - link "Office Address, schedule, FAQs." [ref=e116] [cursor=pointer]:
+            - /url: /lawyer/office
+            - generic [ref=e118]:
+              - generic [ref=e119]: Office
+              - generic [ref=e120]: Address, schedule, FAQs.
+  - region "Notifications alt+T"
