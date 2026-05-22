@@ -139,6 +139,7 @@ Nav data moves to a new module `apps/web/app/_components/portal-nav-config.ts` a
 
 - **Workspace**: Dashboard, Cases
 - **Growth**: Referrals, Referral links
+- **Billing**: Invoices, Discount codes
 - **Practice**: Public profile, Office, KYC
 
 ### Admin (`brandHref: /admin/dashboard`, `roleTag: ADMIN`)
