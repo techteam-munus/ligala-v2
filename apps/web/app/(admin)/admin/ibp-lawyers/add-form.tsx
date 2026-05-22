@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Plus } from "lucide-react";
 import { createIbpLawyer } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 const EMPTY = {
   firstName: "",
@@ -84,16 +80,23 @@ export function AddIbpLawyerForm() {
   }
 
   return (
-    <Card className="mt-6 gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+    <Card size="sm" className="gap-3">
+      <CardHeader className="flex-row items-center gap-2">
+        <Plus className="size-3.5 text-muted-foreground" />
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Add IBP lawyer
-        </CardTitle>
+        </p>
       </CardHeader>
-      <CardContent className="px-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Adds a new entry to the Roll of Attorneys. All changes are audit-logged.
+        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="ibp-first">First name</Label>
+            <Label htmlFor="ibp-first" className="text-xs">
+              First name
+            </Label>
             <Input
               id="ibp-first"
               value={form.firstName}
@@ -101,15 +104,9 @@ export function AddIbpLawyerForm() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="ibp-middle">Middle name (optional)</Label>
-            <Input
-              id="ibp-middle"
-              value={form.middleName}
-              onChange={(e) => update("middleName", e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ibp-last">Last name</Label>
+            <Label htmlFor="ibp-last" className="text-xs">
+              Last name
+            </Label>
             <Input
               id="ibp-last"
               value={form.lastName}
@@ -117,35 +114,59 @@ export function AddIbpLawyerForm() {
             />
           </div>
         </div>
-        <div className="mt-3 space-y-1.5">
-          <Label htmlFor="ibp-address">Address</Label>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="ibp-middle" className="text-xs">
+            Middle name · optional
+          </Label>
+          <Input
+            id="ibp-middle"
+            value={form.middleName}
+            onChange={(e) => update("middleName", e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="ibp-address" className="text-xs">
+            Address
+          </Label>
           <Input
             id="ibp-address"
             value={form.address}
             onChange={(e) => update("address", e.target.value)}
           />
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="ibp-roll-signed">Roll signed (date)</Label>
+            <Label htmlFor="ibp-roll-signed" className="text-xs">
+              Roll signed
+            </Label>
             <Input
               id="ibp-roll-signed"
               type="date"
               value={form.rollSigned}
               onChange={(e) => update("rollSigned", e.target.value)}
+              className="tabular-nums"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="ibp-roll-number">Roll number</Label>
+            <Label htmlFor="ibp-roll-number" className="text-xs">
+              Roll number
+            </Label>
             <Input
               id="ibp-roll-number"
               value={form.rollNumber}
               onChange={(e) => update("rollNumber", e.target.value)}
+              className="font-mono tabular-nums"
             />
           </div>
         </div>
-        <div className="mt-3 space-y-1.5">
-          <Label htmlFor="ibp-reason">Reason (for audit log, min 3 chars)</Label>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="ibp-reason" className="text-xs">
+            Reason · audit log
+          </Label>
           <Input
             id="ibp-reason"
             value={form.reason}
@@ -153,13 +174,26 @@ export function AddIbpLawyerForm() {
             placeholder="Why is this lawyer being added?"
           />
         </div>
-        <div className="mt-4 flex items-center gap-3">
-          <Button type="button" size="sm" disabled={pending} onClick={submit}>
-            {pending ? "Adding…" : "Add lawyer"}
-          </Button>
-          {err ? <p className="text-sm text-destructive">{err}</p> : null}
-          {ok ? <p className="text-sm text-green-700">{ok}</p> : null}
-        </div>
+
+        {err ? (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {err}
+          </p>
+        ) : null}
+        {ok ? (
+          <p className="rounded-md border border-emerald-200/60 bg-emerald-50/40 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+            {ok}
+          </p>
+        ) : null}
+
+        <Button
+          type="button"
+          disabled={pending}
+          onClick={submit}
+          className="w-full"
+        >
+          {pending ? "Adding…" : "Add lawyer"}
+        </Button>
       </CardContent>
     </Card>
   );

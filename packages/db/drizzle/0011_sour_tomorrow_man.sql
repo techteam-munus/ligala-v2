@@ -1,0 +1,1 @@
+ALTER TYPE "public"."admin_audit_action" ADD VALUE 'discount_code_created' BEFORE 'invoice_refunded';

@@ -31,7 +31,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       </Link>
     ),
     blockquote: (props: ComponentPropsWithoutRef<"blockquote">) => (
-      <blockquote className="mt-6 border-l-2 border-border pl-4 italic text-muted-foreground" {...props} />
+      <blockquote className="mt-6 border-l-2 border-border pl-4 text-muted-foreground" {...props} />
     ),
     table: (props: ComponentPropsWithoutRef<"table">) => (
       <div className="mt-6 overflow-x-auto">

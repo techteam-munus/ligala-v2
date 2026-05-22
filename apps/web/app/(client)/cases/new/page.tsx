@@ -1,6 +1,8 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
+import { PageHero } from "@/app/_components/page-hero";
 import { NewCaseForm } from "./form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Ref = { id: string; name: string };
 type RefList = { items: Ref[] };
@@ -55,33 +57,36 @@ export default async function NewCasePage({
       : Promise.resolve(null),
   ]);
 
+  const backHref = lawyer ? `/lawyers/${lawyer.profile.slug}` : "/lawyers";
+
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Open a case</h1>
-      <p className="mt-2 text-muted-foreground">
-        Share the basics. The lawyer reviews and accepts or declines.
-      </p>
-      {lawyer ? (
-        <Alert className="mt-4">
-          <AlertDescription>
-            Engaging <strong>{lawyer.profile.name}</strong>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {refLookup ? (
-        <Alert className="mt-2 border-amber-200 bg-amber-50 text-amber-900">
-          <AlertDescription className="text-xs">
-            Referred via <span className="font-mono">{refLookup.slug}</span>
-            {refLookup.label ? ` (${refLookup.label})` : ""}.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      <NewCaseForm
-        lawyerSlug={lawyer?.profile.slug ?? lawyerSlug ?? ""}
-        referralLinkSlug={refLookup?.slug}
-        practiceAreas={practice.items}
-        jurisdictions={jurisdictions.items}
-      />
+    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+      <Link
+        href={backHref as never}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-3.5" />
+        {lawyer ? "Back to lawyer" : "Browse lawyers"}
+      </Link>
+
+      <div className="mt-3">
+        <PageHero
+          eyebrow="Client · Engage"
+          title="Open a case"
+          summary="Share the basics. The lawyer reviews and accepts or declines."
+        />
+      </div>
+
+      <div className="mt-6">
+        <NewCaseForm
+          lawyerSlug={lawyer?.profile.slug ?? lawyerSlug ?? ""}
+          lawyerName={lawyer?.profile.name ?? null}
+          referralLinkSlug={refLookup?.slug}
+          referralLabel={refLookup?.label ?? null}
+          practiceAreas={practice.items}
+          jurisdictions={jurisdictions.items}
+        />
+      </div>
     </main>
   );
 }

@@ -1,5 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Briefcase } from "lucide-react";
 import { api } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHero } from "@/app/_components/page-hero";
 import { NewInvoiceForm } from "./form";
 
 type CaseRow = {
@@ -31,13 +35,47 @@ export default async function NewInvoicePage({
     { case: { id: "", title: "", type: "", status: "" } },
   );
 
+  const resolvedCaseId = caseRow.id || caseId;
+  const caseHref = `/lawyer/cases/${resolvedCaseId}`;
+
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">New invoice</h1>
-      <p className="mt-2 text-muted-foreground">
-        For case <strong>{caseRow.title || caseId}</strong>.
-      </p>
-      <NewInvoiceForm caseId={caseRow.id || caseId} />
+    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+      <Link
+        href={caseHref as never}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-3.5" />
+        Back to case
+      </Link>
+
+      <div className="mt-3">
+        <PageHero
+          eyebrow="Lawyer · Billing"
+          title="New invoice"
+          summary={
+            caseRow.title ? (
+              <span className="inline-flex items-center gap-1.5">
+                For case
+                <Link
+                  href={caseHref as never}
+                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-xs font-medium text-foreground hover:bg-muted/40"
+                >
+                  <Briefcase className="size-3" />
+                  {caseRow.title}
+                </Link>
+              </span>
+            ) : (
+              <>For the selected case.</>
+            )
+          }
+        />
+      </div>
+
+      <Card className="mt-6 gap-0 py-0">
+        <CardContent className="px-0">
+          <NewInvoiceForm caseId={resolvedCaseId} />
+        </CardContent>
+      </Card>
     </main>
   );
 }

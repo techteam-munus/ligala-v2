@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { PageHero } from "@/app/_components/page-hero";
 import { OfficeSection } from "./section";
 
 type OfficeResponse = {
@@ -37,12 +38,15 @@ export default async function OfficePage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Office</h1>
-      <p className="mt-2 text-muted-foreground">
-        Where clients reach you and when. Add an office to enable scheduling and FAQs.
-      </p>
-      <OfficeSection initial={data} />
+    <main className="mx-auto w-full max-w-5xl px-6 py-10">
+      <PageHero
+        eyebrow="Lawyer · Practice"
+        title="Office"
+        summary="Where clients reach you and when. Add an office to enable scheduling and FAQs on your public profile."
+      />
+      <div className="mt-6">
+        <OfficeSection initial={data} />
+      </div>
     </main>
   );
 }

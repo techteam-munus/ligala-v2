@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { discountCodeInput } from "./billing";
 
 export const userStatusEnum = z.enum(["active", "paused", "banned"]);
 export type UserStatusEnum = z.infer<typeof userStatusEnum>;
@@ -83,3 +84,17 @@ export const ibpLawyerListQuery = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 export type IbpLawyerListQuery = z.infer<typeof ibpLawyerListQuery>;
+
+/**
+ * Create an admin-owned discount code. Admin-owned codes (rows whose owner
+ * has `role='admin'`) are the only codes the subscription checkout will
+ * accept (see `apps/api/src/lib/subscription-discount.ts`). Reuses the base
+ * `discountCodeInput` so the percent-vs-fixed refinement stays in one place,
+ * and tacks on the required `reason` for the admin audit log.
+ */
+export const adminDiscountCodeCreateInput = discountCodeInput.and(
+  z.object({ reason: z.string().min(3).max(2000) }),
+);
+export type AdminDiscountCodeCreateInput = z.infer<
+  typeof adminDiscountCodeCreateInput
+>;

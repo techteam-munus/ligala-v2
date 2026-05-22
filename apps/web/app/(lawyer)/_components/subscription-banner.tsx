@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { ArrowUpRight, Clock, TriangleAlert } from "lucide-react";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type SubscriptionDto = {
   status: "trialing" | "active" | "past_due";
@@ -29,13 +31,29 @@ export async function SubscriptionBanner() {
   if (sub.status === "active" && sub.daysRemaining > 7) return null;
 
   const expired = sub.daysRemaining < 0;
-  // amber when ≤7 days remain (trial or paid period nearing end); red when
-  // already past; muted otherwise.
-  const tone = expired
-    ? "border-destructive/50 bg-destructive/10 text-destructive"
-    : sub.daysRemaining <= 7
-      ? "border-amber-300 bg-amber-50 text-amber-900"
-      : "border-border bg-muted text-muted-foreground";
+  const urgent = expired || sub.daysRemaining <= 3;
+
+  const accent = expired
+    ? "bg-rose-500"
+    : urgent
+      ? "bg-amber-500"
+      : "bg-sky-500";
+  const containerTone = expired
+    ? "bg-rose-50/40 dark:bg-rose-950/15"
+    : urgent
+      ? "bg-amber-50/40 dark:bg-amber-950/15"
+      : "bg-muted/30";
+  const labelTone = expired
+    ? "text-rose-700 dark:text-rose-300"
+    : urgent
+      ? "text-amber-700 dark:text-amber-300"
+      : "text-sky-700 dark:text-sky-300";
+
+  const icon = expired ? (
+    <TriangleAlert className="size-3.5" />
+  ) : (
+    <Clock className="size-3.5" />
+  );
 
   const message = expired
     ? "Your trial has ended. Subscribe to keep creating cases and sending invoices."
@@ -45,14 +63,32 @@ export async function SubscriptionBanner() {
 
   return (
     <div
-      className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2 text-sm ${tone}`}
+      className={cn(
+        "relative flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-6 py-2.5 text-sm",
+        containerTone,
+      )}
     >
-      <span>{message}</span>
+      <span
+        className={cn("absolute left-0 inset-y-2 w-[2px] rounded-r-full", accent)}
+        aria-hidden
+      />
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={cn("inline-flex items-center gap-1.5", labelTone)}>
+          {icon}
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
+            {expired ? "Action required" : "Heads up"}
+          </span>
+        </span>
+        <span className="text-foreground/90">{message}</span>
+      </div>
       <Link
         href="/lawyer/subscribe"
-        className="font-medium underline-offset-2 hover:underline"
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-3 py-1 text-xs font-medium transition-colors hover:bg-muted/60",
+        )}
       >
-        {expired ? "Subscribe now →" : "Manage subscription →"}
+        {expired ? "Subscribe now" : "Manage"}
+        <ArrowUpRight className="size-3 opacity-60" />
       </Link>
     </div>
   );

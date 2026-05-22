@@ -8,7 +8,7 @@ import { clients } from "./routes/clients";
 import { directory } from "./routes/directory";
 import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
-import { billing, discountCodesRouter } from "./routes/billing";
+import { billing, billingDev, discountCodesRouter } from "./routes/billing";
 import { subscriptions } from "./routes/subscriptions";
 import { referrals, referralLinksPublic } from "./routes/referrals";
 import { files } from "./routes/files";
@@ -39,6 +39,9 @@ export function createApp() {
   app.route("/directory", directory);
   app.route("/cases", cases);
   app.route("/engagements", engagements);
+  // `billingDev` must be registered before the auth-gated `billing` router
+  // so the more specific path matches first and skips `requireSession`.
+  app.route("/billing/dev", billingDev);
   app.route("/billing", billing);
   app.route("/billing/discount-codes", discountCodesRouter);
   app.route("/lawyer/subscription", subscriptions);

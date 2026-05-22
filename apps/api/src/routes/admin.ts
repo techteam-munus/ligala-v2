@@ -2,8 +2,10 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db, schema } from "@ligala/db";
 import {
+  adminDiscountCodeCreateInput,
   adminInvoiceListQuery,
   adminListQuery,
   adminUserRoleInput,
@@ -307,7 +309,7 @@ export const admin = new Hono()
     return c.json({ ok: true, status: next });
   })
 
-  // --- Discount codes: global list + moderation removal --------------------
+  // --- Discount codes: global list + admin create + moderation removal -----
   .get("/discount-codes", async (c) => {
     const conn = db();
     const rows = await conn
@@ -315,12 +317,72 @@ export const admin = new Hono()
         code: schema.discountCodes,
         lawyerEmail: schema.user.email,
         lawyerName: schema.user.name,
+        lawyerRole: schema.user.role,
       })
       .from(schema.discountCodes)
       .innerJoin(schema.user, eq(schema.user.id, schema.discountCodes.lawyerId))
       .orderBy(desc(schema.discountCodes.createdAt));
     return c.json({ items: rows });
   })
+
+  /**
+   * Mint an admin-owned discount code for lawyer subscription billing. The
+   * row is owned by the admin (`lawyerId = actor.id`); the subscription
+   * lookup at `apps/api/src/lib/subscription-discount.ts` finds it by joining
+   * to user.role='admin'. No `scope` column — owner role is the marker.
+   */
+  .post(
+    "/discount-codes",
+    zValidator("json", adminDiscountCodeCreateInput),
+    async (c) => {
+      const actor = c.get("user");
+      const input = c.req.valid("json");
+      const id = newId();
+      const codeText = input.code.toUpperCase();
+      let row;
+      try {
+        [row] = await db()
+          .insert(schema.discountCodes)
+          .values({
+            id,
+            lawyerId: actor.id,
+            code: codeText,
+            kind: input.kind,
+            valueBps: input.valueBps ?? null,
+            valueCents: input.valueCents ?? null,
+            minSubtotalCents: input.minSubtotalCents ?? null,
+            maxRedemptions: input.maxRedemptions ?? null,
+            validFrom: input.validFrom ? new Date(input.validFrom) : null,
+            validUntil: input.validUntil ? new Date(input.validUntil) : null,
+          })
+          .returning();
+      } catch (err) {
+        const pgcode = (err as { code?: string } | null)?.code;
+        if (pgcode === "23505") {
+          throw new HTTPException(409, { message: "code_already_exists" });
+        }
+        throw err;
+      }
+      await logAdmin(
+        actor.id,
+        "discount_code_created",
+        "discount_code",
+        id,
+        {
+          code: codeText,
+          kind: input.kind,
+          valueBps: input.valueBps ?? null,
+          valueCents: input.valueCents ?? null,
+          minSubtotalCents: input.minSubtotalCents ?? null,
+          maxRedemptions: input.maxRedemptions ?? null,
+          validFrom: input.validFrom ?? null,
+          validUntil: input.validUntil ?? null,
+        },
+        input.reason,
+      );
+      return c.json({ code: row }, 201);
+    },
+  )
 
   .delete("/discount-codes/:id", async (c) => {
     const actor = c.get("user");
@@ -367,14 +429,59 @@ export const admin = new Hono()
       .where(where);
     const total = countRows[0]?.count ?? 0;
 
+    const lawyerUser = alias(schema.user, "lawyer_user");
+    const clientUser = alias(schema.user, "client_user");
     const rows = await conn
-      .select()
+      .select({
+        invoice: schema.invoices,
+        lawyerName: lawyerUser.name,
+        lawyerEmail: lawyerUser.email,
+        clientName: clientUser.name,
+        clientEmail: clientUser.email,
+      })
       .from(schema.invoices)
+      .leftJoin(lawyerUser, eq(lawyerUser.id, schema.invoices.lawyerId))
+      .leftJoin(clientUser, eq(clientUser.id, schema.invoices.clientId))
       .where(where)
       .orderBy(desc(schema.invoices.createdAt))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
-    return c.json({ items: rows, total, page, pageSize });
+
+    // Platform pulse — intentionally unfiltered so the KPI strip is stable as
+    // the admin types in the search box.
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const statsRows = await conn
+      .select({
+        outstandingCents: sql<number>`coalesce(sum(case when ${schema.invoices.status} in ('sent','partially_paid') then ${schema.invoices.totalCents} - ${schema.invoices.paidCents} else 0 end), 0)::int`,
+        overdueCents: sql<number>`coalesce(sum(case when ${schema.invoices.status} in ('sent','partially_paid') and ${schema.invoices.dueAt} is not null and ${schema.invoices.dueAt} < now() then ${schema.invoices.totalCents} - ${schema.invoices.paidCents} else 0 end), 0)::int`,
+        collected30Cents: sql<number>`coalesce(sum(case when ${schema.invoices.paidAt} is not null and ${schema.invoices.paidAt} >= ${thirtyDaysAgo} then ${schema.invoices.paidCents} else 0 end), 0)::int`,
+        outstandingCount: sql<number>`coalesce(sum(case when ${schema.invoices.status} in ('sent','partially_paid') then 1 else 0 end), 0)::int`,
+        overdueCount: sql<number>`coalesce(sum(case when ${schema.invoices.status} in ('sent','partially_paid') and ${schema.invoices.dueAt} is not null and ${schema.invoices.dueAt} < now() then 1 else 0 end), 0)::int`,
+      })
+      .from(schema.invoices);
+    const stats = statsRows[0] ?? {
+      outstandingCents: 0,
+      overdueCents: 0,
+      collected30Cents: 0,
+      outstandingCount: 0,
+      overdueCount: 0,
+    };
+
+    return c.json({
+      items: rows.map((r) => ({
+        ...r.invoice,
+        lawyer: r.lawyerName
+          ? { name: r.lawyerName, email: r.lawyerEmail }
+          : null,
+        client: r.clientName
+          ? { name: r.clientName, email: r.clientEmail }
+          : null,
+      })),
+      total,
+      page,
+      pageSize,
+      stats,
+    });
   })
 
   .post("/invoices/:id/refund", zValidator("json", refundInput), async (c) => {

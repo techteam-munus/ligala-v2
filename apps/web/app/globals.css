@@ -44,10 +44,12 @@
     --sidebar-ring: oklch(0.708 0 0);
 
     /* Portal sidebar editorial tokens — added 2026-05-22 */
-    --paper: oklch(0.976 0.012 80);
+    /* --paper matches the auth pages' bg (#eef6f3) so the sidebar reads as
+       part of the same surface family. */
+    --paper: #eef6f3;
     --ink: oklch(0.18 0.012 60);
     --muted-ink: oklch(0.45 0.014 70);
-    --oxblood: oklch(0.4 0.12 20);
+    --oxblood: #c10007;
     --rule: oklch(0.91 0.018 75);
 
     /* Map editorial tokens into shadcn sidebar primitive */
@@ -215,8 +217,8 @@
   color: var(--color-foreground);
 }
 .prose-ligala em {
-  color: var(--color-muted-foreground);
-  font-style: italic;
+  color: var(--color-foreground);
+  font-weight: 500;
 }
 .prose-ligala code {
   font-family: var(--font-mono);
@@ -261,7 +263,6 @@
   border-left: 2px solid var(--color-foreground);
   padding-left: 1em;
   color: var(--color-muted-foreground);
-  font-style: italic;
 }
 .prose-ligala hr {
   border: 0;

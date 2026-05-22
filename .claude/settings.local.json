@@ -65,7 +65,17 @@
       "Bash(curl -s -o /dev/null -w \"web:%{http_code}\\\\n\" http://localhost:3000)",
       "Bash(curl -s -o /dev/null -w \"api:%{http_code}\\\\n\" http://localhost:8787)",
       "Bash(PGPASSWORD=ligala_dev psql *)",
-      "mcp__plugin_playwright_playwright__browser_type"
+      "mcp__plugin_playwright_playwright__browser_type",
+      "Bash(pnpm --filter @ligala/api lint)",
+      "Bash(git commit -m 'feat\\(web\\): extract portal nav config into a typed module *)",
+      "Bash(pnpm *)",
+      "Bash(git commit -m 'feat\\(web\\): add SidebarBrand with logo and role tag *)",
+      "Bash(git commit -m 'fix\\(web\\): make SidebarBrand role tag announced by screen readers *)",
+      "Bash(git commit -m 'feat\\(web\\): add SidebarUser footer \\(identity + sign-out only\\) *)",
+      "Bash(git commit -m 'refactor\\(web\\): slim PortalShell to a composer over focused components *)",
+      "WebSearch",
+      "Bash(bash *)",
+      "Bash(xargs grep -l \"GOOGLE_MAPS\\\\|IDMETA\\\\|SES\\\\|admin.*IP\\\\|allowlist\")"
     ]
   }
 }

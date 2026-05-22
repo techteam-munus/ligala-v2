@@ -13,7 +13,9 @@ async function load<T>(path: string): Promise<T | null> {
   try {
     return await api<T>(path);
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 403)) return null;
+    if (err instanceof ApiError && (err.status === 404 || err.status === 403)) {
+      return null;
+    }
     throw err;
   }
 }
@@ -32,9 +34,8 @@ export default async function LawyerInvoicePage({
     appliedCode: AppliedCode;
   }>(`/billing/invoices/${id}`);
   if (!data) notFound();
-
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main>
       <InvoiceDetail viewerRole="lawyer" {...data} />
     </main>
   );

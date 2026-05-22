@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  adminDiscountCodeCreateInput,
   adminUserRoleInput,
   forceVerifyLawyerInput,
   ibpLawyerCreateInput,
   kycAdminDecisionInput,
   refundInput,
   userStatusInput,
+  type AdminDiscountCodeCreateInput,
   type AdminUserRoleInput,
   type ForceVerifyLawyerInput,
   type IbpLawyerCreateInput,
@@ -73,6 +75,18 @@ export async function deleteDiscountCode(codeId: string, reason: string) {
   const q = `?reason=${encodeURIComponent(reason)}`;
   await api(`/admin/discount-codes/${codeId}${q}`, { method: "DELETE" });
   revalidatePath("/admin/discount-codes");
+}
+
+export async function createAdminDiscountCode(
+  input: AdminDiscountCodeCreateInput,
+) {
+  const parsed = adminDiscountCodeCreateInput.parse(input);
+  const res = await api<{ code: { id: string; code: string } }>(
+    "/admin/discount-codes",
+    { method: "POST", body: JSON.stringify(parsed) },
+  );
+  revalidatePath("/admin/discount-codes");
+  return res.code;
 }
 
 export async function refundInvoice(invoiceId: string, input: RefundInput) {

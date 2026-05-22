@@ -11,29 +11,31 @@ export function RefundForm({
   paymentId,
   remainingCents,
   currency,
+  onSuccess,
 }: {
   invoiceId: string;
   paymentId: string;
   remainingCents: number;
   currency: string;
+  onSuccess?: () => void;
 }) {
   const [amount, setAmount] = useState((remainingCents / 100).toFixed(2));
   const [reason, setReason] = useState("");
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr(null);
-    setOk(null);
     const cents = Math.round(Number.parseFloat(amount) * 100);
     if (!Number.isFinite(cents) || cents <= 0) {
       setErr("Amount must be > 0");
       return;
     }
     if (cents > remainingCents) {
-      setErr(`Max refundable: ${(remainingCents / 100).toFixed(2)} ${currency}`);
+      setErr(
+        `Max refundable: ${(remainingCents / 100).toFixed(2)} ${currency}`,
+      );
       return;
     }
     if (reason.trim().length < 3) {
@@ -47,8 +49,8 @@ export function RefundForm({
           amountCents: cents,
           reason,
         });
-        setOk("Refunded.");
         setReason("");
+        onSuccess?.();
       } catch (e) {
         setErr(e instanceof Error ? e.message : "Failed");
       }
@@ -56,13 +58,13 @@ export function RefundForm({
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="mt-3 flex flex-col gap-2 rounded-md border bg-muted/40 p-3 sm:flex-row sm:items-end"
-    >
+    <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5">
-        <Label htmlFor="refund-amount" className="text-xs uppercase tracking-wide text-muted-foreground">
-          Amount {currency}
+        <Label
+          htmlFor="refund-amount"
+          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+        >
+          Amount · {currency}
         </Label>
         <Input
           id="refund-amount"
@@ -71,30 +73,35 @@ export function RefundForm({
           step={0.01}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-32"
+          className="tabular-nums"
         />
+        <p className="text-[11px] text-muted-foreground">
+          Max refundable: {(remainingCents / 100).toFixed(2)} {currency}
+        </p>
       </div>
-      <div className="space-y-1.5 sm:flex-1">
-        <Label htmlFor="refund-reason" className="text-xs uppercase tracking-wide text-muted-foreground">
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="refund-reason"
+          className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+        >
           Reason
         </Label>
         <Input
           id="refund-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Customer satisfaction"
+          placeholder="e.g. customer dispute, double charge…"
         />
       </div>
+      {err ? <p className="text-xs text-destructive">{err}</p> : null}
       <Button
         type="submit"
-        variant="outline"
+        variant="destructive"
         disabled={pending}
-        className="border-destructive text-destructive hover:text-destructive"
+        className="w-full"
       >
-        {pending ? "Refunding…" : "Refund"}
+        {pending ? "Refunding…" : "Issue refund"}
       </Button>
-      {err ? <p className="text-xs text-destructive sm:basis-full">{err}</p> : null}
-      {ok ? <p className="text-xs text-green-700 sm:basis-full">{ok}</p> : null}
     </form>
   );
 }

@@ -55,6 +55,8 @@ export const cases = new Hono()
   .use("*", requireSession)
 
   // --- List -----------------------------------------------------------------
+  // Returns each case plus the counterparty user row for the requesting role:
+  // the client (for a lawyer's view) or the lawyer (for a client's view).
   .get("/", async (c) => {
     const user = c.get("user");
     const conn = db();
@@ -64,12 +66,26 @@ export const cases = new Hono()
         : user.role === "lawyer"
           ? eq(schema.cases.lawyerId, user.id)
           : undefined;
+    const counterpartyIdCol =
+      user.role === "lawyer" ? schema.cases.clientId : schema.cases.lawyerId;
     const rows = await conn
-      .select()
+      .select({
+        caseRow: schema.cases,
+        counterpartyName: schema.user.name,
+        counterpartyEmail: schema.user.email,
+      })
       .from(schema.cases)
+      .leftJoin(schema.user, eq(schema.user.id, counterpartyIdCol))
       .where(where)
       .orderBy(desc(schema.cases.updatedAt));
-    return c.json({ items: rows });
+    return c.json({
+      items: rows.map((r) => ({
+        ...r.caseRow,
+        counterparty: r.counterpartyName
+          ? { name: r.counterpartyName, email: r.counterpartyEmail }
+          : null,
+      })),
+    });
   })
 
   // --- Create (client only) -------------------------------------------------

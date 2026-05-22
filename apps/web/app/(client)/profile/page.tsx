@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { PageHero } from "@/app/_components/page-hero";
 import { ClientProfileForm } from "./form";
 
 type ProfileResponse = {
@@ -33,20 +34,23 @@ export default async function ClientProfilePage() {
   });
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Your profile</h1>
-      <p className="mt-2 text-muted-foreground">
-        Lawyers you engage will see this info to reach you. Keep it current.
-      </p>
-      <ClientProfileForm
-        initial={{
-          displayName: res.profile.displayName ?? "",
-          phone: res.profile.phone ?? "",
-          city: res.profile.city ?? "",
-          region: res.profile.region ?? "",
-          preferredLanguage: res.profile.preferredLanguage,
-        }}
+    <main className="mx-auto w-full max-w-5xl px-6 py-10">
+      <PageHero
+        eyebrow="Client · Account"
+        title="Your profile"
+        summary="Lawyers you engage will see this info to reach you. Keep it current."
       />
+      <div className="mt-6">
+        <ClientProfileForm
+          initial={{
+            displayName: res.profile.displayName ?? "",
+            phone: res.profile.phone ?? "",
+            city: res.profile.city ?? "",
+            region: res.profile.region ?? "",
+            preferredLanguage: res.profile.preferredLanguage,
+          }}
+        />
+      </div>
     </main>
   );
 }

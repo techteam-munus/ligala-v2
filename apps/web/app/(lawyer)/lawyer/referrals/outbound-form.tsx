@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Send } from "lucide-react";
 import { createReferral } from "@/lib/actions/referral";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export type LawyerOption = {
   slug: string;
@@ -68,61 +69,74 @@ export function OutboundForm({
   }
 
   return (
-    <Card className="mt-6 gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="text-base">Refer a case</CardTitle>
-        <CardDescription>
-          Recipient must be a KYC-verified lawyer. Attach a case to hand off
-          the case on acceptance.
-        </CardDescription>
+    <Card size="sm" className="gap-3">
+      <CardHeader className="flex-row items-center gap-2">
+        <Send className="size-3.5 text-muted-foreground" />
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Refer a case
+        </p>
       </CardHeader>
-      <CardContent className="px-4">
-        <form onSubmit={onSubmit}>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="ref-slug">Recipient lawyer</Label>
-              <Select value={slug} onValueChange={setSlug}>
-                <SelectTrigger id="ref-slug" className="w-full">
-                  <SelectValue
-                    placeholder={
-                      lawyers.length === 0
-                        ? "No other verified lawyers yet"
-                        : "Pick a lawyer…"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {lawyers.map((l) => (
-                    <SelectItem key={l.slug} value={l.slug}>
-                      {l.name}
-                      {l.location ? (
-                        <span className="text-muted-foreground"> · {l.location}</span>
-                      ) : null}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ref-case">Case (optional)</Label>
-              <Select value={caseId} onValueChange={setCaseId}>
-                <SelectTrigger id="ref-case" className="w-full">
-                  <SelectValue placeholder="No case attached" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_CASE}>No case attached</SelectItem>
-                  {cases.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.title}
-                      <span className="text-muted-foreground"> · {c.status}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <CardContent>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Recipient must be a KYC-verified lawyer. Attach a case to hand off
+          on acceptance.
+        </p>
+
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="ref-slug" className="text-xs">
+              Recipient lawyer
+            </Label>
+            <Select value={slug} onValueChange={setSlug}>
+              <SelectTrigger id="ref-slug" className="w-full">
+                <SelectValue
+                  placeholder={
+                    lawyers.length === 0
+                      ? "No other verified lawyers yet"
+                      : "Pick a lawyer…"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {lawyers.map((l) => (
+                  <SelectItem key={l.slug} value={l.slug}>
+                    {l.name}
+                    {l.location ? (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {l.location}
+                      </span>
+                    ) : null}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="mt-3 space-y-1.5">
-            <Label htmlFor="ref-note">Note (optional)</Label>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="ref-case" className="text-xs">
+              Case · optional
+            </Label>
+            <Select value={caseId} onValueChange={setCaseId}>
+              <SelectTrigger id="ref-case" className="w-full">
+                <SelectValue placeholder="No case attached" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CASE}>No case attached</SelectItem>
+                {cases.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title}
+                    <span className="text-muted-foreground"> · {c.status}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="ref-note" className="text-xs">
+              Note · optional
+            </Label>
             <Textarea
               id="ref-note"
               value={note}
@@ -131,9 +145,23 @@ export function OutboundForm({
               placeholder="Why this lawyer, what's been discussed already…"
             />
           </div>
-          {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
-          {okAt ? <p className="mt-2 text-sm text-green-700">Referral sent at {okAt}.</p> : null}
-          <Button type="submit" disabled={pending || !slug} className="mt-4">
+
+          {error ? (
+            <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {error}
+            </p>
+          ) : null}
+          {okAt ? (
+            <p className="rounded-md border border-emerald-200/60 bg-emerald-50/40 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
+              Referral sent at {okAt}.
+            </p>
+          ) : null}
+
+          <Button
+            type="submit"
+            disabled={pending || !slug}
+            className="w-full"
+          >
             {pending ? "Sending…" : "Send referral"}
           </Button>
         </form>

@@ -20,6 +20,7 @@ export const adminAuditAction = pgEnum("admin_audit_action", [
   "kyc_decided",
   "kyc_force_approved",
   "discount_code_removed",
+  "discount_code_created",
   "invoice_refunded",
   "invoice_voided",
   "referral_force_decided",

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { TicketPercent, Trash2, UserCog } from "lucide-react";
 import { deleteDiscountCode } from "@/lib/actions/admin";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 type Row = {
   code: {
@@ -18,7 +19,27 @@ type Row = {
   };
   lawyerEmail: string;
   lawyerName: string;
+  lawyerRole: "client" | "lawyer" | "admin";
 };
+
+function pesoNumber(cents: number) {
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function shortDate(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return new Intl.DateTimeFormat("en-PH", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "2-digit" }),
+  }).format(d);
+}
 
 export function CodesList({ items }: { items: Row[] }) {
   const [pending, start] = useTransition();
@@ -38,40 +59,116 @@ export function CodesList({ items }: { items: Row[] }) {
   }
 
   if (items.length === 0) {
-    return <p className="mt-6 text-sm text-muted-foreground">No codes yet.</p>;
+    return (
+      <div className="flex flex-col items-center gap-2 px-4 py-14 text-center">
+        <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <TicketPercent className="size-5" />
+        </span>
+        <p className="text-sm font-medium">No discount codes yet</p>
+        <p className="text-xs text-muted-foreground">
+          Mint the first subscription code from the panel on the right.
+        </p>
+      </div>
+    );
   }
+
   return (
     <>
-      {err ? <p className="mt-2 text-sm text-destructive">{err}</p> : null}
-      <Card className="mt-6 gap-0 py-0">
-        <CardContent className="px-0">
-          <ul className="divide-y">
-            {items.map((r) => (
-              <li key={r.code.id} className="flex items-center justify-between px-4 py-2 text-sm">
-                <div>
-                  <p className="font-mono font-medium">{r.code.code}</p>
-                  <p className="text-xs text-muted-foreground">
+      {err ? (
+        <p className="border-b border-border/60 px-4 py-2 text-xs text-destructive">
+          {err}
+        </p>
+      ) : null}
+      <ul className="divide-y divide-border/60">
+        {items.map((r) => {
+          const expired =
+            r.code.validUntil &&
+            new Date(r.code.validUntil).getTime() < Date.now();
+          const exhausted =
+            r.code.maxRedemptions != null &&
+            r.code.redemptions >= r.code.maxRedemptions;
+          const inactive = expired || exhausted;
+          const isAdmin = r.lawyerRole === "admin";
+
+          return (
+            <li
+              key={r.code.id}
+              className={cn(
+                "flex flex-wrap items-start justify-between gap-3 px-4 py-3",
+                inactive && "opacity-70",
+              )}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-sm font-medium tracking-tight">
+                    {r.code.code}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card px-2 py-0.5 text-[10px] font-medium tabular-nums">
                     {r.code.kind === "percent"
-                      ? `${((r.code.valueBps ?? 0) / 100).toFixed(2)}% off`
-                      : `${((r.code.valueCents ?? 0) / 100).toFixed(2)} PHP off`}{" "}
-                    · by {r.lawyerName} ({r.lawyerEmail}) · {r.code.redemptions} redemptions
-                  </p>
+                      ? `${((r.code.valueBps ?? 0) / 100).toFixed(0)}% off`
+                      : `₱${pesoNumber(r.code.valueCents ?? 0)} off`}
+                  </span>
+                  {isAdmin ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-700 ring-1 ring-inset ring-violet-200/60 dark:text-violet-300 dark:ring-violet-900/40">
+                      <UserCog className="size-3" />
+                      Subscription
+                    </span>
+                  ) : null}
+                  {expired ? (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-600">
+                      expired
+                    </span>
+                  ) : null}
+                  {exhausted ? (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-600">
+                      exhausted
+                    </span>
+                  ) : null}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => remove(r)}
-                  className="border-destructive text-destructive hover:text-destructive"
-                >
-                  Remove
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {isAdmin ? (
+                    <span>Admin-owned · lawyer subscriptions</span>
+                  ) : (
+                    <span>
+                      By <span className="text-foreground">{r.lawyerName}</span>{" "}
+                      <span className="text-muted-foreground/60">
+                        · {r.lawyerEmail}
+                      </span>
+                    </span>
+                  )}
+                </p>
+                <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {r.code.redemptions}
+                  </span>
+                  {r.code.maxRedemptions != null ? (
+                    <span> / {r.code.maxRedemptions}</span>
+                  ) : null}{" "}
+                  redemption{r.code.redemptions === 1 ? "" : "s"}
+                  {r.code.validUntil ? (
+                    <span className="text-muted-foreground/60">
+                      {" · valid until "}
+                      {shortDate(r.code.validUntil)}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                onClick={() => remove(r)}
+                className="text-muted-foreground hover:text-destructive"
+                aria-label={`Remove ${r.code.code}`}
+              >
+                <Trash2 />
+                Remove
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
     </>
   );
 }

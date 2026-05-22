@@ -76,16 +76,21 @@ export function PortalShell({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <SidebarProvider style={{ "--sidebar-width": "17rem" } as React.CSSProperties}>
+      <SidebarProvider
+        style={{ "--sidebar-width": "17rem" } as React.CSSProperties}
+      >
         <Sidebar collapsible="icon">
           <SidebarHeader>
-            <SidebarBrand brandHref={config.brandHref} roleTag={config.roleTag} />
+            <SidebarBrand
+              brandHref={config.brandHref}
+              roleTag={config.roleTag}
+            />
           </SidebarHeader>
-          <SidebarSeparator />
+          <SidebarSeparator className="ml-0" />
           <SidebarContent>
             <SidebarNav groups={config.groups} />
           </SidebarContent>
-          <SidebarSeparator />
+          <SidebarSeparator className="ml-0" />
           <SidebarFooter>
             <SidebarUser
               userEmail={userEmail}
@@ -97,18 +102,21 @@ export function PortalShell({
         <SidebarInset>
           <header className="flex h-14 items-center gap-2 border-b border-[color:var(--rule)] px-3">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mx-2 !h-4" />
+            <Separator orientation="vertical" className="mx-2 !h-4 mt-5" />
             <Breadcrumb>
               <BreadcrumbList className="text-[13px]">
                 {buildCrumbs(pathname).map((crumb, i, arr) => (
                   <Fragment key={crumb.href}>
                     <BreadcrumbItem>
                       {crumb.isLast ? (
-                        <BreadcrumbPage className="font-serif italic text-[color:var(--ink)]">
+                        <BreadcrumbPage className="font-medium text-[color:var(--ink)]">
                           {crumb.label}
                         </BreadcrumbPage>
                       ) : (
-                        <BreadcrumbLink asChild className="text-[color:var(--muted-ink)]">
+                        <BreadcrumbLink
+                          asChild
+                          className="text-[color:var(--muted-ink)]"
+                        >
                           <Link href={crumb.href as never}>{crumb.label}</Link>
                         </BreadcrumbLink>
                       )}

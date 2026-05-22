@@ -61,6 +61,9 @@ export const billing = new Hono()
   .use("*", requireSession)
 
   // --- Invoices: list ------------------------------------------------------
+  // Returns each invoice plus the counterparty user row for the requesting
+  // role: the client (for a lawyer's view) or the lawyer (for a client's view).
+  // `subscription` invoices have no client, so counterparty is null there.
   .get("/invoices", async (c) => {
     const user = c.get("user");
     const conn = db();
@@ -70,12 +73,26 @@ export const billing = new Hono()
         : user.role === "lawyer"
           ? eq(schema.invoices.lawyerId, user.id)
           : undefined;
+    const counterpartyIdCol =
+      user.role === "lawyer" ? schema.invoices.clientId : schema.invoices.lawyerId;
     const rows = await conn
-      .select()
+      .select({
+        invoice: schema.invoices,
+        counterpartyName: schema.user.name,
+        counterpartyEmail: schema.user.email,
+      })
       .from(schema.invoices)
+      .leftJoin(schema.user, eq(schema.user.id, counterpartyIdCol))
       .where(where)
       .orderBy(desc(schema.invoices.updatedAt));
-    return c.json({ items: rows });
+    return c.json({
+      items: rows.map((r) => ({
+        ...r.invoice,
+        counterparty: r.counterpartyName
+          ? { name: r.counterpartyName, email: r.counterpartyEmail }
+          : null,
+      })),
+    });
   })
 
   // --- Invoices: create (lawyer only) --------------------------------------
@@ -393,27 +410,6 @@ export const billing = new Hono()
     });
   })
 
-  // --- Dev: simulate a successful payment (NO auth — used by webhook tests).
-  // Posted via the checkoutUrl returned by /checkout. Status query overrides
-  // to fail instead.
-  .post("/dev/simulate-payment", async (c) => {
-    const url = new URL(c.req.url);
-    const invoiceId = url.searchParams.get("invoiceId");
-    const providerPaymentId = url.searchParams.get("providerPaymentId");
-    const provider = url.searchParams.get("provider") ?? "dev_simulate";
-    const status = url.searchParams.get("status") === "failed" ? "failed" : "succeeded";
-    if (!invoiceId || !providerPaymentId) {
-      throw new HTTPException(400, { message: "missing_params" });
-    }
-    const result = await applyPaymentWebhook({
-      provider: provider as "paymongo" | "paypal" | "dev_simulate",
-      providerPaymentId,
-      invoiceId,
-      status,
-    });
-    return c.json(result);
-  })
-
   // --- Transactions ledger -------------------------------------------------
   .get("/transactions", async (c) => {
     const user = c.get("user");
@@ -449,6 +445,34 @@ export const billing = new Hono()
       .orderBy(desc(schema.transactions.createdAt));
     return c.json({ items: rows });
   });
+
+/**
+ * Dev-only payment simulator. The browser hits this directly via the
+ * `checkoutUrl` returned by /billing/invoices/:id/checkout when the chosen
+ * provider is `dev_simulate`, and so it MUST NOT require a session (the
+ * browser can't share the web origin's auth cookie cross-origin with the
+ * API). Mounted as its own router so it sits outside `billing`'s
+ * `requireSession` middleware. In production this stays available behind the
+ * existing UI flag-gating (Subscribe button only exposes it when
+ * `NODE_ENV !== "production"` + `?simulate=1`).
+ */
+export const billingDev = new Hono().post("/simulate-payment", async (c) => {
+  const url = new URL(c.req.url);
+  const invoiceId = url.searchParams.get("invoiceId");
+  const providerPaymentId = url.searchParams.get("providerPaymentId");
+  const provider = url.searchParams.get("provider") ?? "dev_simulate";
+  const status = url.searchParams.get("status") === "failed" ? "failed" : "succeeded";
+  if (!invoiceId || !providerPaymentId) {
+    throw new HTTPException(400, { message: "missing_params" });
+  }
+  const result = await applyPaymentWebhook({
+    provider: provider as "paymongo" | "paypal" | "dev_simulate",
+    providerPaymentId,
+    invoiceId,
+    status,
+  });
+  return c.json(result);
+});
 
 /**
  * Lawyer-owned discount codes. Mounted at /billing/discount-codes.

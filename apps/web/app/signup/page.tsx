@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -108,9 +109,8 @@ export default function SignupPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-3">
                     <Label htmlFor="password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="password"
-                      type="password"
                       required
                       autoComplete="new-password"
                       minLength={8}
@@ -120,9 +120,8 @@ export default function SignupPage() {
                   </div>
                   <div className="grid gap-3">
                     <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       id="confirm-password"
-                      type="password"
                       required
                       autoComplete="new-password"
                       minLength={8}

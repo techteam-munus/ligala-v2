@@ -19,7 +19,7 @@ export function SidebarNav({ groups }: { groups: NavGroup[] }) {
       {groups.map((group) => (
         <SidebarGroup key={group.label}>
           <SidebarGroupLabel
-            className="font-serif italic text-[11px] tracking-[0.04em] text-[color:var(--muted-ink)]"
+            className="text-[10px] font-medium uppercase tracking-[0.18em] text-[color:var(--muted-ink)]"
           >
             {group.label}
           </SidebarGroupLabel>
