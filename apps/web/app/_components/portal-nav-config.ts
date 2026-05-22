@@ -68,6 +68,13 @@ const LAWYER: PortalConfig = {
       ],
     },
     {
+      label: "Billing",
+      items: [
+        { href: "/lawyer/invoices", label: "Invoices", icon: Receipt },
+        { href: "/lawyer/discount-codes", label: "Discount codes", icon: TicketPercent },
+      ],
+    },
+    {
       label: "Practice",
       items: [
         { href: "/lawyer/profile", label: "Public profile", icon: User },
