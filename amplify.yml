@@ -13,24 +13,15 @@ applications:
         build:
           commands:
             - pnpm build
-            # Standalone output with outputFileTracingRoot puts node_modules
-            # at .next/standalone/ and the server entry at
-            # .next/standalone/apps/web/server.js. Amplify Hosting expects the
-            # entry at the artifact root, so we (a) seed the per-app .next dir
-            # with the static assets the server serves, (b) hoist the apps/web
-            # contents up to .next/standalone/.
+            # Standalone output puts the server bundle in
+            # .next/standalone/apps/web/ alongside the workspace-root
+            # node_modules at .next/standalone/. The Next standalone server
+            # reads .next/static + public from its own working dir, so we
+            # mirror them inside the per-app standalone dir.
             - cp -r .next/static .next/standalone/apps/web/.next/static
             - if [ -d public ]; then cp -r public .next/standalone/apps/web/public; fi
-            - mv .next/standalone/apps/web/.next .next/standalone/.next
-            - mv .next/standalone/apps/web/server.js .next/standalone/server.js
-            - mv .next/standalone/apps/web/package.json .next/standalone/package.json
-            - if [ -d .next/standalone/apps/web/public ]; then mv .next/standalone/apps/web/public .next/standalone/public; fi
-            - rm -rf .next/standalone/apps
-            # required-server-files.json lives in .next/ next to standalone/;
-            # Amplify's SSR runtime expects it in the artifact root.
-            - cp .next/required-server-files.json .next/standalone/required-server-files.json
       artifacts:
-        baseDirectory: .next/standalone
+        baseDirectory: .next
         files:
           - "**/*"
       cache:
