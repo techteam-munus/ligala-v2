@@ -93,7 +93,7 @@ export class CoreStack extends Stack {
       "DbClusterSg",
       {
         vpc: this.vpc,
-        description: "Aurora cluster — accepts traffic from db-client SG only",
+        description: "Aurora cluster - accepts traffic from db-client SG only",
         allowAllOutbound: false,
       },
     );
