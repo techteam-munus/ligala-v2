@@ -10,20 +10,29 @@ const withMDX = createMDX({
   },
 });
 
+// Amplify Hosting (WEB_COMPUTE platform) sets AWS_APP_ID during builds. Gating
+// standalone output on it keeps local Windows `pnpm build` working — pnpm's
+// content-addressable store uses symlinks the standalone copy can't follow on
+// Windows without admin (Next's own bug — see vercel/next.js#50833).
+const isAmplifyBuild = Boolean(process.env.AWS_APP_ID);
+
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@ligala/ui", "@ligala/shared", "@ligala/auth", "@ligala/db"],
   typedRoutes: true,
   pageExtensions: ["ts", "tsx", "md", "mdx"],
-  // Standalone output is a self-contained Node bundle in `.next/standalone/`
-  // with the only deps the runtime actually needs. Required for Amplify SSR
-  // hosting in a pnpm monorepo — Amplify's deploy step looks for
-  // node_modules/next, which pnpm symlinks into the workspace root and the
-  // standalone bundle re-materializes correctly.
-  output: "standalone",
-  // For monorepos, point Next's file-trace at the workspace root so it picks
-  // up workspace packages (@ligala/*) into the standalone bundle.
-  outputFileTracingRoot: path.join(__dirname, "../.."),
+  ...(isAmplifyBuild
+    ? {
+        // Self-contained Node bundle in `.next/standalone/`. Amplify's SSR
+        // deploy step expects a node_modules/next next to server.js, which
+        // pnpm's symlinked workspace install doesn't provide — standalone
+        // re-materializes only the deps the runtime actually needs.
+        output: "standalone" as const,
+        // Trace from the workspace root so @ligala/* workspace packages are
+        // copied into the standalone bundle.
+        outputFileTracingRoot: path.join(__dirname, "../.."),
+      }
+    : {}),
 };
 
 export default withMDX(config);
