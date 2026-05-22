@@ -12,6 +12,12 @@ applications:
             - cd apps/web
         build:
           commands:
+            # Amplify build-time env vars (set on the App/Branch) are NOT
+            # automatically forwarded to the SSR runtime. Writing them into
+            # `.env.production` lets Next bake them into the server bundle
+            # so they're available via process.env at request time.
+            - echo "API_URL=$API_URL" > .env.production
+            - echo "NEXT_PUBLIC_API_URL=$API_URL" >> .env.production
             - pnpm build
       artifacts:
         baseDirectory: .next
