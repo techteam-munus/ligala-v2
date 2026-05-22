@@ -30,6 +30,10 @@
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
+    /* shadcn defaults — most are overridden below by the editorial token
+       remapping (--paper, --ink, --rule, --oxblood, etc.). --sidebar-primary
+       and --sidebar-primary-foreground are NOT remapped and remain in use
+       by submenu/active-link variants in the shadcn primitive. */
     --sidebar: oklch(0.97 0.01 154);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.577 0.245 27.325);

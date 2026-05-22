@@ -37,7 +37,8 @@ function looksLikeId(segment: string): boolean {
 }
 
 function labelForSegment(segment: string): string {
-  if (SEGMENT_LABELS[segment]) return SEGMENT_LABELS[segment]!;
+  const label = SEGMENT_LABELS[segment];
+  if (label) return label;
   if (looksLikeId(segment)) return "Detail";
   return segment.charAt(0).toUpperCase() + segment.slice(1);
 }
