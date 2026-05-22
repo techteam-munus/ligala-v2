@@ -8,7 +8,7 @@ applications:
             - corepack enable
             - corepack prepare pnpm@9.12.0 --activate
             - cd ../..
-            - pnpm install --frozen-lockfile
+            - pnpm install --frozen-lockfile --shamefully-hoist
             - cd apps/web
         build:
           commands:
