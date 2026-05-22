@@ -15,6 +15,7 @@
     "clean": "rm -rf cdk.out .turbo"
   },
   "dependencies": {
+    "@aws-cdk/aws-amplify-alpha": "^2.170.0-alpha.0",
     "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.4.0",
     "source-map-support": "^0.5.21"

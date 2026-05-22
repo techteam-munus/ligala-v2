@@ -9,6 +9,7 @@ import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigwv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import type * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type * as rds from "aws-cdk-lib/aws-rds";
+import * as amplify from "@aws-cdk/aws-amplify-alpha";
 import { Monitoring } from "./monitoring";
 
 export interface AppStackProps extends StackProps {
@@ -33,6 +34,7 @@ export class AppStack extends Stack {
   public readonly apiLambda: lambda.Function;
   public readonly migrateLambda: lambda.Function;
   public readonly httpApi: apigwv2.HttpApi;
+  public readonly webApp: amplify.App;
 
   constructor(scope: Construct, id: string, props: AppStackProps) {
     super(scope, id, props);
@@ -50,7 +52,13 @@ export class AppStack extends Stack {
       path.resolve(__dirname, "../../apps/api/dist"),
     );
 
-    const commonEnv = {
+    // Amplify default-domain pattern is `https://{branch}.{appId}.amplifyapp.com`.
+    // The appId is a CFN token resolved at deploy time; we compose the URL up
+    // front so the API Lambda's BETTER_AUTH_URL points at the eventual Amplify
+    // origin from first deploy onward.
+    const deployBranch = "develop";
+
+    const commonEnv: Record<string, string> = {
       NODE_ENV: "production",
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
       DB_PROXY_ENDPOINT: props.dbProxy.endpoint,
@@ -58,9 +66,7 @@ export class AppStack extends Stack {
       APP_SECRET_ARN: props.appSecret.secretArn,
       DB_NAME: "ligala",
       S3_UPLOADS_BUCKET: props.uploadsBucket.bucketName,
-      // Placeholder for first deploy — overridden in Phase 4 once Amplify
-      // hosting is created and its URL is known.
-      BETTER_AUTH_URL: `https://placeholder.${props.envName}.ligala.invalid`,
+      // Set below after webApp is created — uses webApp.appId token.
     };
 
     // ── API Lambda ─────────────────────────────────────────────────────────
@@ -146,10 +152,34 @@ export class AppStack extends Stack {
     this.monitoring.attachApi5xx(this.httpApi, "api");
     this.monitoring.attachApiLatencyP95(this.httpApi, "api", 1000);
 
+    // ── Amplify Hosting (web) ──────────────────────────────────────────────
+    // No sourceCodeProvider: CDK creates the app shell, the user connects the
+    // GitHub repo through the Amplify Console (which uses the AWS-Amplify
+    // GitHub App). Subsequent pushes auto-build via the Console-managed
+    // webhook + the amplify.yml at repo root.
+    this.webApp = new amplify.App(this, "WebApp", {
+      appName: `ligala-v2-${props.envName}-web`,
+      platform: amplify.Platform.WEB_COMPUTE,
+      environmentVariables: {
+        API_URL: this.httpApi.apiEndpoint,
+        AMPLIFY_MONOREPO_APP_ROOT: "apps/web",
+        AMPLIFY_DIFF_DEPLOY: "false",
+        _LIVE_UPDATES: JSON.stringify([
+          { name: "Node.js version", pkg: "node", type: "nvm", version: "20" },
+        ]),
+      },
+    });
+
+    // Compose the URL the deploy branch will serve at so the API Lambda can
+    // include it in BETTER_AUTH_URL from first deploy. If the branch is
+    // renamed or a custom domain is added, re-set this env var.
+    const webBranchUrl = `https://${deployBranch}.${this.webApp.appId}.amplifyapp.com`;
+    this.apiLambda.addEnvironment("BETTER_AUTH_URL", webBranchUrl);
+
     // ── Outputs ────────────────────────────────────────────────────────────
     new CfnOutput(this, "ApiUrl", {
       value: this.httpApi.apiEndpoint,
-      description: "HTTP API Gateway invoke URL. Set this in Amplify's API_URL.",
+      description: "HTTP API Gateway invoke URL.",
     });
     new CfnOutput(this, "MigrateLambdaName", {
       value: this.migrateLambda.functionName,
@@ -158,6 +188,15 @@ export class AppStack extends Stack {
     });
     new CfnOutput(this, "ApiLambdaName", {
       value: this.apiLambda.functionName,
+    });
+    new CfnOutput(this, "WebAppId", {
+      value: this.webApp.appId,
+      description:
+        "Amplify App ID. Connect this app to the GitHub develop branch in the Amplify Console.",
+    });
+    new CfnOutput(this, "WebUrl", {
+      value: webBranchUrl,
+      description: `Expected URL for the ${deployBranch} branch once connected.`,
     });
   }
 }
