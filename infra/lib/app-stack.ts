@@ -164,9 +164,6 @@ export class AppStack extends Stack {
         API_URL: this.httpApi.apiEndpoint,
         AMPLIFY_MONOREPO_APP_ROOT: "apps/web",
         AMPLIFY_DIFF_DEPLOY: "false",
-        // Gates `output: 'standalone'` in apps/web/next.config.ts so local
-        // Windows builds keep working. See vercel/next.js#50833.
-        AMPLIFY_BUILD: "true",
         _LIVE_UPDATES: JSON.stringify([
           { name: "Node.js version", pkg: "node", type: "nvm", version: "20" },
         ]),

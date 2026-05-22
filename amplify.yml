@@ -13,13 +13,6 @@ applications:
         build:
           commands:
             - pnpm build
-            # Standalone output puts the server bundle in
-            # .next/standalone/apps/web/ alongside the workspace-root
-            # node_modules at .next/standalone/. The Next standalone server
-            # reads .next/static + public from its own working dir, so we
-            # mirror them inside the per-app standalone dir.
-            - cp -r .next/static .next/standalone/apps/web/.next/static
-            - if [ -d public ]; then cp -r public .next/standalone/apps/web/public; fi
       artifacts:
         baseDirectory: .next
         files:
