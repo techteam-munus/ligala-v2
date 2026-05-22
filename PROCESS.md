@@ -7,11 +7,13 @@
 
 ## Current State
 
-- **Active phase:** Phase 8 — Hardening **foundation landed in Session 11.** Marketing MDX live (`/about`, `/pricing`, `/terms`, `/privacy`) with a real (marketing) header/footer chrome and a redesigned landing page. Sentry SDK wired in both apps (no-op when DSN unset). CDK `Monitoring` construct (SNS alarm topic + factories for Lambda errors/throttles/duration, SQS DLQ depth, API 5xx + latency) instantiated in `AppStack`. Playwright suite at `tests/e2e/` (marketing + signup + lawyer-onboarding goldens) with config + helpers. k6 load scripts at `tests/load/` modelling 100k-user read shape. **Session 12 added the lawyer-subscription gate**: 30-day trial seeded at promote-to-lawyer, then writes 403 `subscription_expired` until renewal (₱999/mo via the existing PayMongo/PayPal checkout rails). Typecheck (9/9) + lint clean.
-- **Last working session:** 2026-05-21 (Session 12 — Lawyer subscription plan)
-- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | AWS dev not yet | staging not yet | prod not yet. **Playwright MCP intermittent**, but `@playwright/test` now installed at workspace root with E2E suite ready for `pnpm test:e2e` (no MCP needed).
-- **Next action:** AWS dev deploy (CoreStack + AppStack with real Aurora + Redis + S3 + the new Monitoring topic). Once deployed: run the Playwright suite against the dev URL, run k6 against `/directory/lawyers` to validate p95 < 500ms thresholds, wire real PayMongo + PayPal signature verification + provider refunds + real S3 presigning + real Google Maps key + SES email-on-send. Then deploy-blocked items from earlier phases (admin IP allowlist, real provider refunds).
+- **Active phase:** Phase 8 — Hardening **dev environment now live on AWS as of Session 13.** Full stack deployed: CoreStack (VPC + S3 uploads + Aurora Serverless v2 Postgres 16 + RDS Proxy + Secrets Manager) and AppStack (Hono Lambda + HTTP API Gateway + Migration Lambda + Amplify Hosting for the Next.js web). Web at `https://develop.d2wtzrkac57hbk.amplifyapp.com`, API at `https://ocedif9aej.execute-api.ap-southeast-1.amazonaws.com`. `develop` branch is the deploy target — push to it and (a) Amplify auto-builds the web, (b) `.github/workflows/deploy-dev.yml` deploys CDK via GitHub OIDC (no long-lived AWS keys).
+- **Last working session:** 2026-05-23 (Session 13 — AWS dev deploy)
+- **Environment status:** local dev stack up (compose: Postgres 16 + Redis 7) | **AWS dev live** (account `615299765252`, region `ap-southeast-1`) | staging not yet | prod not yet.
+- **Next action:** wire real PayMongo + PayPal signature verification + provider refunds + real S3 presigning + real Google Maps key + SES email-on-send (the Phase 8 deferred items). Then: run the Playwright suite against the deployed URL via `PLAYWRIGHT_BASE_URL=https://develop.d2wtzrkac57hbk.amplifyapp.com pnpm test:e2e`, run k6 against the API to validate p95 thresholds.
 - **Blockers:** none
+
+> **Cost note:** dev env is ~$120–150/month idle (Aurora Serverless v2 minimum 0.5 ACU ≈ $90, NAT gateway ≈ $32, plus Secrets/CloudWatch/S3 cents). Destroy with `pnpm --filter @ligala/infra destroy:dev` when stepping away for days; recreating is ~15 min.
 
 ---
 
@@ -33,9 +35,9 @@
   - [x] `pnpm lint` green locally (ESLint 9 flat config; 0 errors, 0 warnings)
   - [ ] `pnpm test` green locally (no tests yet)
   - [x] CDK `synth` clean (Core=35 resources: VPC + 6 subnets + NAT + S3 + endpoints; App=placeholder)
-  - [ ] CDK `deploy` to dev env
+  - [x] CDK `deploy` to dev env (Session 13 — account `615299765252`, region `ap-southeast-1`)
   - [ ] Sentry DSN wired in both apps
-  - [ ] `/health` returns 200 from deployed API and Next URLs
+  - [x] `/health` returns 200 from deployed API and Next URLs (web `https://develop.d2wtzrkac57hbk.amplifyapp.com`, API `https://ocedif9aej.execute-api.ap-southeast-1.amazonaws.com/health`)
 - [ ] **Phase 1 — Auth foundation** *(scaffold complete; needs deployed smoke test)*
   - [x] Drizzle schema: `user`, `session`, `account`, `verification` + `user_role` enum
   - [x] First migration generated (`packages/db/drizzle/0000_regular_rachel_grey.sql`)
@@ -150,15 +152,48 @@
   - [x] Playwright: `@playwright/test` installed at workspace root; root `playwright.config.ts` (chromium, list+html reporter, `PLAYWRIGHT_BASE_URL` env override); `tests/e2e/{helpers,marketing,signup,lawyer-onboarding}.spec.ts`; `tests/e2e/README.md` with run instructions; root `package.json` scripts `test:e2e` + `test:e2e:ui`
   - [x] k6 load tests: `tests/load/lawyers-search.js` (50→200 VU ramp w/ 4-min peak soak; 8 filter combinations; p95<500ms API + p95<800ms SSR thresholds; 1-in-5 detail-page click-through), `tests/load/api-health.js` (50 VU floor-latency baseline; p95<150ms); `tests/load/README.md` with k6 install + run + threshold rationale
   - [x] Typecheck (9/9 packages, ~13s), web build (36 static pages prerendered, 43 routes — up from 32/40 in Session 10 because of the 4 new MDX pages + the landing page move into the (marketing) group), api esbuild (4.9MB bundle — up from 78kb because @sentry/aws-serverless pulls in OpenTelemetry; tunable post-deploy), cdk synth (both stacks, AppStack now shows the SNS alarm topic) — all green
-  - [ ] AWS dev deploy (CoreStack + AppStack including Monitoring topic)
-  - [ ] Run Playwright suite against deployed dev URL
+  - [x] AWS dev deploy (Session 13 — CoreStack: VPC + Aurora Serverless v2 + RDS Proxy + Secrets + S3; AppStack: API Lambda + Migration Lambda + HTTP API Gateway + Amplify Hosting + Monitoring topic + alarms on API Lambda + HTTP API)
+  - [ ] Run Playwright suite against deployed dev URL (`PLAYWRIGHT_BASE_URL=https://develop.d2wtzrkac57hbk.amplifyapp.com pnpm test:e2e`)
   - [ ] Run k6 against deployed dev URL; validate thresholds
-  - [ ] Wire CloudWatch alarms to the real API Lambda + worker Lambdas + DLQs once they're in AppStack
-  - [ ] Real PayMongo + PayPal signature verification + checkout URLs; real S3 presigning; real Google Maps key; SES email-on-send; real provider refunds; admin IP allowlist (deploy-blocked items from Phases 5–7)
+  - [x] Wire CloudWatch alarms to the API Lambda + Migration Lambda + HTTP API (Session 13 — done at construction time per the `Monitoring.attach*` convention)
+  - [ ] Wire CloudWatch alarms to the worker Lambdas + DLQs once those are added (workers deferred — see Phase 6 polish)
+  - [ ] Real PayMongo + PayPal signature verification + checkout URLs; real S3 presigning; real Google Maps key; SES email-on-send; real provider refunds; admin IP allowlist (deploy-blocked items from Phases 5–7 — now unblocked but not yet wired)
+  - [x] GitHub Actions auto-deploy on push to `develop` via OIDC (Session 13 — `.github/workflows/deploy-dev.yml`, role `GithubActionsDeploy-Ligala-dev`)
 
 ---
 
 ## Session Log
+
+### 2026-05-23 — Session 13 (AWS dev deploy)
+
+- **Did:**
+  - **CoreStack — Aurora Serverless v2.** Added Aurora Postgres 16.4 cluster (0.5–1 ACU serverless v2) in `PRIVATE_ISOLATED` subnets behind RDS Proxy. Marker-SG pattern: `DbClusterSg` (no inbound rules of its own) + `DbClientSg` (attached to anything that should reach the DB) with a single ingress rule from client → cluster. AppStack just attaches `DbClientSg` to its Lambdas — no cross-stack SG wiring needed. App secret in Secrets Manager auto-generates `BETTER_AUTH_SECRET` (64 chars) and ships placeholder slots for PayMongo/PayPal/IDMeta/Sentry keys (empty strings; API handlers gracefully no-op when unset). VPC also gains a Secrets Manager interface endpoint so private-subnet Lambdas reach secrets without crossing NAT.
+  - **AppStack — API Lambda + Migration Lambda + HTTP API Gateway.** Both Lambdas share one pre-built code asset (`apps/api/dist/`) built by a new `apps/api/scripts/build.mjs` that runs esbuild + copies the Drizzle SQL files alongside. New `apps/api/src/lib/bootstrap-env.ts` reads Aurora master creds + the app secret from Secrets Manager on cold start and populates `process.env` (DATABASE_URL composed from the proxy endpoint + creds), so the existing `env()` validation + `db()` client work unchanged. `apps/api/src/lambda.ts` defers Hono app creation until bootstrap finishes. New `apps/api/src/migrate-lambda.ts` runs Drizzle's programmatic `migrate()` against the bundled `dist/drizzle/` folder; `action: "migrate-and-seed"` also upserts reference data (chapters + practice areas + jurisdictions) — extracted to `packages/db/src/seed-data.ts` so the local seed script and the Lambda share one source of truth. HTTP API Gateway has catch-all `/{proxy+}` + `/` routes → API Lambda. Monitoring alarms (Lambda errors/throttles/duration p95, API 5xx %, API latency p95) wired at construction.
+  - **AppStack — Amplify Hosting.** `amplify.App` shell created via CDK with `Platform.WEB_COMPUTE` (Next.js SSR) — no source provider in CDK; user connects via Console (uses the AWS-Amplify GitHub App, no PAT to manage). `amplify.yml` at repo root handles the pnpm-workspace install + Next build. The deploy-branch URL is composed at CDK synth time from the (token-resolved) `appId` and wired into the API Lambda's `BETTER_AUTH_URL` env var so Better Auth knows its own origin from first deploy.
+  - **`develop` branch is the deploy target.** Branch created and pushed to origin. New `.github/workflows/deploy-dev.yml` runs on push to develop: typecheck → lint → build → `cdk deploy --all`. Uses GitHub OIDC (provider added in AWS, role `GithubActionsDeploy-Ligala-dev` with `AdministratorAccess` trusted to `repo:techteam-munus/ligala-v2:ref:refs/heads/develop` only). No long-lived AWS keys in GitHub secrets. Amplify auto-builds the web on the same push via its own GitHub integration.
+  - **End-to-end smoke.** API `/health` returns 200; `/directory/chapters` returns 13 seeded rows; signup → signin → wrong-password rejection all work via the Amplify proxy → API Gateway → Lambda → Aurora.
+- **Did NOT:**
+  - Run the Playwright suite or k6 against the deployed env (next-action — `PLAYWRIGHT_BASE_URL=https://develop.d2wtzrkac57hbk.amplifyapp.com pnpm test:e2e`).
+  - Set up worker Lambdas + SQS queues. No current route uses them; webhooks are direct HTTP. Lands when SES / image processing / scheduled jobs actually need queues.
+  - Provision ElastiCache Redis. No rate-limiter uses it today; the column-shaped stubs in API code default to in-memory.
+  - Provision SES. No outbound mail wired yet.
+  - Wire real PayMongo / PayPal signature verification + checkout URLs. Provider keys live as empty strings in the app secret — fill via console when keys are provisioned.
+  - Real S3 presigning. `apps/api/src/routes/files.ts` still uses the dev stub.
+  - Real Google Maps Embed API key. Public profile uses the keyless `google.com/maps?q=…&output=embed` form which renders without a key.
+  - Admin IP allowlist on `/admin/*`. Single LB IP is the deploy-time prerequisite; can be added now that the env is up.
+  - Tighten the `GithubActionsDeploy-Ligala-dev` IAM policy from `AdministratorAccess` to a scoped policy. Acceptable for dev; tighten before prod.
+- **Decisions made:**
+  - **Aurora cluster + RDS Proxy in `PRIVATE_ISOLATED` subnets, not `PRIVATE_WITH_EGRESS`.** Why: no public route at all — even if SG is misconfigured, no internet egress can reach the cluster. The Lambdas in `PRIVATE_WITH_EGRESS` connect via the proxy's VPC-internal endpoint. **How to apply:** any new data store (Redis, SES SMTP relay) goes in `PRIVATE_ISOLATED`; only Lambdas/EC2 that need egress for AWS API calls go in `PRIVATE_WITH_EGRESS`.
+  - **Lambdas bootstrap env from Secrets Manager at cold start, not via Lambda env vars containing the secret.** Why: Lambda env vars are visible in the AWS console and IAM-readable to anyone with `lambda:GetFunction`. Reading via SDK at cold start keeps the secret in Secrets Manager's audit + access control surface. The cold-start cost is one indexed `GetSecretValue` call (~50–200ms) on first invocation per container. **How to apply:** all sensitive values stay in Secrets Manager; Lambda env vars carry only ARNs + non-sensitive config (proxy endpoint, bucket name, etc.).
+  - **Migration Lambda over a bastion EC2 for one-off DB tasks.** Why: zero idle cost, lives in-VPC + reuses the same IAM permissions as the API Lambda. Invoked manually via `aws lambda invoke --function-name ligala-v2-dev-migrate --payload '{"action":"migrate-and-seed"}'`. Same Lambda can be extended for future one-off jobs (refresh materialized views, seed test data, etc.). **How to apply:** any non-request-triggered DB work lives in this Lambda or a clone of it — never spin up a long-lived EC2 just for ops tasks.
+  - **`output: 'standalone'` is NOT used; `.npmrc` with `node-linker=hoisted` is.** Why: standalone with pnpm monorepo has too many edge cases (workspace symlinks, manifest copying, trace files) and the canonical Amplify FAQ fix is `node-linker=hoisted` — pnpm installs npm-style flat, Amplify's SSR runtime finds `node_modules/next` where it expects. Trade-off: slightly larger install on disk + slightly slower install in CI. **How to apply:** any future pnpm + Amplify hosting deployment follows the same pattern; if we ever move to standalone, the right place is when we bundle web for non-Amplify hosting (e.g., a Lambda-in-VPC variant).
+  - **Web's `/api/auth/*` proxies to the API Lambda; `getSession()` fetches from the API.** Why: the Amplify Next.js Lambda lives outside our VPC and can't reach Aurora. Running Better Auth on the web side would 500/403 every request that touches the DB. The proxy + API-side Better Auth keeps all DB access in-VPC. Cookies land on the Amplify origin because Set-Cookie carries no Domain attribute, so subsequent requests still ride the same session. **How to apply:** if we ever give the web Lambda VPC access (Amplify Hosting VPC integration), we can revert to Better Auth on the web; until then, the proxy stays.
+  - **Better Auth `basePath: "/auth"`** in `@ligala/auth`. Why: Hono mounts the auth router at `/auth/*` (not the Better Auth default `/api/auth/*`). Setting basePath aligns route matching with the mount point so requests like `/auth/sign-up/email` are recognized. **How to apply:** if the API ever changes mount path, also update basePath; keep them in sync.
+  - **GitHub Actions uses OIDC, not access keys.** Why: long-lived `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` in GitHub secrets are a known-leak surface. OIDC scopes credential lifetime to one workflow run and binds the trust policy to `refs/heads/develop` on this repo. No secret rotation needed; revoking access is "detach the policy". **How to apply:** any new CI workflow that needs AWS assumes a similar role with the appropriate branch/repo trust pattern; never put `AKIA…` in GitHub secrets.
+  - **Web `API_URL` written to `.env.production` at build time, not as an Amplify SSR runtime env var.** Why: Amplify's documented runtime env var feature is console-only — there's no CLI/CDK path. Writing `.env.production` during the Amplify build lets Next.js bake the value into the server bundle, so `process.env.API_URL` resolves at request time without needing console clicks. **How to apply:** any non-secret runtime config the web app needs (API_URL, public feature flags, etc.) writes through `.env.production` in `amplify.yml`'s build phase; secrets do not.
+- **Open questions:**
+  - The Playwright + k6 suites haven't been run against the deployed env yet — until they have, "everything works" is based on manual smokes. Phase 8's checklist still has those items open.
+  - The current IAM role is broad (`AdministratorAccess`). Before a prod analog, scope down to CDK bootstrap-role assumption + per-service permissions.
 
 ### 2026-05-21 — Session 12 (Lawyer subscription plan)
 
