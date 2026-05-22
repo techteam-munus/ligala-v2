@@ -37,6 +37,10 @@ export const auth = betterAuth({
   }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  // Hono mounts this handler at /auth/* (apps/api/src/app.ts), not the Better
+  // Auth default /api/auth. Setting basePath here makes route matching pick
+  // up requests under /auth/*.
+  basePath: "/auth",
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
