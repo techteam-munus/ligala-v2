@@ -26,6 +26,9 @@ applications:
             - mv .next/standalone/apps/web/package.json .next/standalone/package.json
             - if [ -d .next/standalone/apps/web/public ]; then mv .next/standalone/apps/web/public .next/standalone/public; fi
             - rm -rf .next/standalone/apps
+            # required-server-files.json lives in .next/ next to standalone/;
+            # Amplify's SSR runtime expects it in the artifact root.
+            - cp .next/required-server-files.json .next/standalone/required-server-files.json
       artifacts:
         baseDirectory: .next/standalone
         files:
