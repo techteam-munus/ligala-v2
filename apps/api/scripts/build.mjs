@@ -4,7 +4,7 @@
 // `lambda.Code.fromAsset("apps/api/dist")` in infra/lib/app-stack.ts.
 
 import { build } from "esbuild";
-import { cpSync, rmSync, mkdirSync } from "node:fs";
+import { cpSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,5 +41,10 @@ await build({
 });
 
 cpSync(drizzleSrc, resolve(dist, "drizzle"), { recursive: true });
+
+// Lambda Node runtime treats .js as CommonJS unless a package.json in the
+// asset declares `"type": "module"`. The bundles are ESM (banner + format),
+// so this one-liner makes the runtime load them correctly.
+writeFileSync(resolve(dist, "package.json"), '{"type":"module"}\n');
 
 console.log("[api/build] dist/{lambda,migrate-lambda}.js + drizzle/ ready");
