@@ -1,33 +1,8 @@
 "use client";
 
-import { Fragment, useState, useTransition, type ReactNode } from "react";
-import Image from "next/image";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  Bell,
-  Briefcase,
-  Building,
-  Building2,
-  ChevronsUpDown,
-  CreditCard,
-  LayoutDashboard,
-  LogOut,
-  Link2,
-  Receipt,
-  Scale,
-  ScrollText,
-  Search,
-  Share2,
-  ShieldCheck,
-  Sparkles,
-  TicketPercent,
-  User,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
-import { signOut } from "@/lib/auth-client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { usePathname } from "next/navigation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -36,103 +11,26 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarSeparator,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-type Variant = "client" | "lawyer" | "admin";
-
-type NavItem = { href: string; label: string; icon: LucideIcon };
-
-const NAV: Record<Variant, { brandHref: string; items: NavItem[] }> = {
-  client: {
-    brandHref: "/dashboard",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/cases", label: "Cases", icon: Briefcase },
-      { href: "/invoices", label: "Invoices", icon: Receipt },
-      { href: "/profile", label: "Profile", icon: User },
-      { href: "/lawyers", label: "Find a lawyer", icon: Search },
-      { href: "/chapters", label: "IBP chapters", icon: Building2 },
-    ],
-  },
-  lawyer: {
-    brandHref: "/lawyer/dashboard",
-    items: [
-      { href: "/lawyer/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/lawyer/cases", label: "Cases", icon: Briefcase },
-      { href: "/lawyer/referrals", label: "Referrals", icon: Share2 },
-      { href: "/lawyer/referral-links", label: "Referral links", icon: Link2 },
-      { href: "/lawyer/kyc", label: "KYC", icon: ShieldCheck },
-      { href: "/lawyer/profile", label: "Public profile", icon: User },
-      { href: "/lawyer/office", label: "Office", icon: Building },
-    ],
-  },
-  admin: {
-    brandHref: "/admin/dashboard",
-    items: [
-      { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/admin/users", label: "Users", icon: Users },
-      { href: "/admin/kyc", label: "KYC inbox", icon: ShieldCheck },
-      {
-        href: "/admin/discount-codes",
-        label: "Discount codes",
-        icon: TicketPercent,
-      },
-      { href: "/admin/invoices", label: "Invoices", icon: Receipt },
-      { href: "/admin/referrals", label: "Referrals", icon: Share2 },
-      { href: "/admin/ibp-lawyers", label: "IBP lawyers", icon: Scale },
-      { href: "/admin/audit-log", label: "Audit log", icon: ScrollText },
-    ],
-  },
-};
-
-function isActive(pathname: string, href: string): boolean {
-  if (pathname === href) return true;
-  if (href.endsWith("/dashboard")) return false;
-  return pathname.startsWith(href + "/");
-}
-
-const SEGMENT_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  cases: "Cases",
-  invoices: "Invoices",
-  profile: "Profile",
-  lawyers: "Find a lawyer",
-  chapters: "IBP chapters",
-  referrals: "Referrals",
-  "referral-links": "Referral links",
-  "discount-codes": "Discount codes",
-  kyc: "KYC",
-  office: "Office",
-  users: "Users",
-  "audit-log": "Audit log",
-  "ibp-lawyers": "IBP lawyers",
-  subscribe: "Subscription",
-  new: "New",
-};
+import { SidebarBrand } from "./sidebar-brand";
+import { SidebarNav } from "./sidebar-nav";
+import { SidebarUser } from "./sidebar-user";
+import {
+  getPortalConfig,
+  SEGMENT_LABELS,
+  type Variant,
+} from "./portal-nav-config";
 
 function looksLikeId(segment: string): boolean {
   return /^[a-z0-9]{16,}$/i.test(segment) || /^[0-9]+$/.test(segment);
@@ -173,203 +71,43 @@ export function PortalShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [submitting, setSubmitting] = useState(false);
-  const signingOut = pending || submitting;
-  const { brandHref, items } = NAV[variant];
-  const displayName = userName?.trim() || userEmail.split("@")[0] || userEmail;
-  const initial = displayName.charAt(0).toUpperCase();
-
-  const handleSignOut = async () => {
-    setSubmitting(true);
-    try {
-      await signOut();
-    } finally {
-      startTransition(() => {
-        router.replace("/login");
-        router.refresh();
-        setSubmitting(false);
-      });
-    }
-  };
+  const config = getPortalConfig(variant);
 
   return (
     <TooltipProvider delayDuration={0}>
-      <SidebarProvider>
+      <SidebarProvider style={{ "--sidebar-width": "17rem" } as React.CSSProperties}>
         <Sidebar collapsible="icon">
           <SidebarHeader>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild size="lg" tooltip="Ligala">
-                  <Link href={brandHref as never}>
-                    <Image
-                      src="/ligala-logo.svg"
-                      alt=""
-                      aria-hidden
-                      width={25}
-                      height={16}
-                      priority
-                      className="h-6 w-auto shrink-0"
-                    />
-                    <Image
-                      src="/ligala-text.svg"
-                      alt="Ligala"
-                      width={68}
-                      height={22}
-                      priority
-                      className="h-5 w-auto"
-                    />
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarBrand brandHref={config.brandHref} roleTag={config.roleTag} />
           </SidebarHeader>
           <SidebarSeparator />
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(pathname, item.href);
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          tooltip={item.label}
-                        >
-                          <Link href={item.href as never}>
-                            <Icon />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            <SidebarNav groups={config.groups} />
           </SidebarContent>
           <SidebarSeparator />
           <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton
-                      size="lg"
-                      className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                    >
-                      <Avatar>
-                        {userImage ? <AvatarImage src={userImage} alt={displayName} /> : null}
-                        <AvatarFallback className="text-xs font-medium">
-                          {initial}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-medium">
-                          {displayName}
-                        </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {userEmail}
-                        </span>
-                      </span>
-                      <ChevronsUpDown className="ml-auto size-4 opacity-60" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side="right"
-                    align="end"
-                    sideOffset={4}
-                    className="w-56 rounded-lg"
-                  >
-                    <DropdownMenuLabel className="p-0 font-normal">
-                      <div className="flex items-center gap-2 px-1 py-1.5 text-sm">
-                        <Avatar>
-                          {userImage ? <AvatarImage src={userImage} alt={displayName} /> : null}
-                          <AvatarFallback className="text-xs font-medium">
-                            {initial}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-medium">
-                            {displayName}
-                          </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {userEmail}
-                          </span>
-                        </div>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem disabled>
-                      <Sparkles />
-                      Upgrade to Pro
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {variant === "lawyer" ? (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link href={"/lawyer/subscribe" as never}>
-                            <CreditCard />
-                            Subscription
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={"/lawyer/invoices" as never}>
-                            <Receipt />
-                            Invoices
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={"/lawyer/discount-codes" as never}>
-                            <TicketPercent />
-                            Discount codes
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem disabled>
-                        <CreditCard />
-                        Billing
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem disabled>
-                      <Bell />
-                      Notifications
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      disabled={signingOut}
-                      onSelect={(event) => {
-                        event.preventDefault();
-                        void handleSignOut();
-                      }}
-                    >
-                      <LogOut />
-                      {signingOut ? "Signing out…" : "Log out"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarUser
+              userEmail={userEmail}
+              userName={userName}
+              userImage={userImage}
+            />
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
-          <header className="flex h-12 items-center gap-2 border-b border-border/60 px-3">
+          <header className="flex h-14 items-center gap-2 border-b border-[color:var(--rule)] px-3">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mx-2 !h-4 mt-4" />
+            <Separator orientation="vertical" className="mx-2 !h-4" />
             <Breadcrumb>
-              <BreadcrumbList>
+              <BreadcrumbList className="text-[13px]">
                 {buildCrumbs(pathname).map((crumb, i, arr) => (
                   <Fragment key={crumb.href}>
                     <BreadcrumbItem>
                       {crumb.isLast ? (
-                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                        <BreadcrumbPage className="font-serif italic text-[color:var(--ink)]">
+                          {crumb.label}
+                        </BreadcrumbPage>
                       ) : (
-                        <BreadcrumbLink asChild>
+                        <BreadcrumbLink asChild className="text-[color:var(--muted-ink)]">
                           <Link href={crumb.href as never}>{crumb.label}</Link>
                         </BreadcrumbLink>
                       )}
