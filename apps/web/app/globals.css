@@ -38,6 +38,21 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* Portal sidebar editorial tokens — added 2026-05-22 */
+    --paper: oklch(0.976 0.012 80);
+    --ink: oklch(0.18 0.012 60);
+    --muted-ink: oklch(0.45 0.014 70);
+    --oxblood: oklch(0.4 0.12 20);
+    --rule: oklch(0.91 0.018 75);
+
+    /* Map editorial tokens into shadcn sidebar primitive */
+    --sidebar: var(--paper);
+    --sidebar-foreground: var(--ink);
+    --sidebar-border: var(--rule);
+    --sidebar-accent: transparent;
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-ring: var(--oxblood);
   }
 
   .dark {
@@ -91,7 +106,7 @@
 
 @theme inline {
   --font-sans: var(--font-sans);
-  --font-serif: ui-serif, Georgia, serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, monospace;
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -134,4 +149,176 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Marketing prose typography. Used by MDX pages (about, pricing, terms,  */
+/* privacy). Project doesn't depend on @tailwindcss/typography — we style */
+/* a deliberate subset of HTML elements inside `.prose-ligala`.           */
+/* ---------------------------------------------------------------------- */
+.prose-ligala {
+  color: var(--color-foreground);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+.prose-ligala > * + * {
+  margin-top: 1.1em;
+}
+.prose-ligala h1 {
+  font-size: clamp(2rem, 5vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-top: 0;
+  margin-bottom: 0.6em;
+}
+.prose-ligala h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin-top: 2.4em;
+  margin-bottom: 0.6em;
+  padding-top: 1em;
+  border-top: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent);
+}
+.prose-ligala h2:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.prose-ligala h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-top: 1.6em;
+  margin-bottom: 0.4em;
+}
+.prose-ligala p {
+  color: color-mix(in oklch, var(--color-foreground) 92%, transparent);
+}
+.prose-ligala a {
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--color-foreground) 30%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease;
+}
+.prose-ligala a:hover {
+  text-decoration-color: var(--color-foreground);
+}
+.prose-ligala strong {
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.prose-ligala em {
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+.prose-ligala code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--color-muted) 60%, transparent);
+}
+.prose-ligala pre {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 1em 1.2em;
+  border-radius: 0.75rem;
+  background: color-mix(in oklch, var(--color-muted) 60%, transparent);
+  overflow-x: auto;
+}
+.prose-ligala ul,
+.prose-ligala ol {
+  padding-left: 1.4em;
+}
+.prose-ligala ul > li {
+  list-style: none;
+  position: relative;
+}
+.prose-ligala ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1em;
+  top: 0.75em;
+  width: 0.35em;
+  height: 0.35em;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--color-foreground) 30%, transparent);
+}
+.prose-ligala ol > li {
+  list-style: decimal;
+}
+.prose-ligala li + li {
+  margin-top: 0.5em;
+}
+.prose-ligala blockquote {
+  border-left: 2px solid var(--color-foreground);
+  padding-left: 1em;
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+.prose-ligala hr {
+  border: 0;
+  border-top: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent);
+  margin: 2.5em 0;
+}
+.prose-ligala table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin: 1.5em 0;
+  border: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.prose-ligala thead {
+  background: color-mix(in oklch, var(--color-muted) 40%, transparent);
+}
+.prose-ligala th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted-foreground);
+  padding: 0.625rem 1rem;
+}
+.prose-ligala td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid color-mix(in oklch, var(--color-border) 60%, transparent);
+  vertical-align: top;
+}
+.prose-ligala td:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted-foreground);
+}
+.prose-ligala kbd {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  padding: 0.1em 0.45em;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Portal sidebar active-item indicator. The shadcn Sidebar primitive     */
+/* sets data-active="true" on the active menu button; we render a 2px     */
+/* oxblood bar flush to the left edge instead of using a background fill. */
+/* ---------------------------------------------------------------------- */
+[data-sidebar="menu-button"][data-active="true"] {
+  position: relative;
+  font-weight: 500;
+  color: var(--ink);
+}
+[data-sidebar="menu-button"][data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--oxblood);
 }
