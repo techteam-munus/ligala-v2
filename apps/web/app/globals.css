@@ -306,14 +306,17 @@
 /* ---------------------------------------------------------------------- */
 /* Portal sidebar active-item indicator. The shadcn Sidebar primitive     */
 /* sets data-active="true" on the active menu button; we render a 2px     */
-/* oxblood bar flush to the left edge instead of using a background fill. */
+/* oxblood bar flush to the left edge of the wrapping <li> instead of     */
+/* on the button itself. The button has overflow-hidden + rounded-md,     */
+/* which would clip and round the bar; the <li> is already position:      */
+/* relative and has no overflow clipping. font-weight + color stay on the */
+/* button so they only apply when the button itself is active.            */
 /* ---------------------------------------------------------------------- */
 [data-sidebar="menu-button"][data-active="true"] {
-  position: relative;
   font-weight: 500;
   color: var(--ink);
 }
-[data-sidebar="menu-button"][data-active="true"]::before {
+[data-sidebar="menu-item"]:has([data-sidebar="menu-button"][data-active="true"])::before {
   content: "";
   position: absolute;
   left: 0;
