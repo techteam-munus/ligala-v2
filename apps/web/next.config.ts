@@ -10,11 +10,11 @@ const withMDX = createMDX({
   },
 });
 
-// Amplify Hosting (WEB_COMPUTE platform) sets AWS_APP_ID during builds. Gating
-// standalone output on it keeps local Windows `pnpm build` working — pnpm's
-// content-addressable store uses symlinks the standalone copy can't follow on
-// Windows without admin (Next's own bug — see vercel/next.js#50833).
-const isAmplifyBuild = Boolean(process.env.AWS_APP_ID);
+// AMPLIFY_BUILD is set as a branch env var in the Amplify console (Phase 4).
+// Gating standalone output on it keeps local Windows `pnpm build` working —
+// pnpm's content-addressable store uses symlinks the standalone copy can't
+// follow on Windows without admin (vercel/next.js#50833).
+const isAmplifyBuild = process.env.AMPLIFY_BUILD === "true";
 
 const config: NextConfig = {
   reactStrictMode: true,
