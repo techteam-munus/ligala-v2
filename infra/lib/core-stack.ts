@@ -71,6 +71,9 @@ export class CoreStack extends Stack {
     });
 
     // ── S3 uploads bucket ──────────────────────────────────────────────────
+    // CORS: browsers PUT directly to the presigned URL after the API hands one
+    // out, so the bucket must allow the Amplify origin + localhost (dev). Tighten
+    // to the exact Amplify branch URL once a custom domain replaces the default.
     this.uploadsBucket = new s3.Bucket(this, "UploadsBucket", {
       bucketName: `ligala-v2-${props.envName}-uploads`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -79,6 +82,22 @@ export class CoreStack extends Stack {
       versioned: false,
       lifecycleRules: [
         { abortIncompleteMultipartUploadAfter: Duration.days(7) },
+      ],
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.GET,
+            s3.HttpMethods.HEAD,
+          ],
+          allowedOrigins: [
+            "https://*.amplifyapp.com",
+            "http://localhost:3000",
+          ],
+          allowedHeaders: ["*"],
+          exposedHeaders: ["ETag"],
+          maxAge: 3000,
+        },
       ],
       removalPolicy: isProd ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       autoDeleteObjects: !isProd,

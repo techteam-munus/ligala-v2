@@ -11,6 +11,9 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional(),
   PAYMONGO_SECRET_KEY: z.string().optional(),
   PAYMONGO_WEBHOOK_SECRET: z.string().optional(),
+  // Comma-separated IPv4 CIDRs. Empty/unset = no IP gate (dev/test). Set on
+  // the API Lambda when there's an office/VPN range to lock /admin/* to.
+  ADMIN_IP_ALLOWLIST: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;

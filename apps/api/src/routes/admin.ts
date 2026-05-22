@@ -17,6 +17,7 @@ import {
   userStatusInput,
 } from "@ligala/shared/schemas";
 import { requireRole } from "../middleware/session";
+import { adminIpAllowlist } from "../middleware/admin-ip-allowlist";
 import { env } from "../lib/env";
 import { refundPayment } from "./billing";
 
@@ -50,6 +51,9 @@ async function logAdmin(
 }
 
 export const admin = new Hono()
+  // IP allowlist runs first so an off-IP probe gets 403 before any session
+  // lookup happens — keeps admin paths invisible to the open internet.
+  .use("*", adminIpAllowlist)
   .use("*", requireRole("admin"))
 
   // --- Stats ---------------------------------------------------------------
