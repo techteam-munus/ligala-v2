@@ -6,8 +6,8 @@
   "scripts": {
     "synth": "cdk synth",
     "diff": "cdk diff",
-    "deploy:dev": "cdk deploy --all --context env=dev --require-approval=never",
-    "deploy:prod": "cdk deploy --all --context env=prod",
+    "deploy:dev": "pnpm --filter @ligala/api build && cdk deploy --all --context env=dev --require-approval=never",
+    "deploy:prod": "pnpm --filter @ligala/api build && cdk deploy --all --context env=prod",
     "destroy:dev": "cdk destroy --all --context env=dev --force",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
