@@ -1121,18 +1121,24 @@ function ViewAttachmentButton({
 }) {
   const [pending, start] = useTransition();
   function onClick() {
-    // Open a tab synchronously inside the click handler so popup blockers
-    // accept it; navigate it to the signed URL once the action returns.
-    // Browsers also auto-block window.open if it happens after an awaited
-    // network call.
-    const tab = window.open("about:blank", "_blank", "noopener");
+    // Open the tab synchronously inside the click handler so popup blockers
+    // accept it, then navigate once the signed URL is fetched. We do NOT pass
+    // `noopener` here because that makes window.open return null in modern
+    // browsers, leaving us no handle to navigate. The destination is S3 (a
+    // different origin), so window.opener is cross-origin and effectively
+    // inert from S3's side regardless.
+    const tab = window.open("about:blank", "_blank");
     start(async () => {
       try {
         const url = await getCaseAttachmentViewUrl(caseId, attachmentId);
-        if (tab) tab.location.href = url;
-        else window.open(url, "_blank", "noopener");
+        if (tab && !tab.closed) {
+          tab.location.href = url;
+        } else {
+          // Popup blocker swallowed the sync open; final fallback.
+          window.location.href = url;
+        }
       } catch {
-        if (tab) tab.close();
+        if (tab && !tab.closed) tab.close();
       }
     });
   }
