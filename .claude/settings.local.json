@@ -167,7 +167,8 @@
       "Bash(git -C C:/Users/dejes/munus/ligala/ligala-v2 add apps/api/src/routes/cases.ts apps/web/lib/actions/case.ts apps/web/app/_components/case-detail.tsx)",
       "Bash(MSYS_NO_PATHCONV=1 aws lambda get-function-configuration *)",
       "Bash(git -C C:/Users/dejes/munus/ligala/ligala-v2 add apps/web/app/_components/case-detail.tsx)",
-      "Bash(MSYS_NO_PATHCONV=1 aws amplify list-jobs --app-id d2wtzrkac57hbk --branch-name develop --region ap-southeast-1 --max-items 1 --query 'jobSummaries[].{id:jobId,status:status}' --output json)"
+      "Bash(MSYS_NO_PATHCONV=1 aws amplify list-jobs --app-id d2wtzrkac57hbk --branch-name develop --region ap-southeast-1 --max-items 1 --query 'jobSummaries[].{id:jobId,status:status}' --output json)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
