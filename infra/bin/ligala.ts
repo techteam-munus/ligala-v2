@@ -19,6 +19,10 @@ new AppStack(app, `${prefix}-App`, {
   envName,
   vpc: core.vpc,
   uploadsBucket: core.uploadsBucket,
+  dbCluster: core.dbCluster,
+  dbProxy: core.dbProxy,
+  dbClientSecurityGroup: core.dbClientSecurityGroup,
+  appSecret: core.appSecret,
   alarmEmail: process.env.ALARM_EMAIL,
 });
 

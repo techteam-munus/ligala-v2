@@ -1,15 +1,38 @@
+import type { APIGatewayProxyEventV2, Context } from "aws-lambda";
 import { handle } from "hono/aws-lambda";
-import { createApp } from "./app";
+import { bootstrapEnv } from "./lib/bootstrap-env";
 import { initSentry, Sentry } from "./lib/sentry";
 
-initSentry();
+// Module-level promise resolves to a wrapped handler once env bootstrap +
+// Sentry init complete. Cached across warm invocations so Secrets Manager is
+// only hit once per container.
+let handlerPromise:
+  | Promise<
+      (event: APIGatewayProxyEventV2, context: Context) => Promise<unknown>
+    >
+  | null = null;
 
-const app = createApp();
-const honoHandler = handle(app);
+function getHandler() {
+  if (handlerPromise) return handlerPromise;
+  handlerPromise = (async () => {
+    await bootstrapEnv();
+    initSentry();
+    const { createApp } = await import("./app");
+    const honoHandler = handle(createApp()) as (
+      event: APIGatewayProxyEventV2,
+      context: Context,
+    ) => Promise<unknown>;
+    return process.env.SENTRY_DSN
+      ? (Sentry.wrapHandler(honoHandler) as typeof honoHandler)
+      : honoHandler;
+  })();
+  return handlerPromise;
+}
 
-// Wrap the Lambda handler so unhandled exceptions reach Sentry with the right
-// AWS context (event, awsRequestId, function name) and so traces are stitched.
-// When SENTRY_DSN is unset, wrapHandler is a thin pass-through.
-export const handler = process.env.SENTRY_DSN
-  ? Sentry.wrapHandler(honoHandler)
-  : honoHandler;
+export const handler = async (
+  event: APIGatewayProxyEventV2,
+  context: Context,
+) => {
+  const h = await getHandler();
+  return h(event, context);
+};

@@ -1,0 +1,64 @@
+name: Deploy dev
+
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  CDK_DEFAULT_ACCOUNT: "615299765252"
+  CDK_DEFAULT_REGION: ap-southeast-1
+  AWS_REGION: ap-southeast-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm version is read from packageManager in package.json (pinned to
+      # pnpm@9.12.0). Passing version: alongside trips ERR_PNPM_BAD_PM_VERSION.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build api Lambda bundle
+        run: pnpm --filter @ligala/api build
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::615299765252:role/GithubActionsDeploy-Ligala-dev
+          aws-region: ap-southeast-1
+
+      - name: CDK deploy (Core + App)
+        working-directory: infra
+        run: pnpm exec cdk deploy --all --context env=dev --require-approval=never --outputs-file ../cdk-outputs.json
+
+      - name: Print stack outputs
+        if: always()
+        run: |
+          if [ -f cdk-outputs.json ]; then
+            echo "=== CDK Outputs ==="
+            cat cdk-outputs.json
+          fi
