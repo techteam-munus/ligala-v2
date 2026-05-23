@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Ligala" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e5]
+      - img "Ligala" [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: Verify your IBP membership
+        - generic [ref=e10]: Enter your Roll of Attorneys number and full name. We'll match against the IBP directory before you create an account.
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Roll number
+          - textbox "Roll number" [ref=e15]
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: First name
+            - textbox "First name" [ref=e19]
+          - generic [ref=e20]:
+            - generic [ref=e21]: Middle name
+            - textbox "Middle name" [ref=e22]
+          - generic [ref=e23]:
+            - generic [ref=e24]: Last name
+            - textbox "Last name" [ref=e25]
+        - button "Continue" [ref=e26]
+        - paragraph [ref=e27]:
+          - text: Already have an account?
+          - link "Sign in" [ref=e28] [cursor=pointer]:
+            - /url: /login
+    - paragraph [ref=e29]:
+      - text: Not a lawyer?
+      - link "Create a client account" [ref=e30] [cursor=pointer]:
+        - /url: /signup
+  - region "Notifications alt+T"
+  - alert [ref=e31]

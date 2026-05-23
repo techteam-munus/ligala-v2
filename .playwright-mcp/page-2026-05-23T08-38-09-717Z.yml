@@ -1,0 +1,39 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Ligala" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e5]
+      - img "Ligala" [ref=e6]
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: Create your lawyer account
+        - generic [ref=e35]: Signing up as Ronel Talavera De Jesus · Roll No. 00000
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: Email
+            - textbox "Email" [ref=e40]:
+              - /placeholder: you@example.com
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - generic [ref=e44]: Password
+                - generic [ref=e45]:
+                  - textbox "Password" [ref=e46]
+                  - button "Show password" [ref=e47]:
+                    - img [ref=e48]
+              - generic [ref=e51]:
+                - generic [ref=e52]: Confirm
+                - generic [ref=e53]:
+                  - textbox "Confirm" [ref=e54]
+                  - button "Show password" [ref=e55]:
+                    - img [ref=e56]
+            - paragraph [ref=e59]: Must be at least 8 characters long.
+          - button "Create lawyer account" [ref=e60]
+        - button "Not you? Start over" [ref=e62]
+    - paragraph [ref=e29]:
+      - text: Not a lawyer?
+      - link "Create a client account" [ref=e30] [cursor=pointer]:
+        - /url: /signup
+  - region "Notifications alt+T"
+  - alert [ref=e31]

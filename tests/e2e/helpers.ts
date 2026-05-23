@@ -15,7 +15,8 @@ export async function signUp(
   await page.goto("/signup");
   await page.getByLabel(/name/i).fill(opts.name);
   await page.getByLabel(/email/i).fill(opts.email);
-  await page.getByLabel(/password/i).fill(opts.password);
+  await page.locator("#password").fill(opts.password);
+  await page.locator("#confirm-password").fill(opts.password);
   await page.getByRole("button", { name: /create account|sign up/i }).click();
   // 30s covers the cold-compile case in `next dev` — Better Auth + Sentry +
   // OpenTelemetry can take 10-13s for the first sign-up POST, then another
@@ -31,6 +32,6 @@ export async function signIn(
 ) {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(opts.email);
-  await page.getByLabel(/password/i).fill(opts.password);
+  await page.locator("#password").fill(opts.password);
   await page.getByRole("button", { name: /sign in|log in/i }).click();
 }

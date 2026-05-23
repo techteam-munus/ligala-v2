@@ -8,7 +8,7 @@ test("client can sign up and land on dashboard", async ({ page }) => {
     password: "Test1234!",
   });
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByText(/signed in as/i)).toBeVisible();
+  await expect(page.getByText(/client · dashboard/i)).toBeVisible();
 });
 
 test("signed-in user visiting /login is redirected to /dashboard", async ({ page }) => {

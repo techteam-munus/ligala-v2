@@ -1,5 +1,13 @@
 import crypto from "node:crypto";
 
+/**
+ * PayMongo's hosted-checkout minimum amount per session (₱20.00 = 2000 cents).
+ * Sessions below this fail on creation with a 422 from `/v1/checkout_sessions`.
+ * Discount math that drops a total under this triggers a 409 in our routes
+ * instead of being deferred to PayMongo for a worse error surface.
+ */
+export const PAYMONGO_MIN_AMOUNT_CENTS = 2000;
+
 export type PaymongoEvent = {
   data: {
     id: string;
