@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   CircleDashed,
+  ExternalLink,
   FileText,
   Hash,
   MessageCircle,
@@ -22,6 +23,7 @@ import {
   closeCase,
   decideOnCase,
   decideOnEngagement,
+  getCaseAttachmentViewUrl,
   sendEngagement,
 } from "@/lib/actions/case";
 import { cn } from "@/lib/utils";
@@ -1110,6 +1112,45 @@ function NoteVisibilityChip({ visibility }: { visibility: Note["visibility"] }) 
 
 // ---------- Attachments ------------------------------------------------
 
+function ViewAttachmentButton({
+  caseId,
+  attachmentId,
+}: {
+  caseId: string;
+  attachmentId: string;
+}) {
+  const [pending, start] = useTransition();
+  function onClick() {
+    // Open a tab synchronously inside the click handler so popup blockers
+    // accept it; navigate it to the signed URL once the action returns.
+    // Browsers also auto-block window.open if it happens after an awaited
+    // network call.
+    const tab = window.open("about:blank", "_blank", "noopener");
+    start(async () => {
+      try {
+        const url = await getCaseAttachmentViewUrl(caseId, attachmentId);
+        if (tab) tab.location.href = url;
+        else window.open(url, "_blank", "noopener");
+      } catch {
+        if (tab) tab.close();
+      }
+    });
+  }
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      disabled={pending}
+      aria-label="Open attachment in new tab"
+    >
+      <ExternalLink className="size-3.5" />
+      {pending ? "Opening…" : "View"}
+    </Button>
+  );
+}
+
 function AttachmentsSection({
   caseId,
   initial,
@@ -1210,6 +1251,7 @@ function AttachmentsSection({
                     </p>
                   </div>
                 </div>
+                <ViewAttachmentButton caseId={caseId} attachmentId={a.id} />
               </li>
             ))}
           </ul>

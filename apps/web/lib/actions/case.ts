@@ -69,6 +69,17 @@ export async function addCaseAttachment(caseId: string, input: CaseAttachmentInp
   revalidatePath(`/cases/${caseId}`);
 }
 
+export async function getCaseAttachmentViewUrl(
+  caseId: string,
+  attachmentId: string,
+): Promise<string> {
+  const res = await api<{ url: string; expiresAt: string }>(
+    `/cases/${caseId}/attachments/${attachmentId}/view-url`,
+    { method: "GET" },
+  );
+  return res.url;
+}
+
 export async function sendEngagement(caseId: string, input: EngagementInput) {
   const parsed = engagementInput.parse(input);
   await api(`/engagements/cases/${caseId}`, {
