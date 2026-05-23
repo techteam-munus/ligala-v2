@@ -1130,10 +1130,9 @@ function AttachmentsSection({
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            filename: file.name,
-            mime: file.type || "application/octet-stream",
-            sizeBytes: file.size,
             kind: "case_attachment",
+            contentType: file.type || "application/octet-stream",
+            byteSize: file.size,
           }),
         });
         if (!presignRes.ok) throw new Error("presign failed");
