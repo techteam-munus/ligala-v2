@@ -55,6 +55,16 @@ describe("applyPaymentWebhook — lawyer earnings", () => {
     const entries = entriesInserted();
     expect(entries.find((e) => e.kind === "earning")?.amountCents).toBe(10000);
     expect(entries.find((e) => e.kind === "processing_fee")?.amountCents).toBe(300);
+    const earning = entries.find((e) => e.kind === "earning");
+    const fee = entries.find((e) => e.kind === "processing_fee");
+    expect(earning?.direction).toBe("credit");
+    expect(earning?.relatedPaymentId).toBeTypeOf("string");
+    expect(earning?.relatedPaymentId).toBeTruthy();
+    expect(fee?.direction).toBe("debit");
+    expect(fee?.relatedPaymentId).toBeTypeOf("string");
+    expect(fee?.relatedPaymentId).toBeTruthy();
+    // Both entries must link to the same internal payment row.
+    expect(earning?.relatedPaymentId).toBe(fee?.relatedPaymentId);
   });
 
   it("writes NO balance entries for a subscription invoice", async () => {
