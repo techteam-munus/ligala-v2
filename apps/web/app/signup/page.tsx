@@ -44,7 +44,10 @@ export default function SignupPage() {
       setError(result.error.message ?? "Sign up failed");
       return;
     }
-    router.push("/dashboard");
+    // Better Auth sent a 6-digit code (sendOnSignUp). Collect it on the verify
+    // page; on success it auto-signs-in and we land on the dashboard. No
+    // `send=1` here — a code was just sent.
+    router.push(`/verify-email?email=${encodeURIComponent(email)}&next=/dashboard`);
     router.refresh();
   }
 

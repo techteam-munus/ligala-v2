@@ -209,7 +209,8 @@
       "PowerShell(aws lambda get-function-configuration --function-name ligala-v2-dev-api --region ap-southeast-1 --query \"Environment.Variables.{REQ:EMAIL_VERIFICATION_REQUIRED,DEV:EMAIL_DEV_VERIFY_ENABLED}\" --output json)",
       "PowerShell(aws apigatewayv2 get-apis --region ap-southeast-1 --query \"Items[?Name=='ligala-v2-dev-api'].ApiEndpoint\" --output text)",
       "Bash(echo \"exit: $?\")",
-      "Bash(gh pr create --base develop --head fix/worker-esm-lambda-bundle --title 'fix\\(workers\\): ESM worker bundles + enable hard email verification' --body ' *)"
+      "Bash(gh pr create --base develop --head fix/worker-esm-lambda-bundle --title 'fix\\(workers\\): ESM worker bundles + enable hard email verification' --body ' *)",
+      "mcp__plugin_context7_context7__query-docs"
     ]
   }
 }

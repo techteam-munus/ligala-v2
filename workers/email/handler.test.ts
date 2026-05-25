@@ -29,7 +29,7 @@ import { handler } from "./handler";
 function record(body: unknown, messageId = "m1") {
   return { messageId, body: JSON.stringify(body) } as never;
 }
-const good = { kind: "auth_verify", to: "a@b.com", dedupeKey: "k1", data: { name: "A", verifyUrl: "https://x/v" } };
+const good = { kind: "auth_verify", to: "a@b.com", dedupeKey: "k1", data: { code: "123456" } };
 
 beforeEach(() => { sesSend.mockReset(); findFirst.mockReset(); setSpy.mockClear(); setWhere.mockClear(); process.env.EMAIL_FROM = "no-reply@mymunus.com"; });
 

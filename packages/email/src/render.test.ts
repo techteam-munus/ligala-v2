@@ -2,15 +2,15 @@ import { describe, it, expect } from "vitest";
 import { renderEmail } from "./render";
 
 describe("renderEmail", () => {
-  it("renders auth_verify with subject + non-empty html/text", async () => {
-    const out = await renderEmail("auth_verify", { name: "Ana", verifyUrl: "https://x/v?t=1" });
+  it("renders auth_verify with subject + the code in html/text", async () => {
+    const out = await renderEmail("auth_verify", { code: "123456" });
     expect(out.subject.length).toBeGreaterThan(0);
-    expect(out.html).toContain("https://x/v?t=1");
-    expect(out.text.length).toBeGreaterThan(0);
+    expect(out.html).toContain("123456");
+    expect(out.text).toContain("123456");
   });
   it("renders every kind without throwing", async () => {
     const samples = {
-      auth_verify: { name: "A", verifyUrl: "https://x/v" },
+      auth_verify: { code: "654321" },
       auth_reset: { name: "A", resetUrl: "https://x/r" },
       invoice_sent: { clientName: "A", lawyerName: "L", invoiceNumber: "INV-1", amountFormatted: "P5,500.00", currency: "PHP", invoiceUrl: "https://x/i" },
       payment_receipt: { clientName: "A", invoiceNumber: "INV-1", amountPaidFormatted: "P5,500.00", currency: "PHP", paidAtFormatted: "May 25, 2026", invoiceUrl: "https://x/i" },

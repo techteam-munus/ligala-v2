@@ -3,10 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, signUp } from "@/lib/auth-client";
-import {
-  claimIbpAndPromote,
-  clearIbpVerification,
-} from "@/lib/actions/signup-lawyer";
+import { clearIbpVerification } from "@/lib/actions/signup-lawyer";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,18 +57,19 @@ export function LawyerAccountForm({
       email,
       password,
     });
+    setSubmitting(false);
     if (result.error) {
-      setSubmitting(false);
       setError(result.error.message ?? "Sign up failed");
       return;
     }
-    const claim = await claimIbpAndPromote();
-    setSubmitting(false);
-    if (!claim.ok) {
-      setError(claim.message);
-      return;
-    }
-    router.push("/lawyer/dashboard");
+    // The IBP claim (/signup/lawyer/complete) needs an authenticated session,
+    // which only exists once the email is verified. Send the user through the
+    // code step first; on success it auto-signs-in, then `next` finalizes the
+    // lawyer promotion. The IBP verification cookie (30 min TTL) outlives the
+    // 10-min code window.
+    router.push(
+      `/verify-email?email=${encodeURIComponent(email)}&next=/signup/lawyer/complete`,
+    );
     router.refresh();
   }
 

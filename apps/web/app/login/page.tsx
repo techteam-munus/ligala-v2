@@ -35,6 +35,15 @@ function LoginForm() {
     const result = await signIn.email({ email, password });
     setSubmitting(false);
     if (result.error) {
+      // Better Auth returns 403 when requireEmailVerification blocks an
+      // unverified user. Send them to the code step (send=1 — sign-in didn't
+      // issue a fresh code) rather than showing a dead-end error.
+      if (result.error.status === 403) {
+        router.push(
+          `/verify-email?email=${encodeURIComponent(email)}&send=1&next=${encodeURIComponent(next)}`,
+        );
+        return;
+      }
       setError(result.error.message ?? "Sign in failed");
       return;
     }

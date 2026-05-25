@@ -17,8 +17,8 @@ import { enqueueEmail, dispatchEmail } from "./queue";
 import type { EmailMessage } from "@ligala/shared/schemas";
 
 const msg: EmailMessage = {
-  kind: "auth_verify", to: "a@b.com", dedupeKey: "auth_verify:u1:abc",
-  data: { name: "Ana", verifyUrl: "https://x/verify?token=abc" },
+  kind: "auth_verify", to: "a@b.com", dedupeKey: "auth_verify:a@b.com:abc",
+  data: { code: "123456" },
 };
 
 beforeEach(() => { send.mockReset(); values.mockClear(); insert.mockClear(); delete process.env.EMAIL_QUEUE_URL; });
