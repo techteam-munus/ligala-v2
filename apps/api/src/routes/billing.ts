@@ -11,6 +11,7 @@ import {
   invoicePatch,
   invoiceVoidInput,
 } from "@ligala/shared/schemas";
+import { dispatchEmail } from "@ligala/email";
 import { requireRole, requireSession } from "../middleware/session";
 import {
   computeDiscountCents,
@@ -19,6 +20,7 @@ import {
 } from "../lib/billing";
 import { RENEWAL_DAYS, addDays } from "../lib/subscription";
 import { env } from "../lib/env";
+import { formatDate, formatPhp } from "../lib/format";
 import {
   createCheckoutSession,
   PAYMONGO_MIN_AMOUNT_CENTS,
@@ -351,6 +353,35 @@ export const billing = new Hono()
       .update(schema.invoices)
       .set({ status: "sent", sentAt: now, updatedAt: now })
       .where(eq(schema.invoices.id, invoice.id));
+
+    // Enqueue invoice_sent email — only for case invoices (subscription invoices
+    // have no clientId). The session user IS the lawyer (enforced above), so
+    // user.name is used directly; no second DB lookup needed.
+    if (invoice.clientId) {
+      try {
+        const clientUser = await conn.query.user.findFirst({
+          where: eq(schema.user.id, invoice.clientId),
+        });
+        if (clientUser?.email) {
+          await dispatchEmail({
+            kind: "invoice_sent",
+            to: clientUser.email,
+            dedupeKey: `invoice_sent:${invoice.id}`,
+            data: {
+              clientName: clientUser.name,
+              lawyerName: user.name,
+              invoiceNumber: invoice.number,
+              amountFormatted: formatPhp(invoice.totalCents),
+              currency: invoice.currency,
+              invoiceUrl: `${env().BETTER_AUTH_URL}/invoices/${invoice.id}`,
+            },
+          });
+        }
+      } catch (err) {
+        console.error("[email] invoice_sent dispatch failed", invoice.id, err);
+      }
+    }
+
     return c.json({ ok: true });
   })
 
@@ -658,6 +689,7 @@ export async function applyPaymentWebhook(input: {
     // Subscription renewal: extend the lawyer's paid period. The earlier
     // dedup check on (provider, providerPaymentId) means we only get here
     // once per provider payment, so the +30 days is never double-applied.
+    let subscriptionPeriodEnd: Date | undefined;
     if (invoice.kind === "subscription") {
       const sub = await conn.query.lawyerSubscriptions.findFirst({
         where: eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId),
@@ -666,15 +698,76 @@ export async function applyPaymentWebhook(input: {
         // Stack onto the existing period if it hasn't elapsed yet (early
         // renewal); otherwise start a fresh period from `now`.
         const base = sub.currentPeriodEndsAt > now ? sub.currentPeriodEndsAt : now;
+        const newPeriodEnd = addDays(base, RENEWAL_DAYS);
+        subscriptionPeriodEnd = newPeriodEnd;
         await conn
           .update(schema.lawyerSubscriptions)
           .set({
             status: "active",
-            currentPeriodEndsAt: addDays(base, RENEWAL_DAYS),
+            currentPeriodEndsAt: newPeriodEnd,
             lastPaidAt: now,
             updatedAt: now,
           })
           .where(eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId));
+      }
+    }
+
+    // Enqueue receipt emails — payment.id-keyed dedupeKey means replays
+    // (same providerPaymentId) are already blocked above by the existing
+    // check; the try/catch ensures a recipient-lookup failure can't unwind
+    // a billing op that has already committed.
+    if (invoice.kind === "subscription") {
+      try {
+        if (!subscriptionPeriodEnd) {
+          console.error(
+            "[email] subscription row missing, skipping receipt",
+            invoice.lawyerId,
+          );
+        } else {
+          const lawyerUser = await conn.query.user.findFirst({
+            where: eq(schema.user.id, invoice.lawyerId),
+          });
+          if (lawyerUser?.email) {
+            await dispatchEmail({
+              kind: "subscription_receipt",
+              to: lawyerUser.email,
+              dedupeKey: `subscription_receipt:${paymentId}`,
+              data: {
+                lawyerName: lawyerUser.name,
+                invoiceNumber: invoice.number,
+                amountFormatted: formatPhp(amount),
+                currency: invoice.currency,
+                periodEndFormatted: formatDate(subscriptionPeriodEnd),
+                subscriptionUrl: `${env().BETTER_AUTH_URL}/lawyer/subscribe`,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[email] subscription_receipt dispatch failed", paymentId, err);
+      }
+    } else if (invoice.clientId) {
+      try {
+        const clientUser = await conn.query.user.findFirst({
+          where: eq(schema.user.id, invoice.clientId),
+        });
+        if (clientUser?.email) {
+          await dispatchEmail({
+            kind: "payment_receipt",
+            to: clientUser.email,
+            dedupeKey: `payment_receipt:${paymentId}`,
+            data: {
+              clientName: clientUser.name,
+              invoiceNumber: invoice.number,
+              amountPaidFormatted: formatPhp(amount),
+              currency: invoice.currency,
+              paidAtFormatted: formatDate(now),
+              invoiceUrl: `${env().BETTER_AUTH_URL}/invoices/${invoice.id}`,
+            },
+          });
+        }
+      } catch (err) {
+        console.error("[email] payment_receipt dispatch failed", paymentId, err);
       }
     }
   }
