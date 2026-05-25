@@ -30,7 +30,6 @@ const {
   mockInsertValuesReturning,
   mockInsert,
   mockUpdate,
-  mockTransaction,
   mockDb,
   mockCreateBatchTransfer,
   lawyerUser,
@@ -84,7 +83,6 @@ const {
   }));
   const mockKycFindFirst = vi.fn().mockResolvedValue({ status: "approved" });
   const mockMethodFindFirst = vi.fn().mockResolvedValue(methodRow);
-  const mockTransaction = vi.fn();
   const mockDb = vi.fn();
   const mockCreateBatchTransfer = vi.fn();
 
@@ -104,7 +102,6 @@ const {
     mockInsertValuesReturning,
     mockInsert,
     mockUpdate,
-    mockTransaction,
     mockDb,
     mockCreateBatchTransfer,
     lawyerUser,
@@ -542,5 +539,41 @@ describe("POST /lawyer/payouts — withdrawal", () => {
     const feeEntry = entries.find((e) => e.amountCents === paymongoPayoutRow.feeCents);
     expect(netEntry).toBeDefined();
     expect(feeEntry).toBeDefined();
+  });
+
+  it("paymongo success path: 201, status processing, providerTransferId set", async () => {
+    // Set up paymongo path: wallet account + secret key present
+    mockEnvState.PAYMONGO_WALLET_ACCOUNT_NUMBER = "ACCT123";
+    mockEnvState.PAYMONGO_SECRET_KEY = "sk_test_xxx";
+    mockEnvState.PAYMONGO_WALLET_BIC = undefined;
+
+    // The tx insert must return a payout row with provider "paymongo"
+    const paymongoPayoutRow = { ...payoutCreatedRow, provider: "paymongo" as const };
+    mockInsertValuesReturning.mockResolvedValueOnce([paymongoPayoutRow]);
+
+    // Sufficient available balance
+    const { conn } = buildConnForFailurePath([
+      { direction: "credit", amountCents: 100000, clearsAt: new Date("2020-01-01") },
+    ]);
+    mockDb.mockReturnValue(conn);
+
+    // createBatchTransfer resolves with a transferId
+    mockCreateBatchTransfer.mockResolvedValueOnce({ transferId: "tr_success_1" });
+
+    const app = buildApp();
+    const res = await app.request(
+      req("/lawyer/payouts", {
+        method: "POST",
+        body: { payoutMethodId: "meth_1", amountCents: 60000 },
+      }),
+    );
+
+    // 1. HTTP 201
+    expect(res.status).toBe(201);
+    const body = await res.json() as { payout: { status: string; providerTransferId: string } };
+    // 2. Status is processing
+    expect(body.payout.status).toBe("processing");
+    // 3. providerTransferId from the transfer
+    expect(body.payout.providerTransferId).toBe("tr_success_1");
   });
 });

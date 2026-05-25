@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { payoutMethodInput, withdrawalInput } from "@ligala/shared/schemas";
@@ -149,6 +149,12 @@ export const payouts = new Hono()
       throw new HTTPException(404, { message: "method_not_found" });
     }
 
+    // If configured for real disbursement (wallet account set) the secret key
+    // must also be present — fail fast (501) before debiting the ledger.
+    if (env().PAYMONGO_WALLET_ACCOUNT_NUMBER && !env().PAYMONGO_SECRET_KEY) {
+      throw new HTTPException(501, { message: "paymongo_not_configured" });
+    }
+
     const payoutRow = await conn.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(${lawyerLockKey(user.id)})`);
 
@@ -261,9 +267,15 @@ export const payouts = new Hono()
         .where(eq(schema.payouts.id, payoutRow.id));
       return c.json({ payout: { ...payoutRow, providerTransferId: transferId, status: "processing" } }, 201);
     } catch (err) {
+      const failCode =
+        err instanceof PaymongoApiError
+          ? "paymongo_request_failed"
+          : err instanceof PaymongoUnreachableError
+            ? "paymongo_unreachable"
+            : "disbursement_request_failed";
       await conn
         .update(schema.payouts)
-        .set({ status: "failed", failureReason: "disbursement_request_failed", updatedAt: new Date() })
+        .set({ status: "failed", failureReason: failCode, updatedAt: new Date() })
         .where(eq(schema.payouts.id, payoutRow.id));
       await conn.insert(schema.balanceEntries).values([
         {
@@ -279,11 +291,11 @@ export const payouts = new Hono()
       ]);
       if (err instanceof PaymongoApiError) {
         console.error("paymongo_transfer_failed", err.status, err.bodyText.slice(0, 200));
-        throw new HTTPException(502, { message: "paymongo_request_failed" });
+        throw new HTTPException(502, { message: failCode });
       }
       if (err instanceof PaymongoUnreachableError) {
         console.error("paymongo_transfer_unreachable", err.cause);
-        throw new HTTPException(502, { message: "paymongo_unreachable" });
+        throw new HTTPException(502, { message: failCode });
       }
       throw err;
     }
