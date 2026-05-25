@@ -115,6 +115,11 @@ export const webhooks = new Hono()
         : typeof resource.attributes.amount === "number"
           ? resource.attributes.amount
           : undefined;
+    // Collection fee PayMongo charged on this payment — forwarded so the lawyer
+    // balance credit nets it out. NOTE: exact field name unconfirmed in sandbox;
+    // when absent we pass undefined → fee treated as 0 (no deduction yet).
+    const feeCents: number | undefined =
+      typeof resource.attributes.fee === "number" ? resource.attributes.fee : undefined;
     const status: "succeeded" | "failed" =
       type === "payment.failed" ? "failed" : "succeeded";
     const failureReason =
@@ -130,6 +135,7 @@ export const webhooks = new Hono()
         invoiceId,
         status,
         amountCents,
+        feeCents,
         currency: "PHP",
         failureReason,
         rawPayload: event,

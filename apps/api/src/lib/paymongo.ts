@@ -22,6 +22,8 @@ export type PaymongoEvent = {
           reference_number?: string;
           total_amount?: number;
           amount?: number;
+          fee?: number;
+          net_amount?: number;
           last_payment_error?: { message?: string } | null;
           [key: string]: unknown;
         };
