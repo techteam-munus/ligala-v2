@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import crypto from "node:crypto";
 import {
   createCheckoutSession,
+  createBatchTransfer,
   verifyWebhookSignature,
   PaymongoApiError,
   PaymongoUnreachableError,
@@ -177,5 +178,59 @@ describe("createCheckoutSession", () => {
         metadata: { invoiceId: "r", lawyerId: "l" },
       }),
     ).rejects.toBeInstanceOf(PaymongoUnreachableError);
+  });
+});
+
+describe("createBatchTransfer", () => {
+  const origFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = origFetch;
+    vi.restoreAllMocks();
+  });
+
+  function mockOnce(body: unknown, status = 200) {
+    const fn = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+    );
+    globalThis.fetch = fn as unknown as typeof fetch;
+    return fn;
+  }
+
+  const OK = { data: [{ id: "tr_test_123", type: "transfer", attributes: { status: "pending" } }] };
+
+  it("posts a single transfer and returns the transfer id", async () => {
+    const fetchMock = mockOnce(OK);
+    const res = await createBatchTransfer({
+      secretKey: "sk_test_x",
+      amountCents: 49000,
+      currency: "PHP",
+      provider: "instapay",
+      sourceAccount: { number: "ACCT", name: "Ligala", bic: "SRCBICXX" },
+      destination: { number: "09171234567", name: "Juan Dela Cruz", bic: "GXCHPHM2XXX" },
+      referenceNumber: "po_abc",
+      callbackUrl: "https://app.test/webhooks/paymongo-transfer",
+      idempotencyKey: "po_abc",
+    });
+    expect(res).toEqual({ transferId: "tr_test_123" });
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("https://api.paymongo.com/v2/batch_transfers");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe(`Basic ${Buffer.from("sk_test_x:").toString("base64")}`);
+    expect(headers["Idempotency-Key"]).toBe("po_abc");
+    const sent = JSON.parse((init as RequestInit).body as string);
+    expect(sent.data.attributes.transfers[0].amount).toBe(49000);
+    expect(sent.data.attributes.transfers[0].destination_account.number).toBe("09171234567");
+  });
+
+  it("throws PaymongoApiError on non-2xx", async () => {
+    mockOnce({ errors: [{ code: "x" }] }, 422);
+    await expect(
+      createBatchTransfer({
+        secretKey: "sk_test_x", amountCents: 1, currency: "PHP", provider: "instapay",
+        sourceAccount: { number: "A", name: "L" }, destination: { number: "0917", name: "J" },
+        referenceNumber: "r", callbackUrl: "https://x/cb", idempotencyKey: "r",
+      }),
+    ).rejects.toBeInstanceOf(PaymongoApiError);
   });
 });
