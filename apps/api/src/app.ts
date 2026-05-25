@@ -11,6 +11,7 @@ import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
 import { billing, billingDev, discountCodesRouter } from "./routes/billing";
 import { subscriptions } from "./routes/subscriptions";
+import { payouts } from "./routes/payouts";
 import { referrals, referralLinksPublic } from "./routes/referrals";
 import { files } from "./routes/files";
 import { references } from "./routes/references";
@@ -50,6 +51,7 @@ export function createApp() {
   app.route("/billing", billing);
   app.route("/billing/discount-codes", discountCodesRouter);
   app.route("/lawyer/subscription", subscriptions);
+  app.route("/lawyer/payouts", payouts);
   app.route("/referrals", referrals);
   app.route("/directory/referral-links", referralLinksPublic);
   app.route("/files", files);
