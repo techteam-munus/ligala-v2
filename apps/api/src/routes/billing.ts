@@ -18,6 +18,13 @@ import {
   newInvoiceNumber,
 } from "../lib/billing";
 import { RENEWAL_DAYS, addDays } from "../lib/subscription";
+import { env } from "../lib/env";
+import {
+  createCheckoutSession,
+  PAYMONGO_MIN_AMOUNT_CENTS,
+  PaymongoApiError,
+  PaymongoUnreachableError,
+} from "../lib/paymongo";
 
 function newId() {
   return crypto.randomUUID();
@@ -395,10 +402,58 @@ export const billing = new Hono()
       throw new HTTPException(409, { message: "invoice_already_paid" });
     }
 
-    // Dev: every provider returns the same shape — a checkoutUrl the client
-    // can POST to in order to simulate a successful payment. Real PayMongo /
-    // PayPal will return a redirect URL hosted by the provider; the simulate
-    // path stays available behind a build flag for E2E tests.
+    if (provider === "paypal") {
+      throw new HTTPException(501, { message: "paypal_not_enabled" });
+    }
+
+    if (provider === "paymongo") {
+      const secretKey = env().PAYMONGO_SECRET_KEY;
+      if (!secretKey) {
+        console.warn("paymongo_not_configured: PAYMONGO_SECRET_KEY is unset");
+        throw new HTTPException(501, { message: "paymongo_not_configured" });
+      }
+      if (remaining < PAYMONGO_MIN_AMOUNT_CENTS) {
+        throw new HTTPException(409, { message: "amount_below_paymongo_minimum" });
+      }
+      const baseUrl = env().BETTER_AUTH_URL;
+      try {
+        const session = await createCheckoutSession({
+          secretKey,
+          amountCents: remaining,
+          currency: "PHP",
+          lineDescription: `Ligala invoice ${invoice.number}`,
+          successUrl: `${baseUrl}/invoices/${invoice.id}?status=success`,
+          cancelUrl: `${baseUrl}/invoices/${invoice.id}?status=cancelled`,
+          referenceNumber: invoice.id,
+          metadata: { invoiceId: invoice.id, lawyerId: invoice.lawyerId },
+          customerEmail: user.email,
+        });
+        return c.json({
+          provider,
+          providerPaymentId: session.sessionId,
+          amountCents: remaining,
+          currency: invoice.currency,
+          checkoutUrl: session.checkoutUrl,
+        });
+      } catch (err) {
+        if (err instanceof PaymongoApiError) {
+          console.error(
+            "paymongo_request_failed",
+            err.status,
+            err.bodyText.slice(0, 200),
+          );
+          throw new HTTPException(502, { message: "paymongo_request_failed" });
+        }
+        if (err instanceof PaymongoUnreachableError) {
+          console.error("paymongo_unreachable", err.cause);
+          throw new HTTPException(502, { message: "paymongo_unreachable" });
+        }
+        throw err;
+      }
+    }
+
+    // provider === "dev_simulate": stays available so the existing Playwright
+    // + manual smoke flows work without provisioning real PayMongo keys.
     const intentId = `pi_${provider}_${crypto.randomUUID().slice(0, 12)}`;
     const apiOrigin = c.req.url.split(c.req.path)[0];
     return c.json({

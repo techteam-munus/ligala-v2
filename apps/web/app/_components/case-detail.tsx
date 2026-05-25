@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   CircleDashed,
+  ExternalLink,
   FileText,
   Hash,
   MessageCircle,
@@ -22,6 +23,7 @@ import {
   closeCase,
   decideOnCase,
   decideOnEngagement,
+  getCaseAttachmentViewUrl,
   sendEngagement,
 } from "@/lib/actions/case";
 import { cn } from "@/lib/utils";
@@ -1110,6 +1112,51 @@ function NoteVisibilityChip({ visibility }: { visibility: Note["visibility"] }) 
 
 // ---------- Attachments ------------------------------------------------
 
+function ViewAttachmentButton({
+  caseId,
+  attachmentId,
+}: {
+  caseId: string;
+  attachmentId: string;
+}) {
+  const [pending, start] = useTransition();
+  function onClick() {
+    // Open the tab synchronously inside the click handler so popup blockers
+    // accept it, then navigate once the signed URL is fetched. We do NOT pass
+    // `noopener` here because that makes window.open return null in modern
+    // browsers, leaving us no handle to navigate. The destination is S3 (a
+    // different origin), so window.opener is cross-origin and effectively
+    // inert from S3's side regardless.
+    const tab = window.open("about:blank", "_blank");
+    start(async () => {
+      try {
+        const url = await getCaseAttachmentViewUrl(caseId, attachmentId);
+        if (tab && !tab.closed) {
+          tab.location.href = url;
+        } else {
+          // Popup blocker swallowed the sync open; final fallback.
+          window.location.href = url;
+        }
+      } catch {
+        if (tab && !tab.closed) tab.close();
+      }
+    });
+  }
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      disabled={pending}
+      aria-label="Open attachment in new tab"
+    >
+      <ExternalLink className="size-3.5" />
+      {pending ? "Opening…" : "View"}
+    </Button>
+  );
+}
+
 function AttachmentsSection({
   caseId,
   initial,
@@ -1130,10 +1177,9 @@ function AttachmentsSection({
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            filename: file.name,
-            mime: file.type || "application/octet-stream",
-            sizeBytes: file.size,
             kind: "case_attachment",
+            contentType: file.type || "application/octet-stream",
+            byteSize: file.size,
           }),
         });
         if (!presignRes.ok) throw new Error("presign failed");
@@ -1211,6 +1257,7 @@ function AttachmentsSection({
                     </p>
                   </div>
                 </div>
+                <ViewAttachmentButton caseId={caseId} attachmentId={a.id} />
               </li>
             ))}
           </ul>

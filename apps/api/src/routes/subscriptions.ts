@@ -20,12 +20,11 @@ import {
 } from "../lib/subscription";
 import {
   createCheckoutSession,
+  PAYMONGO_MIN_AMOUNT_CENTS,
   PaymongoApiError,
   PaymongoUnreachableError,
 } from "../lib/paymongo";
 import { env } from "../lib/env";
-
-const PAYMONGO_MIN_AMOUNT_CENTS = 2000;
 
 function newId() {
   return crypto.randomUUID();

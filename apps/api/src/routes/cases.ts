@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db, schema } from "@ligala/db";
 import {
   caseAttachmentInput,
@@ -11,6 +13,14 @@ import {
   caseNoteInput,
 } from "@ligala/shared/schemas";
 import { requireSession } from "../middleware/session";
+
+const ATTACHMENT_VIEW_TTL_SECONDS = 15 * 60;
+
+let s3: S3Client | null = null;
+function s3Client(): S3Client {
+  s3 ??= new S3Client({ region: process.env.AWS_REGION ?? "ap-southeast-1" });
+  return s3;
+}
 
 function newId() {
   return crypto.randomUUID();
@@ -355,6 +365,54 @@ export const cases = new Hono()
       filename: input.filename,
     });
     return c.json({ attachment }, 201);
+  })
+
+  // Short-lived presigned GET URL so the client/lawyer can open or download an
+  // attachment. The bucket is private (BlockPublicAccess.BLOCK_ALL) so direct
+  // S3 URLs don't work — every view request mints a fresh signed URL whose
+  // path encodes the S3 key, with ResponseContentDisposition forcing the
+  // browser to use the original filename (S3 keys are UUIDs).
+  .get("/:id/attachments/:attachmentId/view-url", async (c) => {
+    const user = c.get("user");
+    const caseRow = await loadCaseFor(c.req.param("id"), user);
+    const attachment = await db().query.caseAttachments.findFirst({
+      where: and(
+        eq(schema.caseAttachments.id, c.req.param("attachmentId")),
+        eq(schema.caseAttachments.caseId, caseRow.id),
+      ),
+    });
+    if (!attachment) {
+      throw new HTTPException(404, { message: "attachment_not_found" });
+    }
+    const bucket = process.env.S3_UPLOADS_BUCKET;
+    if (!bucket) {
+      // Dev fallback: no real bucket, so just point at the dev sink. The
+      // file won't actually be there but lets the UI flow complete locally.
+      const apiUrl = process.env.API_URL ?? "http://localhost:8787";
+      return c.json({
+        url: `${apiUrl}/files/_dev/upload?key=${encodeURIComponent(attachment.s3Key)}`,
+        expiresAt: new Date(
+          Date.now() + ATTACHMENT_VIEW_TTL_SECONDS * 1000,
+        ).toISOString(),
+      });
+    }
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: attachment.s3Key,
+      ResponseContentDisposition: `inline; filename="${encodeURIComponent(
+        attachment.filename,
+      )}"`,
+      ResponseContentType: attachment.mime,
+    });
+    const url = await getSignedUrl(s3Client(), command, {
+      expiresIn: ATTACHMENT_VIEW_TTL_SECONDS,
+    });
+    return c.json({
+      url,
+      expiresAt: new Date(
+        Date.now() + ATTACHMENT_VIEW_TTL_SECONDS * 1000,
+      ).toISOString(),
+    });
   })
 
   // --- Activities (read-only timeline) --------------------------------------

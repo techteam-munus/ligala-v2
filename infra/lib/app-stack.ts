@@ -11,6 +11,7 @@ import type * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type * as rds from "aws-cdk-lib/aws-rds";
 import * as amplify from "@aws-cdk/aws-amplify-alpha";
 import { Monitoring } from "./monitoring";
+import { AmplifyEnvInjector } from "./amplify-env-injector";
 
 export interface AppStackProps extends StackProps {
   envName: string;
@@ -157,17 +158,15 @@ export class AppStack extends Stack {
     // GitHub repo through the Amplify Console (which uses the AWS-Amplify
     // GitHub App). Subsequent pushes auto-build via the Console-managed
     // webhook + the amplify.yml at repo root.
+    //
+    // Env vars: we DON'T pass `environmentVariables` here. The full env-var
+    // set (CDK-managed values + secret-derived values like BETTER_AUTH_SECRET)
+    // is written by the AmplifyEnvInjector below, which owns this app's env
+    // entirely. Passing them on App create would race with the injector's
+    // update on every deploy.
     this.webApp = new amplify.App(this, "WebApp", {
       appName: `ligala-v2-${props.envName}-web`,
       platform: amplify.Platform.WEB_COMPUTE,
-      environmentVariables: {
-        API_URL: this.httpApi.apiEndpoint,
-        AMPLIFY_MONOREPO_APP_ROOT: "apps/web",
-        AMPLIFY_DIFF_DEPLOY: "false",
-        _LIVE_UPDATES: JSON.stringify([
-          { name: "Node.js version", pkg: "node", type: "nvm", version: "20" },
-        ]),
-      },
     });
 
     // Compose the URL the deploy branch will serve at so the API Lambda can
@@ -175,6 +174,26 @@ export class AppStack extends Stack {
     // renamed or a custom domain is added, re-set this env var.
     const webBranchUrl = `https://${deployBranch}.${this.webApp.appId}.amplifyapp.com`;
     this.apiLambda.addEnvironment("BETTER_AUTH_URL", webBranchUrl);
+
+    // Inject Amplify env vars (CDK-managed + secret-derived). See construct
+    // docstring for the rationale (avoids embedding secret values in the
+    // CloudFormation template).
+    new AmplifyEnvInjector(this, "WebEnv", {
+      amplifyApp: this.webApp,
+      sourceSecret: props.appSecret,
+      baseEnvVars: {
+        API_URL: this.httpApi.apiEndpoint,
+        AMPLIFY_MONOREPO_APP_ROOT: "apps/web",
+        AMPLIFY_DIFF_DEPLOY: "false",
+        _LIVE_UPDATES: JSON.stringify([
+          { name: "Node.js version", pkg: "node", type: "nvm", version: "20" },
+        ]),
+      },
+      // Used by `apps/web/lib/ibp-verification-cookie.ts` to sign the
+      // short-lived IBP-verification cookie. Same secret value as the API
+      // Lambda so cookies stay valid across both surfaces.
+      secretJsonKeys: ["BETTER_AUTH_SECRET"],
+    });
 
     // ── Outputs ────────────────────────────────────────────────────────────
     new CfnOutput(this, "ApiUrl", {

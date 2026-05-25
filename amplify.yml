@@ -18,6 +18,10 @@ applications:
             # so they're available via process.env at request time.
             - echo "API_URL=$API_URL" > .env.production
             - echo "NEXT_PUBLIC_API_URL=$API_URL" >> .env.production
+            # Used by apps/web/lib/ibp-verification-cookie.ts to HMAC-sign the
+            # short-lived IBP verification cookie. Must match the same secret
+            # the API Lambda reads from Secrets Manager.
+            - echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET" >> .env.production
             - pnpm build
       artifacts:
         baseDirectory: .next

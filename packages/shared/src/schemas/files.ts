@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 export const presignRequest = z.object({
-  kind: z.enum(["kyc_document", "lawyer_photo", "office_photo"]),
+  kind: z.enum([
+    "kyc_document",
+    "lawyer_photo",
+    "office_photo",
+    "case_attachment",
+  ]),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp", "application/pdf"]),
   byteSize: z.number().int().positive().max(10 * 1024 * 1024),
 });

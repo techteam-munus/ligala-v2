@@ -7,6 +7,7 @@ import {
 } from "aws-cdk-lib";
 import type { Construct } from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
@@ -175,6 +176,31 @@ export class CoreStack extends Stack {
       maxConnectionsPercent: 95,
     });
 
+    // ── Proxy ⇄ cluster connectivity ───────────────────────────────────────
+    // The proxy and the cluster both run in `dbClusterSecurityGroup`, so the
+    // proxy's backend connections to Aurora (tcp/5432) are intra-SG traffic.
+    // CDK's DatabaseProxy construct adds an implicit self-rule for this, but we
+    // declare it explicitly so the dependency is visible in code and re-asserted
+    // on every deploy (egress is required because allowAllOutbound is false).
+    //
+    // ⚠️  Do NOT detach the cluster from this SG — e.g. a manual
+    // `modify-db-cluster --vpc-security-group-ids ...` to get direct access.
+    // Moving the cluster to another SG silently black-holes the proxy→DB path:
+    // the proxy can't open backend connections, and every query times out with
+    // RDS Proxy "Timed-out waiting to acquire database connection" (surfaces as
+    // 504s on SSR pages). For ad-hoc direct access, port-forward to the proxy
+    // endpoint through the bastion + SSM instead (see the bastion comment below).
+    dbClusterSecurityGroup.addIngressRule(
+      dbClusterSecurityGroup,
+      ec2.Port.tcp(5432),
+      "Proxy to Aurora (intra cluster SG)",
+    );
+    dbClusterSecurityGroup.addEgressRule(
+      dbClusterSecurityGroup,
+      ec2.Port.tcp(5432),
+      "Proxy to Aurora (intra cluster SG)",
+    );
+
     // ── App secret ─────────────────────────────────────────────────────────
     // One Secrets Manager entry holds:
     //   - BETTER_AUTH_SECRET (auto-generated, 64 chars, no punctuation)
@@ -201,6 +227,60 @@ export class CoreStack extends Stack {
         passwordLength: 64,
       },
     });
+
+    // ── Bastion (non-prod only) ────────────────────────────────────────────
+    // t4g.nano in PRIVATE_WITH_EGRESS with DbClientSg attached. No SSH key,
+    // no public IP, no inbound rules — all access is via SSM Session Manager
+    // (outbound only, polled by the SSM agent built into Amazon Linux 2023).
+    // Use case: DBeaver/psql port-forwarding to the RDS Proxy from a laptop.
+    //
+    // Stop the instance when not in use to drop bill to ~$0 (root EBS only).
+    // Connect:
+    //   aws ssm start-session --target <BastionInstanceId> \
+    //     --document-name AWS-StartPortForwardingSessionToRemoteHost \
+    //     --parameters host=<DbProxyEndpoint>,portNumber=5432,localPortNumber=5432
+    // Then point DBeaver at localhost:5432 with creds from the DbMasterSecret.
+    if (!isProd) {
+      const bastionRole = new iam.Role(this, "BastionRole", {
+        assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
+        managedPolicies: [
+          iam.ManagedPolicy.fromAwsManagedPolicyName(
+            "AmazonSSMManagedInstanceCore",
+          ),
+        ],
+      });
+
+      const bastion = new ec2.Instance(this, "Bastion", {
+        vpc: this.vpc,
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        instanceType: ec2.InstanceType.of(
+          ec2.InstanceClass.T4G,
+          ec2.InstanceSize.NANO,
+        ),
+        machineImage: ec2.MachineImage.latestAmazonLinux2023({
+          cpuType: ec2.AmazonLinuxCpuType.ARM_64,
+        }),
+        role: bastionRole,
+        securityGroup: this.dbClientSecurityGroup,
+        requireImdsv2: true,
+        blockDevices: [
+          {
+            deviceName: "/dev/xvda",
+            volume: ec2.BlockDeviceVolume.ebs(8, {
+              volumeType: ec2.EbsDeviceVolumeType.GP3,
+              encrypted: true,
+              deleteOnTermination: true,
+            }),
+          },
+        ],
+      });
+
+      new CfnOutput(this, "BastionInstanceId", {
+        value: bastion.instanceId,
+        description:
+          "EC2 bastion for SSM port-forwarding into the VPC. Stop when idle.",
+      });
+    }
 
     // ── Outputs ────────────────────────────────────────────────────────────
     new CfnOutput(this, "VpcId", { value: this.vpc.vpcId });
