@@ -243,6 +243,19 @@ function buildConn(txLedgerRows: unknown[]) {
   };
 }
 
+/**
+ * Like buildConn but wires the OUTER conn's insert to the hoisted mockInsert
+ * so that failure-path re-credit calls can be inspected.
+ */
+function buildConnForFailurePath(txLedgerRows: unknown[]) {
+  const base = buildConn(txLedgerRows);
+  // Track values() calls so tests can assert the re-credit entries
+  const mockOuterInsertValues = vi.fn().mockResolvedValue([]);
+  mockInsert.mockReturnValue({ values: mockOuterInsertValues });
+  base.insert = mockInsert as typeof base.insert;
+  return { conn: base, mockOuterInsertValues };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -435,5 +448,99 @@ describe("POST /lawyer/payouts — withdrawal", () => {
     expect(res.status).toBe(409);
     const body = await res.json() as { error: string };
     expect(body.error).toBe("amount_below_minimum");
+  });
+
+  it("PaymongoApiError → 502 paymongo_request_failed + balance re-credited", async () => {
+    // Set up paymongo path: PAYMONGO_WALLET_ACCOUNT_NUMBER is truthy
+    mockEnvState.PAYMONGO_WALLET_ACCOUNT_NUMBER = "ACCT123";
+    mockEnvState.PAYMONGO_SECRET_KEY = "sk_test_xxx";
+    mockEnvState.PAYMONGO_WALLET_BIC = undefined;
+
+    // The tx insert must return a payout row with provider "paymongo"
+    const paymongoPayoutRow = { ...payoutCreatedRow, provider: "paymongo" as const };
+    mockInsertValuesReturning.mockResolvedValueOnce([paymongoPayoutRow]);
+
+    // Sufficient available balance (100 000 cents, request 60 000)
+    const { conn, mockOuterInsertValues } = buildConnForFailurePath([
+      { direction: "credit", amountCents: 100000, clearsAt: new Date("2020-01-01") },
+    ]);
+    mockDb.mockReturnValue(conn);
+
+    // createBatchTransfer rejects with PaymongoApiError
+    const { PaymongoApiError } = await import("../lib/paymongo");
+    mockCreateBatchTransfer.mockRejectedValueOnce(new PaymongoApiError(422, "card_declined"));
+
+    const app = buildApp();
+    const res = await app.request(
+      req("/lawyer/payouts", {
+        method: "POST",
+        body: { payoutMethodId: "meth_1", amountCents: 60000 },
+      }),
+    );
+
+    // 1. HTTP 502
+    expect(res.status).toBe(502);
+    const body = await res.json() as { error: string };
+    // 2. Error code
+    expect(body.error).toBe("paymongo_request_failed");
+
+    // 3. Re-credit: outer conn.insert called with two adjustment credit entries
+    expect(mockOuterInsertValues).toHaveBeenCalledOnce();
+    const [entries] = mockOuterInsertValues.mock.calls[0] as [Array<{ kind: string; direction: string; amountCents: number }>];
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.kind === "adjustment" && e.direction === "credit")).toBe(true);
+    // One entry for net, one for fee
+    const netEntry = entries.find((e) => e.amountCents === paymongoPayoutRow.netCents);
+    const feeEntry = entries.find((e) => e.amountCents === paymongoPayoutRow.feeCents);
+    expect(netEntry).toBeDefined();
+    expect(feeEntry).toBeDefined();
+  });
+
+  it("PaymongoUnreachableError → 502 paymongo_unreachable + balance re-credited", async () => {
+    // Set up paymongo path
+    mockEnvState.PAYMONGO_WALLET_ACCOUNT_NUMBER = "ACCT123";
+    mockEnvState.PAYMONGO_SECRET_KEY = "sk_test_xxx";
+    mockEnvState.PAYMONGO_WALLET_BIC = undefined;
+
+    // The tx insert must return a payout row with provider "paymongo"
+    const paymongoPayoutRow = { ...payoutCreatedRow, provider: "paymongo" as const };
+    mockInsertValuesReturning.mockResolvedValueOnce([paymongoPayoutRow]);
+
+    // Sufficient available balance
+    const { conn, mockOuterInsertValues } = buildConnForFailurePath([
+      { direction: "credit", amountCents: 100000, clearsAt: new Date("2020-01-01") },
+    ]);
+    mockDb.mockReturnValue(conn);
+
+    // createBatchTransfer rejects with PaymongoUnreachableError
+    const { PaymongoUnreachableError } = await import("../lib/paymongo");
+    mockCreateBatchTransfer.mockRejectedValueOnce(
+      new PaymongoUnreachableError(new Error("connect ECONNREFUSED")),
+    );
+
+    const app = buildApp();
+    const res = await app.request(
+      req("/lawyer/payouts", {
+        method: "POST",
+        body: { payoutMethodId: "meth_1", amountCents: 60000 },
+      }),
+    );
+
+    // 1. HTTP 502
+    expect(res.status).toBe(502);
+    const body = await res.json() as { error: string };
+    // 2. Error code
+    expect(body.error).toBe("paymongo_unreachable");
+
+    // 3. Re-credit: outer conn.insert called with two adjustment credit entries
+    expect(mockOuterInsertValues).toHaveBeenCalledOnce();
+    const [entries] = mockOuterInsertValues.mock.calls[0] as [Array<{ kind: string; direction: string; amountCents: number }>];
+    expect(entries).toHaveLength(2);
+    expect(entries.every((e) => e.kind === "adjustment" && e.direction === "credit")).toBe(true);
+    // One entry for net, one for fee
+    const netEntry = entries.find((e) => e.amountCents === paymongoPayoutRow.netCents);
+    const feeEntry = entries.find((e) => e.amountCents === paymongoPayoutRow.feeCents);
+    expect(netEntry).toBeDefined();
+    expect(feeEntry).toBeDefined();
   });
 });
