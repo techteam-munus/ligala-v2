@@ -173,6 +173,17 @@ export class AppStack extends Stack {
     emailQueue.grantSendMessages(this.apiLambda);
     this.apiLambda.addEnvironment("EMAIL_QUEUE_URL", emailQueue.queueUrl);
 
+    // Hard email verification: unverified users can't sign in until they
+    // confirm. Enforced by the API Lambda's Better Auth instance — the web app
+    // proxies all /api/auth/* here (next.config rewrite), so the API is the
+    // single auth authority. Non-prod also enables the self-serve verify route
+    // (/accounts/_dev/verify-email) so e2e automation can mark a freshly
+    // signed-up user verified without a real inbox round-trip.
+    this.apiLambda.addEnvironment("EMAIL_VERIFICATION_REQUIRED", "true");
+    if (props.envName !== "prod") {
+      this.apiLambda.addEnvironment("EMAIL_DEV_VERIFY_ENABLED", "true");
+    }
+
     // Monitoring (per the "attach on the line the resource is created" convention).
     this.monitoring.attachLambdaErrors(emailWorker, "email-worker");
     this.monitoring.attachLambdaThrottles(emailWorker, "email-worker");

@@ -203,7 +203,13 @@
       "Bash(xargs grep -l \"sendResetPassword\\\\|emailVerification\")",
       "Bash(xargs grep -l \"name\")",
       "Bash(awk '/if \\\\\\(input\\\\.status === \"succeeded\"\\\\\\)/,/^  return \\\\{ idempotent: false/')",
-      "Bash(gh pr create --base develop --head feature/email-pipeline --title 'feat: transactional email pipeline \\(SQS worker + producers\\)' --body ' *)"
+      "Bash(gh pr create --base develop --head feature/email-pipeline --title 'feat: transactional email pipeline \\(SQS worker + producers\\)' --body ' *)",
+      "Bash(git fetch *)",
+      "Bash(xargs -I{} aws sqs get-queue-attributes --queue-url {} --attribute-names ApproximateNumberOfMessages --region ap-southeast-1 --query \"Attributes\" --output json)",
+      "PowerShell(aws lambda get-function-configuration --function-name ligala-v2-dev-api --region ap-southeast-1 --query \"Environment.Variables.{REQ:EMAIL_VERIFICATION_REQUIRED,DEV:EMAIL_DEV_VERIFY_ENABLED}\" --output json)",
+      "PowerShell(aws apigatewayv2 get-apis --region ap-southeast-1 --query \"Items[?Name=='ligala-v2-dev-api'].ApiEndpoint\" --output text)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(gh pr create --base develop --head fix/worker-esm-lambda-bundle --title 'fix\\(workers\\): ESM worker bundles + enable hard email verification' --body ' *)"
     ]
   }
 }
