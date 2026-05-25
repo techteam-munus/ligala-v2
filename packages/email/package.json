@@ -14,12 +14,16 @@
     "clean": "rm -rf .turbo"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.700.0",
+    "@ligala/db": "workspace:*",
+    "@ligala/shared": "workspace:*",
     "@react-email/components": "^0.0.31",
     "@react-email/render": "^1.0.3",
     "react": "^19.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
   }
 }
