@@ -2,6 +2,7 @@ import {
   Briefcase,
   Building,
   Building2,
+  CreditCard,
   LayoutDashboard,
   Link2,
   Receipt,
@@ -70,6 +71,7 @@ const LAWYER: PortalConfig = {
     {
       label: "Billing",
       items: [
+        { href: "/lawyer/subscribe", label: "Subscription", icon: CreditCard },
         { href: "/lawyer/invoices", label: "Invoices", icon: Receipt },
         { href: "/lawyer/discount-codes", label: "Discount codes", icon: TicketPercent },
       ],
