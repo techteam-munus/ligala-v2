@@ -23,6 +23,7 @@
     "clean": "rm -rf .turbo"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.700.0",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5"
   },

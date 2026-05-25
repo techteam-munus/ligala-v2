@@ -8,6 +8,7 @@ import {
   engagementInput,
 } from "@ligala/shared/schemas";
 import { requireSession } from "../middleware/session";
+import { notifyCaseStatus } from "../lib/case-emails";
 
 function newId() {
   return crypto.randomUUID();
@@ -18,10 +19,12 @@ async function logActivity(
   actorUserId: string | null,
   kind: (typeof schema.caseActivityKind.enumValues)[number],
   payload: Record<string, unknown> | null = null,
-) {
+): Promise<string> {
+  const id = newId();
   await db()
     .insert(schema.caseActivities)
-    .values({ id: newId(), caseId, actorUserId, kind, payload });
+    .values({ id, caseId, actorUserId, kind, payload });
+  return id;
 }
 
 /**
@@ -68,7 +71,8 @@ export const engagements = new Hono()
 
     const input = c.req.valid("json");
     const id = newId();
-    const [engagement] = await db()
+    const conn = db();
+    const [engagement] = await conn
       .insert(schema.engagements)
       .values({
         id,
@@ -81,10 +85,22 @@ export const engagements = new Hono()
         status: "sent",
       })
       .returning();
-    await logActivity(caseRow.id, user.id, "engagement_sent", {
+    const sentActivityId = await logActivity(caseRow.id, user.id, "engagement_sent", {
       engagementId: id,
       rateType: input.rateType,
     });
+
+    // Notify the client that the lawyer has sent engagement terms.
+    await notifyCaseStatus({
+      activityId: sentActivityId,
+      recipientUserId: caseRow.clientId,
+      recipientPortal: "client",
+      caseId: caseRow.id,
+      caseRef: caseRow.title,
+      event: "engagement_sent",
+      actorName: user.name,
+    });
+
     return c.json({ engagement }, 201);
   })
 
@@ -128,10 +144,22 @@ export const engagements = new Hono()
             updatedAt: now,
           })
           .where(eq(schema.engagements.id, id));
-        await logActivity(caseRow.id, user.id, "engagement_declined", {
+        const declinedActivityId = await logActivity(caseRow.id, user.id, "engagement_declined", {
           engagementId: id,
           reason,
         });
+
+        // Notify the lawyer that the client declined the engagement.
+        await notifyCaseStatus({
+          activityId: declinedActivityId,
+          recipientUserId: caseRow.lawyerId,
+          recipientPortal: "lawyer",
+          caseId: caseRow.id,
+          caseRef: caseRow.title,
+          event: "engagement_declined",
+          actorName: user.name,
+        });
+
         return c.json({ status: "declined" });
       }
 
@@ -144,12 +172,24 @@ export const engagements = new Hono()
         .update(schema.cases)
         .set({ status: "active", updatedAt: now })
         .where(eq(schema.cases.id, caseRow.id));
-      await logActivity(caseRow.id, user.id, "engagement_signed", {
+      const signedActivityId = await logActivity(caseRow.id, user.id, "engagement_signed", {
         engagementId: id,
       });
       await logActivity(caseRow.id, user.id, "activated", {
         reason: "engagement_signed",
       });
+
+      // Notify the lawyer that the client signed the engagement.
+      await notifyCaseStatus({
+        activityId: signedActivityId,
+        recipientUserId: caseRow.lawyerId,
+        recipientPortal: "lawyer",
+        caseId: caseRow.id,
+        caseRef: caseRow.title,
+        event: "engagement_signed",
+        actorName: user.name,
+      });
+
       return c.json({ status: "signed" });
     },
   );

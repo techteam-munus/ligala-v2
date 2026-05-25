@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db, schema } from "@ligala/db";
+import { dispatchEmail } from "@ligala/email";
+import { buildVerificationMessage, buildResetMessage } from "./email-hooks";
 
 // Better Auth performs its own `process.env.BETTER_AUTH_SECRET` lookup at init,
 // independent of the `secret` field below. Without a value it throws during
@@ -43,8 +45,17 @@ export const auth = betterAuth({
   basePath: "/auth",
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: process.env.EMAIL_VERIFICATION_REQUIRED === "true",
     minPasswordLength: 8,
+    sendResetPassword: async ({ user, url }: { user: { id: string; email: string; name?: string | null }; url: string }) => {
+      await dispatchEmail(buildResetMessage(user, url));
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string; name?: string | null }; url: string }) => {
+      await dispatchEmail(buildVerificationMessage(user, url));
+    },
   },
   ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
     ? {
