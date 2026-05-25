@@ -45,6 +45,9 @@ jobs:
       - name: Build api Lambda bundle
         run: pnpm --filter @ligala/api build
 
+      - name: Build worker Lambda bundles
+        run: pnpm --filter @ligala/workers build
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:

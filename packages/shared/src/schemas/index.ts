@@ -15,3 +15,4 @@ export * from "./subscriptions";
 export * from "./referral";
 export * from "./admin";
 export * from "./signup";
+export * from "./email";

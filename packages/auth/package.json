@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "better-auth": "^1.0.0",
-    "@ligala/db": "workspace:*"
+    "@ligala/db": "workspace:*",
+    "@ligala/email": "workspace:*",
+    "@ligala/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.16.0",

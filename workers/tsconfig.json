@@ -4,6 +4,8 @@
     "outDir": "dist",
     "rootDir": ".",
     "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["dom", "ES2022"],
     "types": ["node", "aws-lambda"]
   },
   "include": ["**/*.ts"],

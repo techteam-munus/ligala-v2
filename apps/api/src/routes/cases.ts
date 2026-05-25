@@ -13,6 +13,7 @@ import {
   caseNoteInput,
 } from "@ligala/shared/schemas";
 import { requireSession } from "../middleware/session";
+import { notifyCaseStatus } from "../lib/case-emails";
 
 const ATTACHMENT_VIEW_TTL_SECONDS = 15 * 60;
 
@@ -29,16 +30,19 @@ function newId() {
 /**
  * Audit-log helper. Every state-changing handler calls this so the timeline
  * shown to client + lawyer is reconstructable from a single table.
+ * Returns the generated activity id so callers can use it as a dedupeKey.
  */
 async function logActivity(
   caseId: string,
   actorUserId: string | null,
   kind: (typeof schema.caseActivityKind.enumValues)[number],
   payload: Record<string, unknown> | null = null,
-) {
+): Promise<string> {
+  const id = newId();
   await db()
     .insert(schema.caseActivities)
-    .values({ id: newId(), caseId, actorUserId, kind, payload });
+    .values({ id, caseId, actorUserId, kind, payload });
+  return id;
 }
 
 /**
@@ -169,10 +173,22 @@ export const cases = new Hono()
           input.type === "probono" ? (input.probonoReason ?? null) : null,
       })
       .returning();
-    await logActivity(id, user.id, "created", {
+    const createdActivityId = await logActivity(id, user.id, "created", {
       type: input.type,
       referralId,
     });
+
+    // Notify the lawyer that a new case has been submitted to them.
+    await notifyCaseStatus({
+      activityId: createdActivityId,
+      recipientUserId: profile.userId,
+      recipientPortal: "lawyer",
+      caseId: id,
+      caseRef: input.title,
+      event: "case_created",
+      actorName: user.name,
+    });
+
     return c.json({ case: created }, 201);
   })
 
@@ -212,7 +228,19 @@ export const cases = new Hono()
           updatedAt: now,
         })
         .where(eq(schema.cases.id, caseRow.id));
-      await logActivity(caseRow.id, user.id, "declined", { reason });
+      const declinedActivityId = await logActivity(caseRow.id, user.id, "declined", { reason });
+
+      // Notify the client that their case was declined.
+      await notifyCaseStatus({
+        activityId: declinedActivityId,
+        recipientUserId: caseRow.clientId,
+        recipientPortal: "client",
+        caseId: caseRow.id,
+        caseRef: caseRow.title,
+        event: "case_declined",
+        actorName: user.name,
+      });
+
       return c.json({ status: "declined" });
     }
 
@@ -222,10 +250,22 @@ export const cases = new Hono()
       .update(schema.cases)
       .set({ status: nextStatus, decidedAt: now, updatedAt: now })
       .where(eq(schema.cases.id, caseRow.id));
-    await logActivity(caseRow.id, user.id, "accepted", null);
+    const acceptedActivityId = await logActivity(caseRow.id, user.id, "accepted", null);
     if (nextStatus === "active") {
       await logActivity(caseRow.id, user.id, "activated", { reason: "probono_accepted" });
     }
+
+    // Notify the client that their case was accepted.
+    await notifyCaseStatus({
+      activityId: acceptedActivityId,
+      recipientUserId: caseRow.clientId,
+      recipientPortal: "client",
+      caseId: caseRow.id,
+      caseRef: caseRow.title,
+      event: "case_accepted",
+      actorName: user.name,
+    });
+
     return c.json({ status: nextStatus });
   })
 
@@ -262,7 +302,8 @@ export const cases = new Hono()
       throw new HTTPException(409, { message: "case_not_active" });
     }
     const now = new Date();
-    await db()
+    const conn = db();
+    await conn
       .update(schema.cases)
       .set({
         status: "closed",
@@ -271,7 +312,27 @@ export const cases = new Hono()
         updatedAt: now,
       })
       .where(eq(schema.cases.id, caseRow.id));
-    await logActivity(caseRow.id, user.id, "closed", { reason });
+    const closedActivityId = await logActivity(caseRow.id, user.id, "closed", { reason });
+
+    // Notify every party except the actor (admin → both; lawyer-actor → client;
+    // client-actor → lawyer).
+    const closeRecipients: { id: string | null; portal: "client" | "lawyer" }[] = [
+      { id: caseRow.clientId, portal: "client" },
+      { id: caseRow.lawyerId, portal: "lawyer" },
+    ];
+    for (const r of closeRecipients) {
+      if (!r.id || r.id === user.id) continue;
+      await notifyCaseStatus({
+        activityId: closedActivityId,
+        recipientUserId: r.id,
+        recipientPortal: r.portal,
+        caseId: caseRow.id,
+        caseRef: caseRow.title,
+        event: "case_closed",
+        actorName: user.name,
+      });
+    }
+
     return c.json({ status: "closed" });
   })
 
