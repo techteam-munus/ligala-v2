@@ -10,6 +10,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { requireSession } from "../middleware/session";
 import { slugify, withRandomSuffix } from "../lib/slug";
+import { env } from "../lib/env";
 import {
   SUBSCRIPTION_PRICE_CENTS,
   TRIAL_DAYS,
@@ -174,4 +175,21 @@ export const clients = new Hono()
       where: eq(schema.clientProfiles.userId, user.id),
     });
     return c.json({ profile });
+  })
+
+  /**
+   * Dev-only: mark the signed-in user's email as verified.
+   * Only active when EMAIL_DEV_VERIFY_ENABLED=true. Returns 404 otherwise,
+   * matching the pattern used by /billing/dev/* and /files/_dev/upload.
+   */
+  .post("/_dev/verify-email", async (c) => {
+    if (env().EMAIL_DEV_VERIFY_ENABLED !== "true") {
+      return c.json({ message: "not_found" }, 404);
+    }
+    const user = c.get("user");
+    await db()
+      .update(schema.user)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(schema.user.id, user.id));
+    return c.json({ ok: true });
   });
