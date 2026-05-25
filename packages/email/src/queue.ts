@@ -1,6 +1,7 @@
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 import { db, schema } from "@ligala/db";
 import type { EmailMessage } from "@ligala/shared/schemas";
+import { isUndeliverableRecipient } from "./suppress";
 
 let client: SQSClient | null = null;
 function sqs(): SQSClient {
@@ -24,10 +25,18 @@ export async function enqueueEmail(msg: EmailMessage): Promise<void> {
  *  request — a lost notification is recoverable; a failed user action is not. */
 export async function dispatchEmail(msg: EmailMessage): Promise<void> {
   try {
+    // Reserved test/doc TLDs (e.g. the e2e suite's @*.test addresses) can never
+    // be delivered — record them suppressed and skip the queue so they never
+    // reach SES. The worker repeats this check as a backstop.
+    const suppressed = isUndeliverableRecipient(msg.to);
     await db()
       .insert(schema.emailLog)
-      .values({ id: crypto.randomUUID(), kind: msg.kind, recipient: msg.to, dedupeKey: msg.dedupeKey, status: "queued" })
+      .values({ id: crypto.randomUUID(), kind: msg.kind, recipient: msg.to, dedupeKey: msg.dedupeKey, status: suppressed ? "suppressed" : "queued" })
       .onConflictDoNothing({ target: schema.emailLog.dedupeKey });
+    if (suppressed) {
+      console.info("[email] suppressing undeliverable recipient", msg.kind, msg.to);
+      return;
+    }
     await enqueueEmail(msg);
   } catch (err) {
     console.error("[email] dispatchEmail failed", msg.kind, msg.dedupeKey, err);

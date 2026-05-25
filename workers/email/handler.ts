@@ -2,7 +2,7 @@ import type { SQSEvent, SQSBatchResponse } from "aws-lambda";
 import { eq, sql } from "drizzle-orm";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { bootstrapEnv, db, schema } from "@ligala/db";
-import { renderEmail } from "@ligala/email";
+import { renderEmail, isUndeliverableRecipient } from "@ligala/email";
 import { emailMessage } from "@ligala/shared/schemas";
 
 let ses: SESClient | null = null;
@@ -33,6 +33,16 @@ export async function handler(event: SQSEvent): Promise<SQSBatchResponse> {
         // already exist. If it doesn't, send anyway but flag it — the success UPDATE below
         // will match 0 rows and the delivery would otherwise be untracked.
         console.warn("[email-worker] no email_log row for", msg.dedupeKey, "— producer should have created it");
+      }
+
+      // Backstop for the same gate dispatchEmail applies: never hand a reserved
+      // non-deliverable address (e.g. @*.test) to SES — it only bounces.
+      if (isUndeliverableRecipient(msg.to)) {
+        console.info("[email-worker] suppressing undeliverable recipient", msg.to, msg.dedupeKey);
+        await conn.update(schema.emailLog)
+          .set({ status: "suppressed", updatedAt: new Date() })
+          .where(eq(schema.emailLog.dedupeKey, msg.dedupeKey));
+        continue;
       }
 
       const { subject, html, text } = await renderEmail(msg.kind, msg.data as never);
