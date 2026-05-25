@@ -176,6 +176,31 @@ export class CoreStack extends Stack {
       maxConnectionsPercent: 95,
     });
 
+    // ── Proxy ⇄ cluster connectivity ───────────────────────────────────────
+    // The proxy and the cluster both run in `dbClusterSecurityGroup`, so the
+    // proxy's backend connections to Aurora (tcp/5432) are intra-SG traffic.
+    // CDK's DatabaseProxy construct adds an implicit self-rule for this, but we
+    // declare it explicitly so the dependency is visible in code and re-asserted
+    // on every deploy (egress is required because allowAllOutbound is false).
+    //
+    // ⚠️  Do NOT detach the cluster from this SG — e.g. a manual
+    // `modify-db-cluster --vpc-security-group-ids ...` to get direct access.
+    // Moving the cluster to another SG silently black-holes the proxy→DB path:
+    // the proxy can't open backend connections, and every query times out with
+    // RDS Proxy "Timed-out waiting to acquire database connection" (surfaces as
+    // 504s on SSR pages). For ad-hoc direct access, port-forward to the proxy
+    // endpoint through the bastion + SSM instead (see the bastion comment below).
+    dbClusterSecurityGroup.addIngressRule(
+      dbClusterSecurityGroup,
+      ec2.Port.tcp(5432),
+      "Proxy -> Aurora (intra cluster SG)",
+    );
+    dbClusterSecurityGroup.addEgressRule(
+      dbClusterSecurityGroup,
+      ec2.Port.tcp(5432),
+      "Proxy -> Aurora (intra cluster SG)",
+    );
+
     // ── App secret ─────────────────────────────────────────────────────────
     // One Secrets Manager entry holds:
     //   - BETTER_AUTH_SECRET (auto-generated, 64 chars, no punctuation)

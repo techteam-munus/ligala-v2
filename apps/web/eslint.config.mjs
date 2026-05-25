@@ -1,15 +1,24 @@
 // Next.js layers its own plugin rules on top of the monorepo's root flat config.
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { FlatCompat } from "@eslint/eslintrc";
+//
+// We load the @next/next plugin natively rather than via FlatCompat /
+// eslint-config-next. That older path (a) re-registered the @typescript-eslint
+// plugin rootConfig already defines — ESLint 9 flat config rejects a plugin
+// being defined twice — and (b) swapped in eslint-config-next's parser, which
+// broke rootConfig's type-aware rules (consistent-type-imports). TypeScript
+// linting comes entirely from rootConfig (typescript-eslint).
+import nextPlugin from "@next/eslint-plugin-next";
 import rootConfig from "../../eslint.config.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const compat = new FlatCompat({ baseDirectory: __dirname });
 
 const config = [
   ...rootConfig,
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["**/*.{ts,tsx,js,jsx,mjs}"],
+    plugins: { "@next/next": nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
   {
     rules: {
       // Server Components legitimately reference unimported globals (process, etc.)
