@@ -9,6 +9,9 @@ import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigwv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import type * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type * as rds from "aws-cdk-lib/aws-rds";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as iam from "aws-cdk-lib/aws-iam";
+import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import * as amplify from "@aws-cdk/aws-amplify-alpha";
 import { Monitoring } from "./monitoring";
 import { AmplifyEnvInjector } from "./amplify-env-injector";
@@ -118,6 +121,64 @@ export class AppStack extends Stack {
     // RDS Proxy IAM auth is off; password-based connection via the secret is
     // what both Lambdas use. No proxy-level grantConnect() needed.
 
+    // ── Email queue + DLQ + worker ─────────────────────────────────────────
+    const emailDlq = new sqs.Queue(this, "EmailDlq", {
+      queueName: `ligala-v2-${props.envName}-email-dlq`,
+      retentionPeriod: Duration.days(14),
+    });
+    const emailQueue = new sqs.Queue(this, "EmailQueue", {
+      queueName: `ligala-v2-${props.envName}-email`,
+      visibilityTimeout: Duration.seconds(60), // > worker timeout (30s)
+      deadLetterQueue: { queue: emailDlq, maxReceiveCount: 3 },
+    });
+
+    const emailWorker = new lambda.Function(this, "EmailWorker", {
+      functionName: `ligala-v2-${props.envName}-email-worker`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: "email/handler.handler",
+      code: lambda.Code.fromAsset(path.resolve(__dirname, "../../workers/dist")),
+      memorySize: 512,
+      timeout: Duration.seconds(30),
+      vpc: props.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [props.dbClientSecurityGroup],
+      environment: {
+        ...commonEnv,
+        EMAIL_FROM: "no-reply@mymunus.com",
+        EMAIL_REPLY_TO: "support@mymunus.com",
+      },
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    emailWorker.addEventSource(
+      new SqsEventSource(emailQueue, {
+        batchSize: 10,
+        reportBatchItemFailures: true,
+      }),
+    );
+
+    // Worker needs DB creds + app secret + SES send permission.
+    props.dbCluster.secret!.grantRead(emailWorker);
+    props.appSecret.grantRead(emailWorker);
+    emailWorker.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: [
+          `arn:aws:ses:${this.region}:${this.account}:identity/mymunus.com`,
+        ],
+      }),
+    );
+
+    // API Lambda produces to the queue.
+    emailQueue.grantSendMessages(this.apiLambda);
+    this.apiLambda.addEnvironment("EMAIL_QUEUE_URL", emailQueue.queueUrl);
+
+    // Monitoring (per the "attach on the line the resource is created" convention).
+    this.monitoring.attachLambdaErrors(emailWorker, "email-worker");
+    this.monitoring.attachLambdaThrottles(emailWorker, "email-worker");
+    this.monitoring.attachLambdaDurationP95(emailWorker, "email-worker", 5000);
+    this.monitoring.attachDlqDepth(emailDlq, "email-dlq");
+
     // ── HTTP API Gateway ───────────────────────────────────────────────────
     this.httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       apiName: `ligala-v2-${props.envName}-api`,
@@ -216,6 +277,10 @@ export class AppStack extends Stack {
     new CfnOutput(this, "WebUrl", {
       value: webBranchUrl,
       description: `Expected URL for the ${deployBranch} branch once connected.`,
+    });
+    new CfnOutput(this, "EmailQueueUrl", {
+      value: emailQueue.queueUrl,
+      description: "SQS URL for the email worker queue.",
     });
   }
 }
