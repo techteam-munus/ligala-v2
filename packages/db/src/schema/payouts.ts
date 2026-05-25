@@ -2,6 +2,7 @@
 import {
   bigint,
   boolean,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -52,13 +53,15 @@ export const balanceEntries = pgTable("balance_entry", {
   relatedPaymentId: text("related_payment_id").references(() => payments.id, {
     onDelete: "set null",
   }),
-  // FK added after `payouts` is declared below (self-reference ordering).
+  // Intentionally NO FK constraint — would be circular (balanceEntries is declared before payouts). Validated at the application layer.
   relatedPayoutId: text("related_payout_id"),
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .$defaultFn(() => new Date())
     .notNull(),
-});
+}, (t) => ({
+  lawyerIdx: index("balance_entry_lawyer_idx").on(t.lawyerId),
+}));
 
 export const payoutMethodType = pgEnum("payout_method_type", [
   "gcash",
@@ -141,5 +144,6 @@ export const payouts = pgTable(
 export type BalanceEntry = typeof balanceEntries.$inferSelect;
 export type NewBalanceEntry = typeof balanceEntries.$inferInsert;
 export type LawyerPayoutMethod = typeof lawyerPayoutMethods.$inferSelect;
+export type NewLawyerPayoutMethod = typeof lawyerPayoutMethods.$inferInsert;
 export type Payout = typeof payouts.$inferSelect;
 export type NewPayout = typeof payouts.$inferInsert;
