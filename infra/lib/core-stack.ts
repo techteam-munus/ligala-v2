@@ -193,12 +193,12 @@ export class CoreStack extends Stack {
     dbClusterSecurityGroup.addIngressRule(
       dbClusterSecurityGroup,
       ec2.Port.tcp(5432),
-      "Proxy -> Aurora (intra cluster SG)",
+      "Proxy to Aurora (intra cluster SG)",
     );
     dbClusterSecurityGroup.addEgressRule(
       dbClusterSecurityGroup,
       ec2.Port.tcp(5432),
-      "Proxy -> Aurora (intra cluster SG)",
+      "Proxy to Aurora (intra cluster SG)",
     );
 
     // ── App secret ─────────────────────────────────────────────────────────
