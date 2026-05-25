@@ -34,3 +34,35 @@ export function computeBalance(
   }
   return { availableCents, pendingCents };
 }
+
+export type WithdrawCheck =
+  | { ok: true }
+  | { ok: false; error: "amount_below_minimum" | "insufficient_balance" | "amount_invalid" };
+
+export function checkWithdrawable(args: {
+  requestCents: number;
+  availableCents: number;
+  minCents: number;
+}): WithdrawCheck {
+  if (!Number.isInteger(args.requestCents) || args.requestCents <= 0) {
+    return { ok: false, error: "amount_invalid" };
+  }
+  if (args.requestCents < args.minCents) return { ok: false, error: "amount_below_minimum" };
+  if (args.requestCents > args.availableCents) return { ok: false, error: "insufficient_balance" };
+  return { ok: true };
+}
+
+/**
+ * Net amount to claw back from a lawyer's balance on refund: the net that was
+ * credited (gross - processing fee), pro-rata to the refunded fraction of gross.
+ * PayMongo does not return its collection fee on refunds, so we reverse net, not gross.
+ */
+export function refundReversalCents(args: {
+  grossCents: number;
+  processingFeeCents: number;
+  refundedGrossCents: number;
+}): number {
+  if (args.grossCents <= 0) return 0;
+  const net = args.grossCents - args.processingFeeCents;
+  return Math.round(net * (args.refundedGrossCents / args.grossCents));
+}
