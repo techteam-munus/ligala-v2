@@ -5,6 +5,7 @@ import { health } from "./routes/health";
 import { auth } from "./routes/auth";
 import { lawyers } from "./routes/lawyers";
 import { clients } from "./routes/clients";
+import { devAccounts } from "./routes/dev-accounts";
 import { directory } from "./routes/directory";
 import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
@@ -34,6 +35,10 @@ export function createApp() {
   app.route("/health", health);
   app.route("/auth", auth);
   app.route("/signup", signup);
+  // `devAccounts` must be registered before the auth-gated `clients` router so
+  // the more specific path matches first and skips `requireSession` (mirrors
+  // the `/billing/dev` precedent below).
+  app.route("/accounts/_dev", devAccounts);
   app.route("/accounts", clients);
   app.route("/lawyers", lawyers);
   app.route("/directory", directory);
