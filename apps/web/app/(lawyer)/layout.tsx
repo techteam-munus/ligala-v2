@@ -7,7 +7,9 @@ import { SubscriptionBanner } from "./_components/subscription-banner";
 
 export default async function LawyerLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  // Clear a stale cookie via /logout (not a bare /login redirect, which the
+  // edge middleware bounces straight back — an infinite loop). See app/logout.
+  if (!session) redirect("/logout");
   if (session.user.role !== "lawyer") redirect(roleHome(session.user.role));
   return (
     <PortalShell

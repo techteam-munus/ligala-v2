@@ -8,6 +8,7 @@ import { getSessionCookie } from "better-auth/cookies";
 const PUBLIC_PATHS = new Set([
   "/",
   "/login",
+  "/logout",
   "/signup",
   "/forgot-password",
   "/about",
