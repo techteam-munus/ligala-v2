@@ -21,3 +21,5 @@ export * from "./subscriptions";
 export * from "./referrals";
 export * from "./admin";
 export * from "./ibp-lawyers";
+// Cross-cutting — email pipeline (email_log)
+export * from "./email";
