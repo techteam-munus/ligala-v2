@@ -313,6 +313,35 @@ export const payouts = new Hono()
   });
 
 /**
+ * Admin payout queue (read-only). Mounted at /admin/payouts.
+ */
+export const adminPayouts = new Hono()
+  .use("*", requireRole("admin"))
+  .get("/", async (c) => {
+    const status = c.req.query("status");
+    const conn = db();
+    const base = conn
+      .select({
+        payout: schema.payouts,
+        lawyerName: schema.user.name,
+        lawyerEmail: schema.user.email,
+      })
+      .from(schema.payouts)
+      .leftJoin(schema.user, eq(schema.user.id, schema.payouts.lawyerId));
+    const rows = status
+      ? await base
+          .where(eq(schema.payouts.status, status as never))
+          .orderBy(desc(schema.payouts.createdAt))
+      : await base.orderBy(desc(schema.payouts.createdAt));
+    return c.json({
+      items: rows.map((r) => ({
+        ...r.payout,
+        lawyer: r.lawyerName ? { name: r.lawyerName, email: r.lawyerEmail } : null,
+      })),
+    });
+  });
+
+/**
  * Dev-only payout simulator. Flips a `dev_simulate` payout to succeeded/failed.
  * Session-less (mounted outside `payouts`' requireRole), mirroring billingDev.
  */
