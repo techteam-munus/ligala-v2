@@ -93,9 +93,10 @@ At-least-once webhook delivery + idempotency on `verification_id` (skip if the s
 ## 6. IDMeta contract (confirmed from OpenAPI) & status mapping
 
 - **Create:** `POST {IDMETA_BASE_URL}/api/v1/verification/create-verification`, `Authorization: Bearer {IDMETA_TOKEN}`, body `{ template_id, metadata }` → `{ verification: { id, status: 99 /* created */ } }`. `metadata` is echoed back at finalize.
-- **Finalize:** `POST {IDMETA_BASE_URL}/api/v1/verification/finalize-verification`, body `{ template_id, verification_id }` → `{ verification: { id, status, metadata, verification_data }, status, status_message }`. `verification_data` carries per-check results including captured images.
-- **Document image fields seen in the spec:** `face_url` / `photo` (URLs, incl. S3 URLs), `imageFrontSide` / `imageBackSide` (base64 `data:` URLs), generic `url`.
-- **Status:** numeric (`99 = created`, `2 = REVIEW_NEEDED`). Map to our `kyc_status`: approved → `approved`; rejected → `rejected`; review/pending → `submitted`. The full numeric table is pulled from `verification-status-types` during implementation; mapping lives in one function with a safe default of `submitted` for unknown codes.
+- **Finalize:** `POST {IDMETA_BASE_URL}/api/v1/verification/finalize-verification`, body `{ template_id, verification_id }` → `{ verification: { id, status, ... }, status, status_message }`. Used as a status/result backstop.
+- **Webhook payload (confirmed via Postman collection):** `{ id /* = verification_id */, company_id, template_id, status /* string, e.g. "REVIEW_NEEDED" */, metadata /* echoed back from create */, profile_name, verification_results: { document_verification: { request_data, request_result }, ... } }`. The webhook carries both our echoed `metadata` **and** the verification results (where captured images live), so it is the primary ingestion source; finalize is the backstop.
+- **Document image fields:** `imageFrontSide` / `imageBackSide` (document, base64 `data:` URLs), and face/selfie images in the biometric check results (`face_url` / `photo` URLs or base64). Exact nesting inside `verification_results` is handled by a defensive recursive scan (`extractImages`) rather than hard-coded paths.
+- **Status mapping (confirmed codes):** `3 VERIFIED → approved`; `1 REJECTED / 6 FAILED → rejected`; `2 REVIEW_NEEDED → submitted`; `4 INCOMPLETE / 5 IN_PROGRESS / 99 EMPTY → pending`; unknown → `submitted` (safe: surfaces for admin review). One `mapIdmetaStatus()` function keys off the string `status`/`status_message` first, numeric `status` second.
 
 ## 7. Error handling & idempotency
 
@@ -129,8 +130,8 @@ No `IDMETA_TOKEN` / no `S3_UPLOADS_BUCKET` in dev:
 
 ## 11. Open items to confirm against the IDMeta sandbox (isolated, non-blocking)
 
-1. **Hosted-link ↔ created-verification binding** — how a server-created `verification.id` reaches the hosted Trust Flow link the lawyer opens (query param vs. a URL field in the create response). Abstracted behind `hostedUrlFor(verificationId)`.
-2. **Webhook payload + signature scheme** — the webhook-types doc is mid-rewrite. Parse defensively for `verification_id`; always finalize for authoritative data.
-3. **Numeric status table** — full code→meaning map from `verification-status-types`.
+1. **Hosted-link ↔ created-verification binding** — how a server-created `verification.id` reaches the hosted Trust Flow link the lawyer opens (the exact query param appended to the link, vs. a session URL field in the create response). Abstracted behind `hostedUrlFor(verificationId, createResponse)`; the rest of the build is independent of the answer.
+2. **Webhook signature scheme** — payload shape is confirmed (§6); only the HMAC header name/encoding used with `IDMETA_WEBHOOK_SECRET` needs confirming. `verifyIdmetaSignature()` isolates it; unset secret ⇒ verification skipped (dev).
+3. **Exact image nesting** inside `verification_results` — handled by the recursive `extractImages` scan, so no hard dependency; a sandbox sample just lets us tighten the kind-classification heuristics.
 
 These are confirmable in the dashboard/sandbox (credentials available) and are quarantined behind single functions so the rest of the build is unaffected.
