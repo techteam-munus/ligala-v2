@@ -169,6 +169,17 @@
 
 ## Session Log
 
+### 2026-05-26 — Session 22 (profile picture upload)
+
+- **Did:**
+  - **Added user profile-picture upload** on branch `feat/profile-picture-upload`. Reuses the existing presign → direct-PUT pipeline (new `kind: "avatar"`) and stores the S3 key on the existing Better Auth `user.image` column — **no DB migration**, single source of truth for both the in-app sidebar and the public lawyer directory.
+  - **shared:** `avatar` added to `presignRequest.kind`; new `avatarUpdateInput` schema.
+  - **api:** new `lib/avatar.ts` `resolveImageUrl()` (null/http passthrough; presigns only `avatar/`-prefixed keys → defense-in-depth against a bucket read-oracle; dev-sink fallback). New endpoints on the role-independent `/accounts` router — `PATCH /avatar` (IDOR guard: key must start with `avatar/<userId>/`), `DELETE /avatar`, `GET /avatar-url`. `POST /files/presign` now rejects non-image content types for the `avatar` kind. `directory.ts` selects `user.image` and returns a resolved `photoUrl` for the public list + `:slug` profile.
+  - **web:** new `AvatarUpload` client component (optimistic preview + `router.refresh()`) and `lib/actions/account.ts`. Wired into the client `/profile` and lawyer `/lawyer/profile` forms. The 3 portal layouts resolve `session.user.image` to a display URL via `lib/avatar.ts` (`http` short-circuit = zero extra round trips for OAuth users). Public `/lawyers` cards + `/lawyers/[slug]` portrait render `photoUrl` (plain `<img>`, not `next/image`, to avoid `remotePatterns` for rotating presigned hosts) with initials fallback. Admin upload UI deferred (no admin profile page).
+  - **Verification:** `pnpm typecheck` 9/9 green; `pnpm lint` 0 errors (pre-existing warnings only); `pnpm test` all green incl. new `lib/avatar.test.ts` (5), `routes/files.test.ts` (3), `routes/clients.avatar.test.ts` (6) — **118 api tests total**; `pnpm build` 3/3 green (`/profile`, `/lawyer/profile`, `/lawyers`, `/lawyers/[slug]` all dynamic, so no stale presigned URLs are prerendered).
+- **Did NOT:** admin upload UI; server-side image resize/optimization (`workers/image` is still a placeholder); orphaned-S3-object cleanup on replace/remove (sweep later via lifecycle policy on the `kind` metadata tag). **Note:** against the dev S3 sink the upload flow completes but the `<img>` won't actually paint — true visual verification needs a real bucket (same limitation as KYC/attachments in dev).
+- **Next:** visual QA against the dev S3 bucket; merge to `develop` via PR.
+
 ### 2026-05-26 — Session 21 (lawyer payouts web UI — Plan 2 complete)
 
 - **Did:**

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import {
+  avatarUpdateInput,
   claimIbpInput,
   clientProfilePatch,
   roleAssignmentInput,
@@ -9,6 +10,7 @@ import {
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { requireSession } from "../middleware/session";
+import { resolveImageUrl } from "../lib/avatar";
 import { slugify, withRandomSuffix } from "../lib/slug";
 import {
   SUBSCRIPTION_PRICE_CENTS,
@@ -174,4 +176,47 @@ export const clients = new Hono()
       where: eq(schema.clientProfiles.userId, user.id),
     });
     return c.json({ profile });
+  })
+
+  /**
+   * Profile picture — stored on `user.image` so it flows through the session
+   * to the sidebar (every portal) and the public lawyer directory. The value
+   * is an S3 key minted by `POST /files/presign` with kind `avatar`; display
+   * code resolves it to a presigned GET (see lib/avatar.ts).
+   */
+  .patch("/avatar", zValidator("json", avatarUpdateInput), async (c) => {
+    const user = c.get("user");
+    const { s3Key } = c.req.valid("json");
+
+    // Anti-IDOR: presign mints keys as `avatar/<userId>/<uuid>.<ext>`. Only let
+    // a user point their own image at a key under their own prefix — otherwise
+    // the resolver would later mint a GET URL for another user's object.
+    if (!s3Key.startsWith(`avatar/${user.id}/`)) {
+      throw new HTTPException(403, { message: "forbidden" });
+    }
+
+    await db()
+      .update(schema.user)
+      .set({ image: s3Key, updatedAt: new Date() })
+      .where(eq(schema.user.id, user.id));
+    return c.json({ ok: true });
+  })
+
+  .delete("/avatar", async (c) => {
+    const user = c.get("user");
+    await db()
+      .update(schema.user)
+      .set({ image: null, updatedAt: new Date() })
+      .where(eq(schema.user.id, user.id));
+    return c.json({ ok: true });
+  })
+
+  /**
+   * Resolve the signed-in user's stored image to a browser-renderable URL.
+   * Reads the key from the session (never a client-supplied key) so it can't
+   * be used to presign arbitrary objects.
+   */
+  .get("/avatar-url", async (c) => {
+    const user = c.get("user");
+    return c.json({ url: await resolveImageUrl(user.image) });
   });
