@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { saveClientProfile } from "@/lib/actions/client";
 import { cn } from "@/lib/utils";
+import { AvatarUpload } from "@/app/_components/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +34,15 @@ const LANGUAGE_LABEL: Record<string, string> = {
   ceb: "Cebuano",
 };
 
-export function ClientProfileForm({ initial }: { initial: Initial }) {
+export function ClientProfileForm({
+  initial,
+  avatarUrl,
+  fallbackInitial,
+}: {
+  initial: Initial;
+  avatarUrl: string | null;
+  fallbackInitial: string;
+}) {
   const [form, setForm] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -174,6 +183,19 @@ export function ClientProfileForm({ initial }: { initial: Initial }) {
 
         {/* Side rail ========================================= */}
         <aside className="space-y-4 lg:self-start">
+          {/* Profile photo */}
+          <Card size="sm" className="gap-2">
+            <CardContent className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Profile photo
+              </p>
+              <AvatarUpload
+                currentUrl={avatarUrl}
+                fallbackInitial={fallbackInitial}
+              />
+            </CardContent>
+          </Card>
+
           {/* Preview avatar card */}
           <Card size="sm" className="gap-2">
             <CardContent className="space-y-3">

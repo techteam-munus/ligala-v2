@@ -27,6 +27,7 @@ type ProfileResponse = {
   profile: {
     slug: string;
     name: string;
+    photoUrl: string | null;
     bio: string | null;
     barNumber: string | null;
     verified: boolean;
@@ -263,17 +264,28 @@ export default async function PublicLawyerProfile({
           {/* Portrait + CTA -------------------------------------------- */}
           <div className="flex flex-col items-center gap-4 md:items-end md:w-[224px]">
             <div className="relative">
-              <span
-                className={cn(
-                  "flex size-44 shrink-0 items-center justify-center rounded-full text-5xl font-semibold tracking-tight ring-1 ring-inset md:size-52 md:text-6xl",
-                  tint.bg,
-                  tint.text,
-                  tint.ring,
-                )}
-                aria-hidden
-              >
-                {initialsOf(profile.name) || "?"}
-              </span>
+              {profile.photoUrl ? (
+                // Plain <img>, not next/image: presigned S3 URLs rotate hosts/
+                // query params, which next/image's remotePatterns can't allow.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.photoUrl}
+                  alt={profile.name}
+                  className="size-44 shrink-0 rounded-full object-cover ring-1 ring-inset ring-border md:size-52"
+                />
+              ) : (
+                <span
+                  className={cn(
+                    "flex size-44 shrink-0 items-center justify-center rounded-full text-5xl font-semibold tracking-tight ring-1 ring-inset md:size-52 md:text-6xl",
+                    tint.bg,
+                    tint.text,
+                    tint.ring,
+                  )}
+                  aria-hidden
+                >
+                  {initialsOf(profile.name) || "?"}
+                </span>
+              )}
               {profile.verified ? (
                 <span
                   className="absolute -bottom-1 -right-1 inline-flex size-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-4 ring-background md:size-10"

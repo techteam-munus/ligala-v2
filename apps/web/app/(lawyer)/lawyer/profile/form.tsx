@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { saveLawyerProfile } from "@/lib/actions/lawyer";
 import { cn } from "@/lib/utils";
+import { AvatarUpload } from "@/app/_components/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,11 +35,15 @@ const SELECT_CLASS =
 
 export function LawyerProfileForm({
   initial,
+  avatarUrl,
+  fallbackInitial,
   ibpChapters,
   practiceAreas,
   jurisdictions,
 }: {
   initial: Initial;
+  avatarUrl: string | null;
+  fallbackInitial: string;
   ibpChapters: Ref[];
   practiceAreas: Ref[];
   jurisdictions: Ref[];
@@ -209,8 +214,26 @@ export function LawyerProfileForm({
           </Card>
         </div>
 
-        {/* Right rail: Pro bono + Save ----------------------------- */}
+        {/* Right rail: Photo + Pro bono + Save --------------------- */}
         <aside className="space-y-4 lg:self-start">
+          <Card className="gap-0 py-0">
+            <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+              <User className="size-3.5 text-muted-foreground" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Profile photo
+              </p>
+            </div>
+            <CardContent className="px-4 py-4">
+              <AvatarUpload
+                currentUrl={avatarUrl}
+                fallbackInitial={fallbackInitial}
+              />
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                Shown on your public profile and in the lawyer directory.
+              </p>
+            </CardContent>
+          </Card>
+
           <Card
             className={cn(
               "gap-0 py-0 transition-colors",
