@@ -62,6 +62,9 @@ importers:
       '@ligala/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@ligala/kyc':
+        specifier: workspace:*
+        version: link:../../packages/kyc
       '@ligala/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -348,6 +351,31 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@20.19.41)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.6(@types/node@20.19.41)(typescript@5.9.3))(terser@5.47.1)
 
+  packages/kyc:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.700.0
+        version: 3.1050.0
+      '@aws-sdk/client-sqs':
+        specifier: ^3.700.0
+        version: 3.1050.0
+      '@ligala/db':
+        specifier: workspace:*
+        version: link:../db
+      '@ligala/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: ^20.16.0
+        version: 20.19.41
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@20.19.41)(jsdom@25.0.1)(lightningcss@1.32.0)(msw@2.14.6(@types/node@20.19.41)(typescript@5.9.3))(terser@5.47.1)
+
   packages/shared:
     dependencies:
       zod:
@@ -409,6 +437,9 @@ importers:
       '@ligala/email':
         specifier: workspace:*
         version: link:../packages/email
+      '@ligala/kyc':
+        specifier: workspace:*
+        version: link:../packages/kyc
       '@ligala/shared':
         specifier: workspace:*
         version: link:../packages/shared
