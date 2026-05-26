@@ -262,7 +262,8 @@
       "Bash(awk 'END{print NR}' PROCESS.md)",
       "Bash(ls -la apps/web/.env*)",
       "Bash(ls -la .env*)",
-      "Bash(grep -rn \"IDMETA_HOSTED_URL\" apps/web/.env* .env .env.local)"
+      "Bash(grep -rn \"IDMETA_HOSTED_URL\" apps/web/.env* .env .env.local)",
+      "Bash(gh api *)"
     ]
   }
 }
