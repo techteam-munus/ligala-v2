@@ -94,9 +94,12 @@ export default async function KycPage() {
     documents: [],
   });
 
-  const statusKey: keyof typeof STATUS_META = kyc.submission
-    ? (kyc.submission.status as keyof typeof STATUS_META)
-    : "none";
+  // Map the submission status to display meta. Guard against any status value
+  // not in STATUS_META (e.g. a new enum value the deployed bundle doesn't know)
+  // → fall back to "none" rather than throwing on `meta.tone` during render.
+  const rawStatus = kyc.submission?.status ?? "none";
+  const statusKey: keyof typeof STATUS_META =
+    rawStatus in STATUS_META ? (rawStatus as keyof typeof STATUS_META) : "none";
   const meta = STATUS_META[statusKey];
   const idmetaEnabled = !!process.env.IDMETA_HOSTED_URL;
   const allowResubmit = kyc.submission?.status !== "submitted";
