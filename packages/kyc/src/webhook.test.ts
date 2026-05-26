@@ -22,6 +22,22 @@ describe("normalizeIdmetaWebhook", () => {
     expect(n.terminal).toBe(true);
   });
 
+  it("extracts submissionId from string metadata (m=KEY:VALUE round-trip forms)", () => {
+    // IDMeta may echo the `m=submissionId:<id>` param back as a string.
+    expect(
+      normalizeIdmetaWebhook({
+        type: "trustValidation.complete",
+        data: { id: "v", status: 3, metadata: "submissionId:sub_9" },
+      }).submissionId,
+    ).toBe("sub_9");
+    expect(
+      normalizeIdmetaWebhook({
+        type: "trustValidation.complete",
+        data: { id: "v", status: 3, metadata: '{"submissionId":"sub_x"}' },
+      }).submissionId,
+    ).toBe("sub_x");
+  });
+
   it("treats trustValidation.create as non-terminal but still reads metadata", () => {
     const n = normalizeIdmetaWebhook({
       type: "trustValidation.create",

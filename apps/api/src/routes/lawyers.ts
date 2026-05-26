@@ -12,7 +12,7 @@ import {
   officeScheduleInput,
 } from "@ligala/shared/schemas";
 import { requireRole } from "../middleware/session";
-import { createVerification, hostedUrlFor } from "@ligala/kyc";
+import { hostedUrlFor } from "@ligala/kyc";
 
 /**
  * All endpoints here require role=lawyer. The role-promotion path lives at
@@ -124,36 +124,23 @@ export const lawyers = new Hono()
 
   .post("/kyc/idmeta/start", async (c) => {
     const user = c.get("user");
-    const hasApi = !!process.env.IDMETA_TOKEN && !!process.env.IDMETA_TEMPLATE_ID;
-    const staticLink = process.env.IDMETA_HOSTED_URL;
-    if (!hasApi && !staticLink) {
+    if (!process.env.IDMETA_HOSTED_URL) {
       throw new HTTPException(501, { message: "idmeta_not_configured" });
     }
 
-    const conn = db();
-    const now = new Date();
     const submissionId = newId();
-    await conn.insert(schema.kycSubmissions).values({
+    await db().insert(schema.kycSubmissions).values({
       id: submissionId,
       lawyerId: user.id,
       status: "pending",
       method: "idmeta",
     });
 
-    // Dev / no-API fallback: open the static Trust Flow link, no verification
-    // is pre-created (ingestion is skipped without a token + bucket anyway).
-    if (!hasApi) {
-      return c.json({ hostedUrl: staticLink as string, submissionId });
-    }
-
-    const created = await createVerification({ submissionId });
-    await conn
-      .update(schema.kycSubmissions)
-      .set({ idmetaApplicantId: created.verificationId, updatedAt: now })
-      .where(eq(schema.kycSubmissions.id, submissionId));
-
-    const hostedUrl = hostedUrlFor(created.verificationId, created.raw);
-    return c.json({ hostedUrl, submissionId });
+    // Launch the hosted SDK with our submissionId attached as metadata (m=
+    // param). IDMeta's SDK creates the verification and echoes the metadata back
+    // in the trustValidation.complete webhook, which is how we map the result to
+    // this submission — no pre-created verification / token needed at launch.
+    return c.json({ hostedUrl: hostedUrlFor(submissionId), submissionId });
   })
 
   // --- Office -----------------------------------------------------------------

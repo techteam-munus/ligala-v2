@@ -64,25 +64,21 @@ export async function finalizeVerification(
 }
 
 /**
- * Build the URL the lawyer opens. SANDBOX-CONFIRM (spec §11.1): if create
- * returns a ready session URL we use it; otherwise we append the verification
- * id to the configured Trust Flow link. The exact param name may need
- * adjusting once confirmed against the live dashboard.
+ * Build the hosted-SDK URL the lawyer opens, attaching our submissionId as
+ * IDMeta metadata via the `m=KEY:VALUE` param. This is the mechanism the v1
+ * integration uses (`&m=userID:<id>`): the value round-trips into the
+ * verification's `metadata` and comes back in the `trustValidation.complete`
+ * webhook, which is how we map the completion to the right lawyer. The SDK
+ * creates its own verification, so we don't pre-create one.
+ *
+ * The `:` is intentionally NOT URL-encoded — IDMeta expects the literal
+ * `m=KEY:VALUE` shape (submissionId is a UUID, so it's URL-safe as-is).
  */
-export function hostedUrlFor(
-  verificationId: string,
-  createRaw: Record<string, unknown>,
-): string {
-  const sessionUrl = createRaw.url ?? createRaw.verification_url ?? createRaw.hosted_url;
-  if (typeof sessionUrl === "string" && sessionUrl.length > 0) return sessionUrl;
-
+export function hostedUrlFor(submissionId: string): string {
   const base = process.env.IDMETA_HOSTED_URL;
   if (!base) throw new Error("IDMETA_HOSTED_URL is not configured");
   const sep = base.includes("?") ? "&" : "?";
-  // IDMeta's own term for a verification is "trustValidation" (see webhook
-  // event types trustValidation.create/complete + the trustValidationId field),
-  // so the hosted SDK binds to a pre-created verification via `trustValidationId`.
-  return `${base}${sep}trustValidationId=${encodeURIComponent(verificationId)}`;
+  return `${base}${sep}m=submissionId:${submissionId}`;
 }
 
 export interface DocumentBytes {

@@ -76,16 +76,10 @@ describe("finalizeVerification", () => {
 });
 
 describe("hostedUrlFor", () => {
-  it("uses a session URL from the create response when present", () => {
-    expect(hostedUrlFor("ver_1", { url: "https://web-sdk.idmetagroup.com/session/xyz" })).toBe(
-      "https://web-sdk.idmetagroup.com/session/xyz",
-    );
-  });
-
-  it("otherwise appends trustValidationId to the configured hosted link", () => {
-    const out = hostedUrlFor("ver_1", {});
+  it("appends submissionId as the m=KEY:VALUE metadata param", () => {
+    const out = hostedUrlFor("sub_1");
     expect(out).toContain("https://web-sdk.idmetagroup.com/?templateId=abc");
-    expect(out).toContain("trustValidationId=ver_1");
+    expect(out).toContain("m=submissionId:sub_1");
   });
 });
 

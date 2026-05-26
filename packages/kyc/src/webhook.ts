@@ -33,15 +33,43 @@ function firstString(...vals: unknown[]): string | undefined {
   return undefined;
 }
 
+/**
+ * Extract our submissionId from IDMeta's echoed metadata. We pass it via the
+ * `m=submissionId:<id>` SDK param, and IDMeta returns it as either an object
+ * (`{ submissionId: "..." }`) or a string (`"submissionId:..."`, JSON, or the
+ * raw value). Mirrors the defensive parsing the v1 integration uses.
+ */
+function extractSubmissionId(metadata: unknown): string | undefined {
+  if (!metadata) return undefined;
+  if (typeof metadata === "object") {
+    const m = metadata as Record<string, unknown>;
+    if (typeof m.submissionId === "string" && m.submissionId.length > 0) return m.submissionId;
+    const first = Object.values(m).find((v) => typeof v === "string" && v.length > 0);
+    return typeof first === "string" ? first : undefined;
+  }
+  if (typeof metadata === "string") {
+    try {
+      const parsed = JSON.parse(metadata) as Record<string, unknown>;
+      const fromObj = extractSubmissionId(parsed);
+      if (fromObj) return fromObj;
+    } catch {
+      /* not JSON — fall through to KEY:VALUE / raw handling */
+    }
+    const colon = metadata.indexOf(":");
+    const raw = (colon >= 0 ? metadata.slice(colon + 1) : metadata)
+      .replace(/^["{]+|["}]+$/g, "")
+      .trim();
+    return raw.length > 0 ? raw : undefined;
+  }
+  return undefined;
+}
+
 export function normalizeIdmetaWebhook(body: unknown): NormalizedIdmetaEvent {
   const evt = asRecord(body);
   const type = typeof evt.type === "string" ? evt.type : undefined;
   // Most events nest the verification under `data`; some (verification.aml)
   // put fields at the top level — fall back to the envelope itself.
   const data = evt.data && typeof evt.data === "object" ? asRecord(evt.data) : evt;
-  const meta = asRecord(data.metadata).submissionId
-    ? asRecord(data.metadata)
-    : asRecord(evt.metadata);
 
   const status =
     (typeof data.status === "string" || typeof data.status === "number"
@@ -66,7 +94,7 @@ export function normalizeIdmetaWebhook(body: unknown): NormalizedIdmetaEvent {
       evt.id,
     ),
     status,
-    submissionId: firstString(meta.submissionId),
+    submissionId: extractSubmissionId(data.metadata ?? evt.metadata),
     results: data.verification_results ?? data.verification_data ?? data,
   };
 }
