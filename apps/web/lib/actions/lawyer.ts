@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { api } from "@/lib/api";
 import type {
+  IdmetaStartResponse,
   KycSubmissionInput,
   LawyerProfilePatch,
   OfficeFaqInput,
@@ -19,6 +20,14 @@ export async function submitKyc(input: KycSubmissionInput) {
   const res = await api<{ submissionId: string; status: string }>("/lawyers/kyc", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+  revalidatePath("/lawyer/kyc");
+  return res;
+}
+
+export async function startIdmetaVerification(): Promise<IdmetaStartResponse> {
+  const res = await api<IdmetaStartResponse>("/lawyers/kyc/idmeta/start", {
+    method: "POST",
   });
   revalidatePath("/lawyer/kyc");
   return res;

@@ -11,11 +11,12 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHero } from "@/app/_components/page-hero";
 import { KycForm } from "./form";
+import { IdmetaLaunch } from "./idmeta-launch";
 
 type KycResponse = {
   submission: {
     id: string;
-    status: "draft" | "submitted" | "approved" | "rejected";
+    status: "pending" | "draft" | "submitted" | "approved" | "rejected";
     rejectReason: string | null;
     submittedAt: string | null;
     decidedAt: string | null;
@@ -41,7 +42,7 @@ function longDate(iso: string | null | undefined) {
 }
 
 const STATUS_META: Record<
-  "none" | "draft" | "submitted" | "approved" | "rejected",
+  "none" | "pending" | "draft" | "submitted" | "approved" | "rejected",
   {
     label: string;
     icon: React.ReactNode;
@@ -54,6 +55,12 @@ const STATUS_META: Record<
     icon: <CircleDashed className="size-3.5" />,
     accent: "bg-zinc-300",
     tone: "text-muted-foreground",
+  },
+  pending: {
+    label: "Verification started",
+    icon: <Clock className="size-3.5" />,
+    accent: "bg-sky-500",
+    tone: "text-sky-700 dark:text-sky-300",
   },
   draft: {
     label: "Draft",
@@ -91,6 +98,7 @@ export default async function KycPage() {
     ? (kyc.submission.status as keyof typeof STATUS_META)
     : "none";
   const meta = STATUS_META[statusKey];
+  const idmetaEnabled = !!process.env.IDMETA_HOSTED_URL;
   const allowResubmit = kyc.submission?.status !== "submitted";
 
   return (
@@ -113,8 +121,42 @@ export default async function KycPage() {
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* Upload tiles ----------------------------------------------- */}
-        <div>
+        {/* Verification methods --------------------------------------- */}
+        <div className="space-y-6">
+          {idmetaEnabled ? (
+            <Card
+              size="sm"
+              className="gap-3 ring-emerald-300/70 bg-emerald-50/30 dark:ring-emerald-900/40 dark:bg-emerald-950/20"
+            >
+              <CardHeader>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
+                  Fast verification
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Verify your identity instantly with IDMeta — capture your
+                  selfie and a government ID. We securely store the captured
+                  documents for our records.
+                </p>
+                <IdmetaLaunch />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {idmetaEnabled ? (
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or upload documents manually
+                </span>
+              </div>
+            </div>
+          ) : null}
+
           <KycForm allowResubmit={!!allowResubmit} />
         </div>
 
