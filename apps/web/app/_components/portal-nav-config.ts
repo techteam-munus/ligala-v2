@@ -14,6 +14,7 @@ import {
   TicketPercent,
   User,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +75,7 @@ const LAWYER: PortalConfig = {
         { href: "/lawyer/subscribe", label: "Subscription", icon: CreditCard },
         { href: "/lawyer/invoices", label: "Invoices", icon: Receipt },
         { href: "/lawyer/discount-codes", label: "Discount codes", icon: TicketPercent },
+        { href: "/lawyer/payouts", label: "Payouts", icon: Wallet },
       ],
     },
     {
@@ -108,6 +110,7 @@ const ADMIN: PortalConfig = {
       label: "Money",
       items: [
         { href: "/admin/invoices", label: "Invoices", icon: Receipt },
+        { href: "/admin/payouts", label: "Payouts", icon: Wallet },
         { href: "/admin/discount-codes", label: "Discount codes", icon: TicketPercent },
         { href: "/admin/referrals", label: "Referrals", icon: Share2 },
       ],
@@ -152,6 +155,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   "ibp-lawyers": "IBP lawyers",
   subscribe: "Subscription",
   new: "New",
+  payouts: "Payouts",
 };
 
 /**
