@@ -239,6 +239,11 @@ export class CoreStack extends Stack {
           IDMETA_TOKEN: "",
           IDMETA_TEMPLATE_ID: "",
           IDMETA_WEBHOOK_SECRET: "",
+          // Hosted Trust Flow link. Read by the API (bootstrapEnv) AND copied
+          // into the Amplify web env (see AmplifyEnvInjector secretJsonKeys in
+          // app-stack.ts) — its presence is what renders the "Verify with
+          // IDMeta" card on /lawyer/kyc.
+          IDMETA_HOSTED_URL: "",
           SENTRY_DSN: "",
         }),
         generateStringKey: "BETTER_AUTH_SECRET",

@@ -283,10 +283,12 @@ export class AppStack extends Stack {
           { name: "Node.js version", pkg: "node", type: "nvm", version: "20" },
         ]),
       },
-      // Used by `apps/web/lib/ibp-verification-cookie.ts` to sign the
-      // short-lived IBP-verification cookie. Same secret value as the API
-      // Lambda so cookies stay valid across both surfaces.
-      secretJsonKeys: ["BETTER_AUTH_SECRET"],
+      // BETTER_AUTH_SECRET: used by `apps/web/lib/ibp-verification-cookie.ts`
+      // to sign the short-lived IBP-verification cookie (same value as the API
+      // Lambda so cookies stay valid across both surfaces).
+      // IDMETA_HOSTED_URL: read server-side in the /lawyer/kyc page to gate the
+      // "Verify with IDMeta" card (only renders when set).
+      secretJsonKeys: ["BETTER_AUTH_SECRET", "IDMETA_HOSTED_URL"],
     });
 
     // ── Outputs ────────────────────────────────────────────────────────────
