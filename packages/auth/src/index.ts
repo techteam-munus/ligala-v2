@@ -4,6 +4,7 @@ import { emailOTP } from "better-auth/plugins";
 import { db, schema } from "@ligala/db";
 import { dispatchEmail } from "@ligala/email";
 import { buildVerificationCodeMessage, buildResetMessage } from "./email-hooks";
+import { parseTrustedOrigins } from "./trusted-origins";
 
 // Better Auth performs its own `process.env.BETTER_AUTH_SECRET` lookup at init,
 // independent of the `secret` field below. Without a value it throws during
@@ -14,6 +15,8 @@ if (!process.env.BETTER_AUTH_SECRET) {
   process.env.BETTER_AUTH_SECRET =
     "build-time-placeholder-secret-replace-in-production-environment-12345";
 }
+
+const trustedOrigins = parseTrustedOrigins(process.env.AUTH_TRUSTED_ORIGINS);
 
 /**
  * Shared Better Auth instance — imported by both `apps/web` (mounted as a
@@ -40,6 +43,10 @@ export const auth = betterAuth({
   }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  // Additional trusted origins for CSRF (custom domain + Amplify default, etc).
+  // baseURL is always trusted; this only adds the others. Omitted when empty so
+  // we don't override Better Auth's default.
+  ...(trustedOrigins.length > 0 ? { trustedOrigins } : {}),
   // Hono mounts this handler at /auth/* (apps/api/src/app.ts), not the Better
   // Auth default /api/auth. Setting basePath here makes route matching pick
   // up requests under /auth/*.

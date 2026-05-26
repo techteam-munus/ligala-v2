@@ -26,6 +26,14 @@ export interface AppStackProps extends StackProps {
   appSecret: secretsmanager.Secret;
   /** Optional email to subscribe to the alarm SNS topic. */
   alarmEmail?: string;
+  /**
+   * Public custom domain (host, no scheme) in front of the Amplify default
+   * domain — e.g. `dev.ligalaoffice.mymunus.com`. When set, it becomes the
+   * API Lambda's BETTER_AUTH_URL and is added to the trusted origins so auth
+   * (sign-in/sign-out) works from it. Both the custom domain and the Amplify
+   * default domain stay trusted.
+   */
+  webCustomDomain?: string;
 }
 
 /**
@@ -241,11 +249,25 @@ export class AppStack extends Stack {
       platform: amplify.Platform.WEB_COMPUTE,
     });
 
-    // Compose the URL the deploy branch will serve at so the API Lambda can
-    // include it in BETTER_AUTH_URL from first deploy. If the branch is
-    // renamed or a custom domain is added, re-set this env var.
+    // Compose the URL the deploy branch will serve at. This is always a valid
+    // origin (Amplify default domain) and stays trusted even when a custom
+    // domain is also in use.
     const webBranchUrl = `https://${deployBranch}.${this.webApp.appId}.amplifyapp.com`;
-    this.apiLambda.addEnvironment("BETTER_AUTH_URL", webBranchUrl);
+    const customDomainUrl = props.webCustomDomain
+      ? `https://${props.webCustomDomain}`
+      : undefined;
+
+    // BETTER_AUTH_URL drives cookie attributes, callback/redirect URLs, and the
+    // default trusted origin. Prefer the user-facing custom domain when present.
+    this.apiLambda.addEnvironment("BETTER_AUTH_URL", customDomainUrl ?? webBranchUrl);
+
+    // Trust every host the app is actually reachable from. Better Auth's CSRF
+    // check rejects sign-in/sign-out POSTs from origins not listed here (the
+    // default is only baseURL) — which silently breaks sign-out from the custom
+    // domain, leaving the session cookie uncleared. Listing both keeps auth
+    // working whether the user hits the custom domain or the Amplify default.
+    const trustedOrigins = [customDomainUrl, webBranchUrl].filter(Boolean) as string[];
+    this.apiLambda.addEnvironment("AUTH_TRUSTED_ORIGINS", trustedOrigins.join(","));
 
     // Inject Amplify env vars (CDK-managed + secret-derived). See construct
     // docstring for the rationale (avoids embedding secret values in the
