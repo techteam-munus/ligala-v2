@@ -243,7 +243,11 @@
       "Bash(find apps/web -path '*api/auth*' -name '*.ts')",
       "Bash(grep -rn \"toNextJsHandler\\\\|basePath\\\\|NEXT_PUBLIC_BETTER_AUTH_URL\" apps/web --include=\"*.ts\" --include=\"*.tsx\")",
       "Bash(echo \"=== exit: $? \\(1 = no matches in repo\\) ===\")",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git branch *)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\dejes\\\\munus\\\\ligala\\\\ligala-v2\\\\apps\\\\web\\\\app\\\\\\(lawyer\\)\\\\lawyer\\\\payouts\\\\_components\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"Directory created\")"
     ]
   }
 }
