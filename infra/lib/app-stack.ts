@@ -198,6 +198,62 @@ export class AppStack extends Stack {
     this.monitoring.attachLambdaDurationP95(emailWorker, "email-worker", 5000);
     this.monitoring.attachDlqDepth(emailDlq, "email-dlq");
 
+    // ── IDMeta KYC ingest queue + DLQ + worker ─────────────────────────────
+    // POST /webhooks/idmeta enqueues { verificationId } here in prod (i.e. when
+    // IDMETA_QUEUE_URL is set); this worker finalizes the verification with
+    // IDMeta, downloads the captured selfie/ID into the uploads bucket, and
+    // reconciles the kyc_submission. Mirrors the email worker pattern above.
+    const idmetaDlq = new sqs.Queue(this, "IdmetaDlq", {
+      queueName: `ligala-v2-${props.envName}-idmeta-dlq`,
+      retentionPeriod: Duration.days(14),
+    });
+    const idmetaQueue = new sqs.Queue(this, "IdmetaQueue", {
+      queueName: `ligala-v2-${props.envName}-idmeta`,
+      // > worker timeout (120s). IDMeta finalize + several image downloads +
+      // S3 puts can run longer than the email worker, so both are higher.
+      visibilityTimeout: Duration.seconds(180),
+      deadLetterQueue: { queue: idmetaDlq, maxReceiveCount: 3 },
+    });
+
+    const idmetaWorker = new lambda.Function(this, "IdmetaWorker", {
+      functionName: `ligala-v2-${props.envName}-idmeta-worker`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: "idmeta/handler.handler",
+      code: lambda.Code.fromAsset(path.resolve(__dirname, "../../workers/dist")),
+      memorySize: 512,
+      timeout: Duration.seconds(120),
+      vpc: props.vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [props.dbClientSecurityGroup],
+      environment: commonEnv,
+      logRetention: logs.RetentionDays.ONE_MONTH,
+    });
+    // Small batch: each record does network I/O (finalize + image downloads +
+    // S3 puts), so keep per-invocation work bounded.
+    idmetaWorker.addEventSource(
+      new SqsEventSource(idmetaQueue, {
+        batchSize: 5,
+        reportBatchItemFailures: true,
+      }),
+    );
+
+    // Worker needs DB creds + app secret (IDMeta token/base URL, via
+    // bootstrapEnv) + write access to the uploads bucket for the captured docs.
+    props.dbCluster.secret!.grantRead(idmetaWorker);
+    props.appSecret.grantRead(idmetaWorker);
+    props.uploadsBucket.grantReadWrite(idmetaWorker);
+
+    // API Lambda enqueues ingest jobs. Setting IDMETA_QUEUE_URL is precisely
+    // what flips the webhook from inline ingestion (dev) to async enqueue (prod).
+    idmetaQueue.grantSendMessages(this.apiLambda);
+    this.apiLambda.addEnvironment("IDMETA_QUEUE_URL", idmetaQueue.queueUrl);
+
+    this.monitoring.attachLambdaErrors(idmetaWorker, "idmeta-worker");
+    this.monitoring.attachLambdaThrottles(idmetaWorker, "idmeta-worker");
+    this.monitoring.attachLambdaDurationP95(idmetaWorker, "idmeta-worker", 30000);
+    this.monitoring.attachDlqDepth(idmetaDlq, "idmeta-dlq");
+
     // ── HTTP API Gateway ───────────────────────────────────────────────────
     this.httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       apiName: `ligala-v2-${props.envName}-api`,
