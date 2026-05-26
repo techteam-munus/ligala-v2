@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/session";
 import { roleHome } from "@/lib/role";
+import { MarketingMobileNav } from "./_components/mobile-nav";
 
 export default async function MarketingLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
@@ -36,7 +37,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
               className="h-5 w-auto"
             />
           </Link>
-          <nav className="flex items-center gap-1 text-sm">
+          <nav className="hidden items-center gap-1 text-sm md:flex">
             <Button asChild variant="ghost" size="sm">
               <Link href="/lawyers">Find a lawyer</Link>
             </Button>
@@ -71,6 +72,13 @@ export default async function MarketingLayout({ children }: { children: ReactNod
               </>
             )}
           </nav>
+          <MarketingMobileNav
+            isAuthenticated={!!user}
+            displayName={displayName}
+            initial={initial}
+            userImage={user?.image}
+            homeHref={homeHref}
+          />
         </div>
       </header>
 

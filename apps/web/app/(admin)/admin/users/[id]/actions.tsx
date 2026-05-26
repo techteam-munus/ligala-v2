@@ -129,7 +129,7 @@ export function UserActions({
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Status
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Button
               type="button"
               variant="outline"
@@ -174,7 +174,7 @@ export function UserActions({
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Role
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {(["client", "lawyer", "admin"] as Role[]).map((r) => (
               <Button
                 key={r}
