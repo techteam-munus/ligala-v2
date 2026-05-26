@@ -65,6 +65,11 @@ export const invoices = pgTable(
       () => discountCodes.id,
       { onDelete: "set null" },
     ),
+    // Latest PayMongo Checkout Session id (cs_xxx) created for this invoice.
+    // Lets the success-redirect reconcile flow retrieve the session and record
+    // the payment directly when the async webhook is delayed or undeliverable
+    // (e.g. localhost dev without a tunnel). Overwritten on each new checkout.
+    paymongoCheckoutSessionId: text("paymongo_checkout_session_id"),
     notesMd: text("notes_md"),
     dueAt: timestamp("due_at", { withTimezone: true }),
     sentAt: timestamp("sent_at", { withTimezone: true }),

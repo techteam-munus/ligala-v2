@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockInsertValues, mockInsert, mockDb, paymentRow, invoiceRow } = vi.hoisted(() => {
+const { mockInsertValues, mockInsert, mockTransaction, mockDb, paymentRow, invoiceRow } = vi.hoisted(() => {
   const mockInsertValues = vi.fn().mockResolvedValue([]);
   const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
   const paymentRow = { id: "pay_1", invoiceId: "inv_1", status: "succeeded", amountCents: 10000, refundedCents: 0, currency: "PHP" };
@@ -13,8 +13,11 @@ const { mockInsertValues, mockInsert, mockDb, paymentRow, invoiceRow } = vi.hois
     },
     insert: mockInsert,
     update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })) })),
+    // Transparent transaction: invoke the callback with the same db handle and
+    // return its result (refundPayment returns from inside the txn).
+    transaction: vi.fn(async (cb: (tx: typeof mockDb) => Promise<unknown>) => cb(mockDb)),
   };
-  return { mockInsertValues, mockInsert, mockDb, paymentRow, invoiceRow };
+  return { mockInsertValues, mockInsert, mockTransaction: mockDb.transaction, mockDb, paymentRow, invoiceRow };
 });
 
 vi.mock("@ligala/db", () => ({
@@ -30,12 +33,17 @@ describe("refundPayment — balance reversal", () => {
   beforeEach(() => {
     mockInsertValues.mockClear();
     mockInsert.mockClear();
+    mockTransaction.mockClear();
     invoiceRow.kind = "case";
   });
   it("inserts a refund_reversal for the net credited", async () => {
     await refundPayment({ paymentId: "pay_1", amountCents: 10000 });
     const rev = mockInsertValues.mock.calls.map((c) => c[0]).find((v) => v?.kind === "refund_reversal");
     expect(rev?.amountCents).toBe(9700);
+  });
+  it("performs the refund writes inside a single transaction", async () => {
+    await refundPayment({ paymentId: "pay_1", amountCents: 10000 });
+    expect(mockTransaction).toHaveBeenCalledOnce();
   });
   it("writes NO refund_reversal for a subscription invoice", async () => {
     invoiceRow.kind = "subscription";

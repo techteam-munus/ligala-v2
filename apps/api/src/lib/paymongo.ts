@@ -192,6 +192,102 @@ export async function createCheckoutSession(
   return { sessionId, checkoutUrl };
 }
 
+export type RetrievedCheckoutSession = {
+  id: string;
+  attributes: {
+    metadata?: Record<string, string>;
+    reference_number?: string;
+    payments?: Array<{
+      id?: string;
+      attributes?: { amount?: number; fee?: number; net_amount?: number; status?: string };
+    }>;
+    payment_intent?: { attributes?: { status?: string; amount?: number } } | null;
+    [key: string]: unknown;
+  };
+};
+
+export type CheckoutSessionPayment = {
+  paid: boolean;
+  amountCents?: number;
+  feeCents?: number;
+  metadataInvoiceId?: string;
+};
+
+/**
+ * Derive, from a retrieved checkout session, whether it carries a completed
+ * payment and the amount/fee to record. A session is paid when it has a payment
+ * with status "paid" (the usual case), or its payment_intent has succeeded.
+ * Defensive about shape — PayMongo nests the settled payment under
+ * `attributes.payments`. Pure function, unit-tested.
+ */
+export function checkoutSessionPayment(
+  attributes: RetrievedCheckoutSession["attributes"],
+): CheckoutSessionPayment {
+  const metadataInvoiceId = attributes.metadata?.invoiceId;
+  const paidPayment = attributes.payments?.find((p) => p?.attributes?.status === "paid");
+  if (paidPayment) {
+    return {
+      paid: true,
+      amountCents:
+        typeof paidPayment.attributes?.amount === "number"
+          ? paidPayment.attributes.amount
+          : undefined,
+      feeCents:
+        typeof paidPayment.attributes?.fee === "number"
+          ? paidPayment.attributes.fee
+          : undefined,
+      metadataInvoiceId,
+    };
+  }
+  if (attributes.payment_intent?.attributes?.status === "succeeded") {
+    return {
+      paid: true,
+      amountCents:
+        typeof attributes.payment_intent.attributes.amount === "number"
+          ? attributes.payment_intent.attributes.amount
+          : undefined,
+      metadataInvoiceId,
+    };
+  }
+  return { paid: false, metadataInvoiceId };
+}
+
+/**
+ * Retrieve a checkout session by id. Used by the success-redirect reconcile
+ * flow to record a payment directly when the async webhook is delayed or
+ * undeliverable. Same error contract as `createCheckoutSession`.
+ */
+export async function retrieveCheckoutSession(
+  secretKey: string,
+  sessionId: string,
+): Promise<RetrievedCheckoutSession> {
+  let res: Response;
+  try {
+    res = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${sessionId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`,
+      },
+    });
+  } catch (err) {
+    throw new PaymongoUnreachableError(err);
+  }
+
+  const text = await res.text();
+  if (!res.ok) throw new PaymongoApiError(res.status, text);
+
+  let parsed: { data?: { id?: string; attributes?: RetrievedCheckoutSession["attributes"] } };
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new PaymongoApiError(res.status, text);
+  }
+  const id = parsed?.data?.id;
+  const attributes = parsed?.data?.attributes;
+  if (!id || !attributes) throw new PaymongoApiError(res.status, text);
+  return { id, attributes };
+}
+
 export type BatchTransferAccount = { number: string; name: string; bic?: string };
 
 export type CreateBatchTransferInput = {

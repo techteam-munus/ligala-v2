@@ -3,6 +3,8 @@ import crypto from "node:crypto";
 import {
   createCheckoutSession,
   createBatchTransfer,
+  retrieveCheckoutSession,
+  checkoutSessionPayment,
   verifyWebhookSignature,
   PaymongoApiError,
   PaymongoUnreachableError,
@@ -178,6 +180,93 @@ describe("createCheckoutSession", () => {
         metadata: { invoiceId: "r", lawyerId: "l" },
       }),
     ).rejects.toBeInstanceOf(PaymongoUnreachableError);
+  });
+});
+
+describe("checkoutSessionPayment", () => {
+  it("reports paid with amount + fee from a settled payment", () => {
+    const result = checkoutSessionPayment({
+      metadata: { invoiceId: "inv_1" },
+      payments: [
+        { id: "pay_1", attributes: { amount: 10000, fee: 250, net_amount: 9750, status: "paid" } },
+      ],
+    });
+    expect(result).toEqual({
+      paid: true,
+      amountCents: 10000,
+      feeCents: 250,
+      metadataInvoiceId: "inv_1",
+    });
+  });
+
+  it("falls back to payment_intent.succeeded when payments are absent", () => {
+    const result = checkoutSessionPayment({
+      metadata: { invoiceId: "inv_2" },
+      payment_intent: { attributes: { status: "succeeded", amount: 5000 } },
+    });
+    expect(result).toMatchObject({ paid: true, amountCents: 5000, metadataInvoiceId: "inv_2" });
+  });
+
+  it("reports NOT paid when no payment has settled", () => {
+    const result = checkoutSessionPayment({
+      metadata: { invoiceId: "inv_3" },
+      payments: [{ id: "pay_x", attributes: { status: "awaiting_payment_method" } }],
+      payment_intent: { attributes: { status: "awaiting_next_action" } },
+    });
+    expect(result).toEqual({ paid: false, metadataInvoiceId: "inv_3" });
+  });
+
+  it("is paid even when amount/fee are missing (amount undefined → caller falls back)", () => {
+    const result = checkoutSessionPayment({
+      payments: [{ id: "pay_1", attributes: { status: "paid" } }],
+    });
+    expect(result).toEqual({ paid: true, amountCents: undefined, feeCents: undefined, metadataInvoiceId: undefined });
+  });
+});
+
+describe("retrieveCheckoutSession", () => {
+  const origFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = origFetch;
+    vi.restoreAllMocks();
+  });
+
+  function mockOnce(body: unknown, status = 200) {
+    const fn = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+    );
+    globalThis.fetch = fn as unknown as typeof fetch;
+    return fn;
+  }
+
+  it("GETs the session and returns id + attributes", async () => {
+    const fetchMock = mockOnce({
+      data: { id: "cs_test_1", attributes: { metadata: { invoiceId: "inv_1" }, payments: [] } },
+    });
+    const res = await retrieveCheckoutSession("sk_test_x", "cs_test_1");
+    expect(res.id).toBe("cs_test_1");
+    expect(res.attributes.metadata).toEqual({ invoiceId: "inv_1" });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("https://api.paymongo.com/v1/checkout_sessions/cs_test_1");
+    expect((init as RequestInit).method).toBe("GET");
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe(`Basic ${Buffer.from("sk_test_x:").toString("base64")}`);
+  });
+
+  it("throws PaymongoApiError on non-2xx", async () => {
+    mockOnce({ errors: [{ code: "resource_not_found" }] }, 404);
+    await expect(retrieveCheckoutSession("sk_test_x", "cs_missing")).rejects.toBeInstanceOf(
+      PaymongoApiError,
+    );
+  });
+
+  it("throws PaymongoUnreachableError when fetch throws", async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("ECONNREFUSED");
+    }) as unknown as typeof fetch;
+    await expect(retrieveCheckoutSession("sk_test_x", "cs_1")).rejects.toBeInstanceOf(
+      PaymongoUnreachableError,
+    );
   });
 });
 
