@@ -150,6 +150,16 @@ export const payouts = new Hono()
       throw new HTTPException(404, { message: "method_not_found" });
     }
 
+    // Refuse real withdrawals when no disbursement wallet is configured in
+    // production. Without this, the provider below resolves to `dev_simulate`,
+    // which debits the ledger and creates a payout that can never settle (the
+    // simulate endpoint 404s in prod) — silently draining the balance into a
+    // stuck `pending` payout. Fail fast before any ledger write. Non-prod
+    // (dev/test) intentionally keeps the dev_simulate path for local smoke tests.
+    if (env().NODE_ENV === "production" && !env().PAYMONGO_WALLET_ACCOUNT_NUMBER) {
+      throw new HTTPException(501, { message: "payouts_not_configured" });
+    }
+
     // If configured for real disbursement (wallet account set) the secret key
     // must also be present — fail fast (501) before debiting the ledger.
     if (env().PAYMONGO_WALLET_ACCOUNT_NUMBER && !env().PAYMONGO_SECRET_KEY) {
