@@ -22,6 +22,8 @@ export type PaymongoEvent = {
           reference_number?: string;
           total_amount?: number;
           amount?: number;
+          fee?: number;
+          net_amount?: number;
           last_payment_error?: { message?: string } | null;
           [key: string]: unknown;
         };
@@ -188,4 +190,83 @@ export async function createCheckoutSession(
   }
 
   return { sessionId, checkoutUrl };
+}
+
+export type BatchTransferAccount = { number: string; name: string; bic?: string };
+
+export type CreateBatchTransferInput = {
+  secretKey: string;
+  amountCents: number;
+  currency: "PHP";
+  provider: "instapay" | "pesonet";
+  sourceAccount: BatchTransferAccount;
+  destination: BatchTransferAccount;
+  referenceNumber: string;
+  callbackUrl: string;
+  idempotencyKey: string;
+};
+
+/**
+ * Create a single disbursement via PayMongo Money Movement batch_transfers.
+ *
+ * NOTE: shape is best-effort and MUST be confirmed against the PayMongo
+ * sandbox (Idempotency-Key header, source_account requirement, response id
+ * location). We send one transfer per withdrawal.
+ */
+export async function createBatchTransfer(
+  input: CreateBatchTransferInput,
+): Promise<{ transferId: string }> {
+  const body = {
+    data: {
+      attributes: {
+        transfers: [
+          {
+            amount: input.amountCents,
+            currency: input.currency,
+            provider: input.provider,
+            source_account: {
+              number: input.sourceAccount.number,
+              name: input.sourceAccount.name,
+              ...(input.sourceAccount.bic ? { bic: input.sourceAccount.bic } : {}),
+            },
+            destination_account: {
+              number: input.destination.number,
+              name: input.destination.name,
+              ...(input.destination.bic ? { bic: input.destination.bic } : {}),
+            },
+            reference_number: input.referenceNumber,
+            callback_url: input.callbackUrl,
+          },
+        ],
+      },
+    },
+  };
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.paymongo.com/v2/batch_transfers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(`${input.secretKey}:`).toString("base64")}`,
+        "Idempotency-Key": input.idempotencyKey,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new PaymongoUnreachableError(err);
+  }
+
+  const text = await res.text();
+  if (!res.ok) throw new PaymongoApiError(res.status, text);
+
+  let parsed: { data?: Array<{ id?: string }> };
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new PaymongoApiError(res.status, text);
+  }
+  const transferId = parsed?.data?.[0]?.id;
+  if (!transferId) throw new PaymongoApiError(res.status, text);
+  return { transferId };
 }

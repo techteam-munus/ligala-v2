@@ -27,6 +27,7 @@ import {
   PaymongoApiError,
   PaymongoUnreachableError,
 } from "../lib/paymongo";
+import { clearsAtForEarning, refundReversalCents } from "../lib/payouts";
 
 function newId() {
   return crypto.randomUUID();
@@ -607,6 +608,8 @@ export async function applyPaymentWebhook(input: {
   amountCents?: number;
   currency?: string;
   failureReason?: string;
+  /** PayMongo collection fee (cents); 0/undefined when unknown. */
+  feeCents?: number;
   rawPayload?: unknown;
 }) {
   const conn = db();
@@ -660,6 +663,39 @@ export async function applyPaymentWebhook(input: {
       currency,
       note: `Payment via ${input.provider}`,
     });
+
+    // Lawyer earnings: only for case invoices (subscription invoices are
+    // platform revenue, not lawyer earnings). Pass-through model — credit the
+    // full gross as `earning`, debit only PayMongo's real collection fee. Both
+    // clear together after the configured window.
+    if (invoice.kind !== "subscription") {
+      const feeCents = input.feeCents ?? 0;
+      const clearsAt = clearsAtForEarning(now, env().PAYOUT_CLEARING_DAYS);
+      await conn.insert(schema.balanceEntries).values({
+        id: crypto.randomUUID(),
+        lawyerId: invoice.lawyerId,
+        kind: "earning",
+        direction: "credit",
+        amountCents: amount,
+        currency,
+        clearsAt,
+        relatedPaymentId: paymentId,
+        note: `Earning from invoice ${invoice.number}`,
+      });
+      if (feeCents > 0) {
+        await conn.insert(schema.balanceEntries).values({
+          id: crypto.randomUUID(),
+          lawyerId: invoice.lawyerId,
+          kind: "processing_fee",
+          direction: "debit",
+          amountCents: feeCents,
+          currency,
+          clearsAt,
+          relatedPaymentId: paymentId,
+          note: `PayMongo collection fee for invoice ${invoice.number}`,
+        });
+      }
+    }
 
     const newPaid = invoice.paidCents + amount;
     const fullyPaid = newPaid >= invoice.totalCents;
@@ -843,6 +879,36 @@ export async function refundPayment(input: {
     currency: payment.currency,
     note: input.note ?? `Refund${input.providerRefundId ? ` ${input.providerRefundId}` : ""}`,
   });
+
+  // Claw back the lawyer's earnings for the refunded portion. Reverse the NET
+  // that was credited (gross - collection fee), pro-rata to refundedGross/gross.
+  // Only applies to case invoices (subscription invoices never credited a balance).
+  if (invoice.kind !== "subscription") {
+    const feeLine = await conn.query.balanceEntries.findFirst({
+      where: and(
+        eq(schema.balanceEntries.relatedPaymentId, payment.id),
+        eq(schema.balanceEntries.kind, "processing_fee"),
+      ),
+    });
+    const reversal = refundReversalCents({
+      grossCents: payment.amountCents,
+      processingFeeCents: feeLine?.amountCents ?? 0,
+      refundedGrossCents: input.amountCents,
+    });
+    if (reversal > 0) {
+      await conn.insert(schema.balanceEntries).values({
+        id: crypto.randomUUID(),
+        lawyerId: invoice.lawyerId,
+        kind: "refund_reversal",
+        direction: "debit",
+        amountCents: reversal,
+        currency: payment.currency,
+        clearsAt: now, // immediate — may drive available negative
+        relatedPaymentId: payment.id,
+        note: `Refund reversal for invoice ${invoice.number}`,
+      });
+    }
+  }
 
   // Roll back the invoice paid total + status.
   const newPaid = Math.max(0, invoice.paidCents - input.amountCents);
