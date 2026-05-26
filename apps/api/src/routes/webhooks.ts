@@ -1,8 +1,7 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { eq } from "drizzle-orm";
-import { db, schema } from "@ligala/db";
 import { idmetaWebhookPayload, paymentWebhookInput } from "@ligala/shared/schemas";
+import { ingestIdmetaResult, enqueueIdmetaIngest, verifyIdmetaSignature } from "@ligala/kyc";
 import { applyPaymentWebhook } from "./billing";
 import {
   verifyWebhookSignature,
@@ -22,41 +21,45 @@ import { applyTransferWebhook, mapTransferStatus } from "../lib/transfer-webhook
  * common form before calling `applyPaymentWebhook`.
  */
 export const webhooks = new Hono()
+  /**
+   * IDMeta verification webhook. Verifies the HMAC signature (when a secret is
+   * configured), normalizes the payload, then either ingests inline (dev) or
+   * enqueues to the idmeta SQS worker (prod, when IDMETA_QUEUE_URL is set).
+   * Maps the verification to a kyc_submission, pulls captured images into our
+   * S3, and reconciles status — all inside the shared ingestIdmetaResult().
+   */
   .post("/idmeta", async (c) => {
-    const body = await c.req.json().catch(() => null);
-    const parsed = idmetaWebhookPayload.safeParse(body);
+    const raw = await c.req.raw.text();
+    const signature =
+      c.req.header("Idmeta-Signature") ?? c.req.header("X-Idmeta-Signature") ?? null;
+    if (!verifyIdmetaSignature(raw, signature, process.env.IDMETA_WEBHOOK_SECRET)) {
+      return c.json({ error: "invalid_signature" }, 401);
+    }
+
+    const parsed = idmetaWebhookPayload.safeParse(JSON.parse(raw || "null"));
     if (!parsed.success) {
       return c.json({ error: "bad_payload", issues: parsed.error.flatten() }, 400);
     }
-    const { applicant_id, status, reject_reason } = parsed.data;
+    const verificationId = parsed.data.id as string;
 
-    const submission =
-      (await db().query.kycSubmissions.findFirst({
-        where: eq(schema.kycSubmissions.idmetaApplicantId, applicant_id),
-      })) ??
-      (await db().query.kycSubmissions.findFirst({
-        where: eq(schema.kycSubmissions.id, applicant_id),
-      }));
-
-    if (!submission) {
-      return c.json({ error: "submission_not_found", applicant_id }, 404);
+    // Prod: hand off to the SQS worker so the webhook returns fast (downloading
+    // several images can outlast the webhook timeout). Dev: process inline so
+    // the flow is observable end-to-end locally.
+    if (process.env.IDMETA_QUEUE_URL) {
+      await enqueueIdmetaIngest({ verificationId });
+      return c.json({ queued: true, verificationId }, 202);
     }
 
-    const next =
-      status === "approved" ? "approved" : status === "rejected" ? "rejected" : "submitted";
-
-    await db()
-      .update(schema.kycSubmissions)
-      .set({
-        status: next,
-        idmetaApplicantId: applicant_id,
-        decidedAt: next === "submitted" ? null : new Date(),
-        rejectReason: next === "rejected" ? reject_reason ?? null : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.kycSubmissions.id, submission.id));
-
-    return c.json({ ok: true, submissionId: submission.id, status: next });
+    const result = await ingestIdmetaResult({
+      verificationId,
+      status: parsed.data.status,
+      verificationResults: parsed.data.verification_results ?? undefined,
+    });
+    if (result.notFound) {
+      console.error("idmeta_webhook_submission_not_found", { verificationId });
+      return c.json({ error: "submission_not_found", verificationId }, 404);
+    }
+    return c.json({ ok: true, ...result });
   })
 
   /**
