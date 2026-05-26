@@ -307,6 +307,9 @@ export const payouts = new Hono()
  * Session-less (mounted outside `payouts`' requireRole), mirroring billingDev.
  */
 export const payoutsDev = new Hono().post("/simulate-transfer", async (c) => {
+  if (env().NODE_ENV === "production") {
+    throw new HTTPException(404, { message: "not_found" });
+  }
   const url = new URL(c.req.url);
   const payoutId = url.searchParams.get("payoutId");
   const status = url.searchParams.get("status") === "failed" ? "failed" : "succeeded";

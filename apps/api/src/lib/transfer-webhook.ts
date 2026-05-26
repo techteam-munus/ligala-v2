@@ -1,5 +1,5 @@
 import { HTTPException } from "hono/http-exception";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 
 export type PayoutWebhookStatus = "succeeded" | "failed" | "returned";
@@ -31,7 +31,10 @@ export async function applyTransferWebhook(input: {
   const payout = await conn.query.payouts.findFirst({
     where:
       input.provider === "dev_simulate"
-        ? eq(schema.payouts.id, input.providerTransferId)
+        ? and(
+            eq(schema.payouts.id, input.providerTransferId),
+            eq(schema.payouts.provider, "dev_simulate"),
+          )
         : eq(schema.payouts.providerTransferId, input.providerTransferId),
   });
   if (!payout) throw new HTTPException(404, { message: "payout_not_found" });

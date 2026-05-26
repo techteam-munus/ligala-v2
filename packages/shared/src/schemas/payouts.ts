@@ -11,6 +11,8 @@ export const PAYOUT_ERROR_CODES = [
   "paymongo_not_configured",
   "paymongo_request_failed",
   "paymongo_unreachable",
+  "disbursement_request_failed",
+  "transfer_webhook_not_configured",
 ] as const;
 
 const ewalletNumber = z

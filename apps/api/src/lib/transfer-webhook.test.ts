@@ -44,14 +44,15 @@ const {
 vi.mock("@ligala/db", () => ({
   db: () => mockDb,
   schema: {
-    payouts: { id: "id", providerTransferId: "provider_transfer_id" },
+    payouts: { id: "id", providerTransferId: "provider_transfer_id", provider: "provider" },
     balanceEntries: {},
   },
 }));
 
-// eq is used in the where clause; mock it to pass through so findFirst resolves
+// eq/and are used in the where clause; mock them to pass through so findFirst resolves
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col: unknown, val: unknown) => ({ col, val })),
+  and: vi.fn((...conds: unknown[]) => ({ and: conds })),
 }));
 
 import { mapTransferStatus, applyTransferWebhook } from "./transfer-webhook";
@@ -197,5 +198,32 @@ describe("applyTransferWebhook", () => {
 
     // No transaction entered
     expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("dev_simulate provider cannot find a paymongo payout by id → 404, no writes", async () => {
+    // The payout exists in the DB with provider "paymongo", but the lookup is
+    // called with provider "dev_simulate". The and(id, provider=dev_simulate)
+    // filter should not match it — findFirst returns undefined (no match).
+    mockFindFirst.mockResolvedValue(undefined);
+
+    let caughtErr: unknown;
+    try {
+      await applyTransferWebhook({
+        provider: "dev_simulate",
+        providerTransferId: "payout_1", // same id as a real paymongo payout
+        status: "succeeded",
+      });
+    } catch (err) {
+      caughtErr = err;
+    }
+
+    // Must throw with status 404
+    expect(caughtErr).toBeDefined();
+    expect((caughtErr as { status: number }).status).toBe(404);
+
+    // No transaction, no update, no insert
+    expect(mockTransaction).not.toHaveBeenCalled();
+    expect(mockTxUpdate).not.toHaveBeenCalled();
+    expect(mockTxInsert).not.toHaveBeenCalled();
   });
 });

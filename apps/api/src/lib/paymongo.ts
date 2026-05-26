@@ -198,7 +198,7 @@ export type CreateBatchTransferInput = {
   secretKey: string;
   amountCents: number;
   currency: "PHP";
-  provider: "instapay" | "pesonet" | "paymongo";
+  provider: "instapay" | "pesonet";
   sourceAccount: BatchTransferAccount;
   destination: BatchTransferAccount;
   referenceNumber: string;
