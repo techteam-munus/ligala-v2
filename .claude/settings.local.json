@@ -251,7 +251,18 @@
       "Bash(xargs grep -l \"File\\\\|upload\\\\|presign\")",
       "Bash(xargs grep -l \"s3Client\\\\|S3Client\")",
       "Bash(git stat *)",
-      "Bash(git --no-pager diff --stat HEAD)"
+      "Bash(git --no-pager diff --stat HEAD)",
+      "WebFetch(domain:idmetagroup.com)",
+      "WebFetch(domain:docs.idmetagroup.com)",
+      "WebFetch(domain:documenter.getpostman.com)",
+      "WebFetch(domain:documenter.gw.postman.com)",
+      "Bash(git *)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\dejes\\\\munus\\\\ligala\\\\ligala-v2\\\\packages\\\\kyc\\\\src\")",
+      "PowerShell(New-Item *)",
+      "Bash(awk 'END{print NR}' PROCESS.md)",
+      "Bash(ls -la apps/web/.env*)",
+      "Bash(ls -la .env*)",
+      "Bash(grep -rn \"IDMETA_HOSTED_URL\" apps/web/.env* .env .env.local)"
     ]
   }
 }
