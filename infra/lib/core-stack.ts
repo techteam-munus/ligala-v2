@@ -223,6 +223,15 @@ export class CoreStack extends Stack {
         secretStringTemplate: JSON.stringify({
           PAYMONGO_SECRET_KEY: "",
           PAYMONGO_WEBHOOK_SECRET: "",
+          // Disbursements / payouts (PayMongo batch_transfers). The wallet is the
+          // platform source account funds are transferred FROM; the transfer
+          // webhook secret verifies the /webhooks/paymongo-transfer callback.
+          // Until these are filled, payouts resolve to the dev_simulate provider
+          // (no real transfer) — see apps/api/src/routes/payouts.ts.
+          PAYMONGO_WALLET_ACCOUNT_NUMBER: "",
+          PAYMONGO_WALLET_ACCOUNT_NAME: "",
+          PAYMONGO_WALLET_BIC: "",
+          PAYMONGO_TRANSFER_WEBHOOK_SECRET: "",
           PAYPAL_CLIENT_ID: "",
           PAYPAL_CLIENT_SECRET: "",
           PAYPAL_WEBHOOK_ID: "",
