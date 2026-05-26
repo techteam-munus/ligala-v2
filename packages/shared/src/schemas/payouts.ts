@@ -8,6 +8,7 @@ export const PAYOUT_ERROR_CODES = [
   "insufficient_balance",
   "amount_invalid",
   "payout_not_found",
+  "payouts_not_configured",
   "paymongo_not_configured",
   "paymongo_request_failed",
   "paymongo_unreachable",

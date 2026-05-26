@@ -87,6 +87,7 @@ const {
   const mockCreateBatchTransfer = vi.fn();
 
   const mockEnvState = {
+    NODE_ENV: undefined as string | undefined,
     PAYMONGO_WALLET_ACCOUNT_NUMBER: undefined as string | undefined,
     PAYMONGO_WALLET_ACCOUNT_NAME: "Ligala",
     PAYMONGO_WALLET_BIC: undefined as string | undefined,
@@ -340,6 +341,7 @@ describe("POST /lawyer/payouts/methods — KYC gate", () => {
 describe("POST /lawyer/payouts — withdrawal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnvState.NODE_ENV = undefined;
     mockEnvState.PAYMONGO_WALLET_ACCOUNT_NUMBER = undefined;
     mockKycFindFirst.mockResolvedValue({ status: "approved" });
     mockMethodFindFirst.mockResolvedValue(methodRow);
@@ -362,6 +364,31 @@ describe("POST /lawyer/payouts — withdrawal", () => {
     expect(res.status).toBe(201);
     const body = await res.json() as { payout: { provider: string } };
     expect(body.payout.provider).toBe("dev_simulate");
+  });
+
+  it("returns 501 payouts_not_configured in production when no disbursement wallet is set (does not debit the ledger)", async () => {
+    // In production the dev_simulate fallthrough is a trap: it would debit the
+    // ledger and create a payout that can never settle (the simulate endpoint
+    // 404s in prod). The guard must refuse before any ledger write.
+    mockEnvState.NODE_ENV = "production";
+    mockEnvState.PAYMONGO_WALLET_ACCOUNT_NUMBER = undefined;
+    mockDb.mockReturnValue(
+      buildConn([
+        { direction: "credit", amountCents: 100000, clearsAt: new Date("2020-01-01") },
+      ]),
+    );
+    const app = buildApp();
+    const res = await app.request(
+      req("/lawyer/payouts", {
+        method: "POST",
+        body: { payoutMethodId: "meth_1", amountCents: 60000 },
+      }),
+    );
+    expect(res.status).toBe(501);
+    const body = await res.json() as { error: string };
+    expect(body.error).toBe("payouts_not_configured");
+    // Fail-fast: no payout row created, ledger untouched.
+    expect(mockInsertValuesReturning).not.toHaveBeenCalled();
   });
 
   it("returns 404 method_not_found when method belongs to a different lawyer", async () => {

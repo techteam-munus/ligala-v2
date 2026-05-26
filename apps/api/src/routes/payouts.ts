@@ -150,6 +150,16 @@ export const payouts = new Hono()
       throw new HTTPException(404, { message: "method_not_found" });
     }
 
+    // Refuse real withdrawals when no disbursement wallet is configured in
+    // production. Without this, the provider below resolves to `dev_simulate`,
+    // which debits the ledger and creates a payout that can never settle (the
+    // simulate endpoint 404s in prod) — silently draining the balance into a
+    // stuck `pending` payout. Fail fast before any ledger write. Non-prod
+    // (dev/test) intentionally keeps the dev_simulate path for local smoke tests.
+    if (env().NODE_ENV === "production" && !env().PAYMONGO_WALLET_ACCOUNT_NUMBER) {
+      throw new HTTPException(501, { message: "payouts_not_configured" });
+    }
+
     // If configured for real disbursement (wallet account set) the secret key
     // must also be present — fail fast (501) before debiting the ledger.
     if (env().PAYMONGO_WALLET_ACCOUNT_NUMBER && !env().PAYMONGO_SECRET_KEY) {
@@ -300,6 +310,52 @@ export const payouts = new Hono()
       }
       throw err;
     }
+  });
+
+/** Mirrors the `payout_status` pgEnum — used to validate the admin ?status= filter. */
+const PAYOUT_STATUS_VALUES = [
+  "pending",
+  "processing",
+  "succeeded",
+  "failed",
+  "returned",
+] as const;
+type PayoutStatusValue = (typeof PAYOUT_STATUS_VALUES)[number];
+
+/**
+ * Admin payout queue (read-only). Mounted at /admin/payouts.
+ */
+export const adminPayouts = new Hono()
+  .use("*", requireRole("admin"))
+  .get("/", async (c) => {
+    // Validate the optional ?status= filter against the payout_status enum
+    // before it reaches the query. A raw unknown value would otherwise be sent
+    // to Postgres and rejected ("invalid input value for enum payout_status"),
+    // surfacing as a 500 rather than a filtered/empty result. Unknown → ignore.
+    const statusParam = c.req.query("status");
+    const status = PAYOUT_STATUS_VALUES.includes(statusParam as PayoutStatusValue)
+      ? (statusParam as PayoutStatusValue)
+      : undefined;
+    const conn = db();
+    const base = conn
+      .select({
+        payout: schema.payouts,
+        lawyerName: schema.user.name,
+        lawyerEmail: schema.user.email,
+      })
+      .from(schema.payouts)
+      .leftJoin(schema.user, eq(schema.user.id, schema.payouts.lawyerId));
+    const rows = status
+      ? await base
+          .where(eq(schema.payouts.status, status))
+          .orderBy(desc(schema.payouts.createdAt))
+      : await base.orderBy(desc(schema.payouts.createdAt));
+    return c.json({
+      items: rows.map((r) => ({
+        ...r.payout,
+        lawyer: r.lawyerName ? { name: r.lawyerName, email: r.lawyerEmail } : null,
+      })),
+    });
   });
 
 /**

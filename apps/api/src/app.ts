@@ -11,7 +11,7 @@ import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
 import { billing, billingDev, discountCodesRouter } from "./routes/billing";
 import { subscriptions } from "./routes/subscriptions";
-import { payouts, payoutsDev } from "./routes/payouts";
+import { payouts, payoutsDev, adminPayouts } from "./routes/payouts";
 import { referrals, referralLinksPublic } from "./routes/referrals";
 import { files } from "./routes/files";
 import { references } from "./routes/references";
@@ -61,6 +61,7 @@ export function createApp() {
   app.route("/references", references);
   app.route("/integrations", integrations);
   app.route("/webhooks", webhooks);
+  app.route("/admin/payouts", adminPayouts);
   app.route("/admin", admin);
 
   app.onError(errorHandler);
