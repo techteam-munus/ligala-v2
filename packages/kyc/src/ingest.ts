@@ -7,6 +7,8 @@ import { putKycDocument } from "./s3";
 
 export interface IngestInput {
   verificationId: string;
+  /** Our kyc_submission id, echoed back via IDMeta metadata (primary mapping). */
+  submissionId?: string;
   /** String/numeric status from the webhook, if present. */
   status?: string | number;
   /** `verification_results` from the webhook, if present (primary image source). */
@@ -30,11 +32,19 @@ export interface IngestResult {
 export async function ingestIdmetaResult(input: IngestInput): Promise<IngestResult> {
   const conn = db();
 
-  // 1. Resolve submission. Primary: the verification id we stored at /start.
-  let submission = await conn.query.kycSubmissions.findFirst({
-    where: eq(schema.kycSubmissions.idmetaApplicantId, input.verificationId),
-  });
-  // Fallback: a submission whose id equals the verification id (defensive).
+  // 1. Resolve submission. Primary: our submissionId echoed back in IDMeta
+  // metadata. Then the verification id we stored at /start (idmetaApplicantId).
+  // Then a submission whose id equals the verification id (defensive).
+  let submission = input.submissionId
+    ? await conn.query.kycSubmissions.findFirst({
+        where: eq(schema.kycSubmissions.id, input.submissionId),
+      })
+    : undefined;
+  if (!submission) {
+    submission = await conn.query.kycSubmissions.findFirst({
+      where: eq(schema.kycSubmissions.idmetaApplicantId, input.verificationId),
+    });
+  }
   if (!submission) {
     submission = await conn.query.kycSubmissions.findFirst({
       where: eq(schema.kycSubmissions.id, input.verificationId),

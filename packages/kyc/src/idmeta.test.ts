@@ -82,10 +82,10 @@ describe("hostedUrlFor", () => {
     );
   });
 
-  it("otherwise appends verification_id to the configured hosted link", () => {
+  it("otherwise appends trustValidationId to the configured hosted link", () => {
     const out = hostedUrlFor("ver_1", {});
     expect(out).toContain("https://web-sdk.idmetagroup.com/?templateId=abc");
-    expect(out).toContain("verification_id=ver_1");
+    expect(out).toContain("trustValidationId=ver_1");
   });
 });
 

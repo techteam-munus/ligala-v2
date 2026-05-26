@@ -79,7 +79,10 @@ export function hostedUrlFor(
   const base = process.env.IDMETA_HOSTED_URL;
   if (!base) throw new Error("IDMETA_HOSTED_URL is not configured");
   const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}verification_id=${encodeURIComponent(verificationId)}`;
+  // IDMeta's own term for a verification is "trustValidation" (see webhook
+  // event types trustValidation.create/complete + the trustValidationId field),
+  // so the hosted SDK binds to a pre-created verification via `trustValidationId`.
+  return `${base}${sep}trustValidationId=${encodeURIComponent(verificationId)}`;
 }
 
 export interface DocumentBytes {

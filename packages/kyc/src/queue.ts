@@ -2,6 +2,10 @@ import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 export interface IdmetaIngestMessage {
   verificationId: string;
+  /** Our kyc_submission id (from IDMeta metadata) for reliable mapping. */
+  submissionId?: string;
+  /** Final status from the webhook (avoids a finalize round-trip in the worker). */
+  status?: string | number;
 }
 
 let client: SQSClient | null = null;

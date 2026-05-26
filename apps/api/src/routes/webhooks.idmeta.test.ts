@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { createHmac } from "node:crypto";
 
 const { ingestIdmetaResult, enqueueIdmetaIngest } = vi.hoisted(() => ({
-  ingestIdmetaResult: vi.fn(async () => ({ submissionId: "sub_1", status: "approved", ingestedDocuments: 2 })),
+  ingestIdmetaResult: vi.fn(async () => ({ submissionId: "sub_1", status: "approved", ingestedDocuments: 0 })),
   enqueueIdmetaIngest: vi.fn(async () => {}),
 }));
 vi.mock("@ligala/kyc", async (importOriginal) => {
@@ -25,11 +25,15 @@ function app() {
   return a;
 }
 
+// IDMeta's real terminal event shape: { type, data: {...} }.
 const payload = JSON.stringify({
-  id: "ver_1",
-  status: "VERIFIED",
-  metadata: { submissionId: "sub_1" },
-  verification_results: { document_verification: { request_data: { imageFrontSide: "data:image/jpeg;base64,/9j/A" } } },
+  type: "trustValidation.complete",
+  data: {
+    id: "ver_1",
+    status: 3,
+    metadata: { submissionId: "sub_1" },
+    verification_data: "[]",
+  },
 });
 
 beforeEach(() => {
@@ -44,7 +48,7 @@ afterEach(() => {
 });
 
 describe("POST /webhooks/idmeta", () => {
-  it("ingests inline when no queue is configured (dev)", async () => {
+  it("ingests the completion event inline when no queue is configured (dev)", async () => {
     const res = await app().request("/webhooks/idmeta", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -52,7 +56,7 @@ describe("POST /webhooks/idmeta", () => {
     });
     expect(res.status).toBe(200);
     expect(ingestIdmetaResult).toHaveBeenCalledWith(
-      expect.objectContaining({ verificationId: "ver_1", status: "VERIFIED" }),
+      expect.objectContaining({ verificationId: "ver_1", submissionId: "sub_1", status: 3 }),
     );
     expect(enqueueIdmetaIngest).not.toHaveBeenCalled();
   });
@@ -65,8 +69,23 @@ describe("POST /webhooks/idmeta", () => {
       body: payload,
     });
     expect(res.status).toBe(202);
-    expect(enqueueIdmetaIngest).toHaveBeenCalledWith({ verificationId: "ver_1" });
+    expect(enqueueIdmetaIngest).toHaveBeenCalledWith({
+      verificationId: "ver_1",
+      submissionId: "sub_1",
+      status: 3,
+    });
     expect(ingestIdmetaResult).not.toHaveBeenCalled();
+  });
+
+  it("acks (200) and ignores non-terminal events without ingesting", async () => {
+    const res = await app().request("/webhooks/idmeta", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "trustValidation.create", data: { id: "ver_1", status: 99 } }),
+    });
+    expect(res.status).toBe(200);
+    expect(ingestIdmetaResult).not.toHaveBeenCalled();
+    expect(enqueueIdmetaIngest).not.toHaveBeenCalled();
   });
 
   it("rejects a bad signature with 401 when a secret is configured", async () => {
@@ -92,11 +111,11 @@ describe("POST /webhooks/idmeta", () => {
     expect(ingestIdmetaResult).toHaveBeenCalled();
   });
 
-  it("400s a payload with no verification id", async () => {
+  it("400s a completion event with no verification id", async () => {
     const res = await app().request("/webhooks/idmeta", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ status: "VERIFIED" }),
+      body: JSON.stringify({ type: "trustValidation.complete", data: { status: 3 } }),
     });
     expect(res.status).toBe(400);
   });

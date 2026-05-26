@@ -10,13 +10,24 @@ export async function handler(event: SQSEvent): Promise<SQSBatchResponse> {
 
   for (const r of event.Records) {
     try {
-      const body = JSON.parse(r.body) as { verificationId?: unknown };
+      const body = JSON.parse(r.body) as {
+        verificationId?: unknown;
+        submissionId?: unknown;
+        status?: unknown;
+      };
       if (typeof body.verificationId !== "string" || body.verificationId.length === 0) {
         console.error("[idmeta-worker] invalid message", r.messageId, r.body.slice(0, 200));
         failures.push({ itemIdentifier: r.messageId });
         continue;
       }
-      const result = await ingestIdmetaResult({ verificationId: body.verificationId });
+      const result = await ingestIdmetaResult({
+        verificationId: body.verificationId,
+        submissionId: typeof body.submissionId === "string" ? body.submissionId : undefined,
+        status:
+          typeof body.status === "string" || typeof body.status === "number"
+            ? body.status
+            : undefined,
+      });
       if (result.notFound) {
         // No submission maps to this verification — non-retryable; log & ack.
         console.error("[idmeta-worker] submission not found", body.verificationId);

@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { idmetaWebhookPayload, paymentWebhookInput } from "@ligala/shared/schemas";
-import { ingestIdmetaResult, enqueueIdmetaIngest, verifyIdmetaSignature } from "@ligala/kyc";
+import { paymentWebhookInput } from "@ligala/shared/schemas";
+import {
+  ingestIdmetaResult,
+  enqueueIdmetaIngest,
+  verifyIdmetaSignature,
+  normalizeIdmetaWebhook,
+} from "@ligala/kyc";
 import { applyPaymentWebhook } from "./billing";
 import {
   verifyWebhookSignature,
@@ -42,28 +47,45 @@ export const webhooks = new Hono()
     } catch {
       return c.json({ error: "bad_payload" }, 400);
     }
-    const parsed = idmetaWebhookPayload.safeParse(body);
-    if (!parsed.success) {
-      return c.json({ error: "bad_payload", issues: parsed.error.flatten() }, 400);
+
+    const evt = normalizeIdmetaWebhook(body);
+    // IDMeta fires several events per verification (trustValidation.create,
+    // per-check, trustValidation.complete). Only the terminal completion drives
+    // reconciliation; ack the rest with 200 so IDMeta doesn't keep retrying.
+    if (!evt.terminal) {
+      return c.json({ ignored: true, type: evt.type ?? null });
     }
-    const verificationId = parsed.data.id as string;
+    if (!evt.verificationId) {
+      return c.json({ error: "bad_payload" }, 400);
+    }
 
     // Prod: hand off to the SQS worker so the webhook returns fast (downloading
-    // several images can outlast the webhook timeout). Dev: process inline so
-    // the flow is observable end-to-end locally.
+    // images can outlast the webhook timeout). Dev: process inline so the flow
+    // is observable end-to-end locally.
     if (process.env.IDMETA_QUEUE_URL) {
-      await enqueueIdmetaIngest({ verificationId });
-      return c.json({ queued: true, verificationId }, 202);
+      await enqueueIdmetaIngest({
+        verificationId: evt.verificationId,
+        submissionId: evt.submissionId,
+        status: evt.status,
+      });
+      return c.json({ queued: true, verificationId: evt.verificationId }, 202);
     }
 
     const result = await ingestIdmetaResult({
-      verificationId,
-      status: parsed.data.status,
-      verificationResults: parsed.data.verification_results ?? undefined,
+      verificationId: evt.verificationId,
+      submissionId: evt.submissionId,
+      status: evt.status,
+      verificationResults: evt.results,
     });
     if (result.notFound) {
-      console.error("idmeta_webhook_submission_not_found", { verificationId });
-      return c.json({ error: "submission_not_found", verificationId }, 404);
+      console.error("idmeta_webhook_submission_not_found", {
+        verificationId: evt.verificationId,
+        submissionId: evt.submissionId,
+      });
+      return c.json(
+        { error: "submission_not_found", verificationId: evt.verificationId },
+        404,
+      );
     }
     return c.json({ ok: true, ...result });
   })
