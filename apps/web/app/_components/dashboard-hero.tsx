@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { phDateFormat } from "@/lib/datetime";
 
 function greetingFor(hour: number): string {
   if (hour < 5) return "Good evening";
@@ -35,7 +36,7 @@ export function DashboardHero({
   const now = new Date();
   const greeting = greetingFor(now.getHours());
   const firstName = firstNameOf(userName, userEmail);
-  const dateLabel = new Intl.DateTimeFormat("en-PH", {
+  const dateLabel = phDateFormat({
     weekday: "short",
     month: "short",
     day: "numeric",

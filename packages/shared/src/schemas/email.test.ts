@@ -4,8 +4,8 @@ import { emailMessage } from "./email";
 describe("emailMessage", () => {
   it("accepts a valid auth_verify message", () => {
     const r = emailMessage.safeParse({
-      kind: "auth_verify", to: "a@b.com", dedupeKey: "auth_verify:u1:abc",
-      data: { name: "Ana", verifyUrl: "https://x/verify?token=abc" },
+      kind: "auth_verify", to: "a@b.com", dedupeKey: "auth_verify:a@b.com:abc",
+      data: { code: "123456" },
     });
     expect(r.success).toBe(true);
   });

@@ -11,6 +11,15 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional(),
   PAYMONGO_SECRET_KEY: z.string().optional(),
   PAYMONGO_WEBHOOK_SECRET: z.string().optional(),
+  // Disbursements / payouts
+  PAYMONGO_TRANSFER_WEBHOOK_SECRET: z.string().optional(),
+  // Source (platform) wallet account for batch_transfers — confirm in sandbox.
+  PAYMONGO_WALLET_ACCOUNT_NUMBER: z.string().optional(),
+  PAYMONGO_WALLET_ACCOUNT_NAME: z.string().default("Ligala"),
+  PAYMONGO_WALLET_BIC: z.string().optional(),
+  // Minimum withdrawal (PHP 500) + clearing window before earnings are withdrawable.
+  PAYOUT_MIN_CENTS: z.coerce.number().int().positive().default(50000),
+  PAYOUT_CLEARING_DAYS: z.coerce.number().int().min(0).default(3),
   // Comma-separated IPv4 CIDRs. Empty/unset = no IP gate (dev/test). Set on
   // the API Lambda when there's an office/VPN range to lock /admin/* to.
   ADMIN_IP_ALLOWLIST: z.string().optional(),

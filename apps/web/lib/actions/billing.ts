@@ -72,6 +72,25 @@ export async function checkoutInvoice(id: string, input: CheckoutInput) {
   );
 }
 
+/**
+ * Pull the latest PayMongo checkout session and record the payment if it has
+ * settled — the success-redirect fallback for when the async webhook is delayed
+ * or (in local dev) undeliverable. Safe to call repeatedly: the API dedups on
+ * the checkout-session id. Revalidates the invoice pages when it actually
+ * recorded something so the fresh "paid" state renders.
+ */
+export async function reconcileInvoice(id: string) {
+  const res = await api<{ reconciled: boolean; status: string }>(
+    `/billing/invoices/${id}/reconcile`,
+    { method: "POST" },
+  );
+  if (res.reconciled) {
+    revalidatePath(`/invoices/${id}`);
+    revalidatePath(`/lawyer/invoices/${id}`);
+  }
+  return res;
+}
+
 export async function createDiscountCode(input: DiscountCodeInput) {
   const parsed = discountCodeInput.parse(input);
   await api("/billing/discount-codes", {

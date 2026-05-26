@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { phDateFormat } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHero } from "@/app/_components/page-hero";
@@ -131,7 +132,7 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
 }
 
 function longDate(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",

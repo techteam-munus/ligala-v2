@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { ArrowUpRight, Briefcase, Link2 } from "lucide-react";
 import { decideOnReferral } from "@/lib/actions/referral";
 import { cn } from "@/lib/utils";
+import { phDateFormat } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -32,7 +33,7 @@ function relativeTime(iso: string) {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.round(diffHr / 24);
   if (diffDay < 30) return `${diffDay}d ago`;
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
   }).format(new Date(iso));
@@ -154,7 +155,7 @@ function Row({
               </span>
             </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {relativeTime(r.createdAt)}
+              <span suppressHydrationWarning>{relativeTime(r.createdAt)}</span>
             </p>
           </div>
         </div>

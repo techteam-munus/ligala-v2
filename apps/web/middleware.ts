@@ -8,7 +8,11 @@ import { getSessionCookie } from "better-auth/cookies";
 const PUBLIC_PATHS = new Set([
   "/",
   "/login",
+  "/logout",
   "/signup",
+  // Email-verification code entry. Reachable while signed-out (post-signup,
+  // before a session exists) so it must be public.
+  "/verify-email",
   "/forgot-password",
   "/about",
   "/pricing",

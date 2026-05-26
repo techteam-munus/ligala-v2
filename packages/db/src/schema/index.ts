@@ -18,6 +18,7 @@ export * from "./clients";
 export * from "./cases";
 export * from "./billing";
 export * from "./subscriptions";
+export * from "./payouts";
 export * from "./referrals";
 export * from "./admin";
 export * from "./ibp-lawyers";

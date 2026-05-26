@@ -19,14 +19,17 @@ vi.mock("@ligala/db", () => ({
   }),
   schema: { emailLog: { dedupeKey: "dedupe_key", attempts: "attempts" } },
 }));
-vi.mock("@ligala/email", () => ({ renderEmail: vi.fn(async () => ({ subject: "S", html: "<p>h</p>", text: "h" })) }));
+vi.mock("@ligala/email", () => ({
+  renderEmail: vi.fn(async () => ({ subject: "S", html: "<p>h</p>", text: "h" })),
+  isUndeliverableRecipient: (email: string) => /\.(test|example|invalid|localhost)$/i.test(email.split("@")[1] ?? ""),
+}));
 
 import { handler } from "./handler";
 
 function record(body: unknown, messageId = "m1") {
   return { messageId, body: JSON.stringify(body) } as never;
 }
-const good = { kind: "auth_verify", to: "a@b.com", dedupeKey: "k1", data: { name: "A", verifyUrl: "https://x/v" } };
+const good = { kind: "auth_verify", to: "a@b.com", dedupeKey: "k1", data: { code: "123456" } };
 
 beforeEach(() => { sesSend.mockReset(); findFirst.mockReset(); setSpy.mockClear(); setWhere.mockClear(); process.env.EMAIL_FROM = "no-reply@mymunus.com"; });
 
@@ -38,6 +41,13 @@ describe("email worker", () => {
     expect(sesSend).toHaveBeenCalledTimes(1);
     expect(res.batchItemFailures).toEqual([]);
     expect(setSpy).toHaveBeenCalledWith(expect.objectContaining({ status: "sent" }));
+  });
+  it("suppresses reserved-TLD (.test) recipients without calling SES", async () => {
+    findFirst.mockResolvedValue({ status: "queued" });
+    const res = await handler({ Records: [record({ ...good, to: "x@ligala.test", dedupeKey: "kt" })] } as never);
+    expect(sesSend).not.toHaveBeenCalled();
+    expect(res.batchItemFailures).toEqual([]);
+    expect(setSpy).toHaveBeenCalledWith(expect.objectContaining({ status: "suppressed" }));
   });
   it("skips when already sent (dedupe)", async () => {
     findFirst.mockResolvedValue({ status: "sent" });

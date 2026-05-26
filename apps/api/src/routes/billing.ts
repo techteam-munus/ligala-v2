@@ -22,11 +22,14 @@ import { RENEWAL_DAYS, addDays } from "../lib/subscription";
 import { env } from "../lib/env";
 import { formatDate, formatPhp } from "../lib/format";
 import {
+  checkoutSessionPayment,
   createCheckoutSession,
   PAYMONGO_MIN_AMOUNT_CENTS,
   PaymongoApiError,
   PaymongoUnreachableError,
+  retrieveCheckoutSession,
 } from "../lib/paymongo";
+import { clearsAtForEarning, refundReversalCents } from "../lib/payouts";
 
 function newId() {
   return crypto.randomUUID();
@@ -459,6 +462,12 @@ export const billing = new Hono()
           metadata: { invoiceId: invoice.id, lawyerId: invoice.lawyerId },
           customerEmail: user.email,
         });
+        // Persist the session id so the success-redirect reconcile flow can
+        // retrieve it and record the payment if the webhook is delayed/undelivered.
+        await conn
+          .update(schema.invoices)
+          .set({ paymongoCheckoutSessionId: session.sessionId, updatedAt: new Date() })
+          .where(eq(schema.invoices.id, invoice.id));
         return c.json({
           provider,
           providerPaymentId: session.sessionId,
@@ -493,6 +502,78 @@ export const billing = new Hono()
       amountCents: remaining,
       currency: invoice.currency,
       checkoutUrl: `${apiOrigin}/billing/dev/simulate-payment?invoiceId=${invoice.id}&providerPaymentId=${intentId}&provider=${provider}`,
+    });
+  })
+
+  // --- Invoices: reconcile (client; pull PayMongo session, record if paid) --
+  // Fallback for when the async PayMongo webhook is delayed or undeliverable
+  // (e.g. localhost dev without a public tunnel). Retrieves the stored checkout
+  // session and, if it shows a completed payment, records it via the same
+  // idempotent applyPaymentWebhook — keyed on the cs_ id, so it dedups with the
+  // webhook regardless of which fires first. Never 5xx's: provider errors are
+  // logged and reported as "unchanged" so the success page can simply retry.
+  .post("/invoices/:id/reconcile", async (c) => {
+    const user = c.get("user");
+    const conn = db();
+    const invoice = await conn.query.invoices.findFirst({
+      where: eq(schema.invoices.id, c.req.param("id")),
+    });
+    if (!invoice) throw new HTTPException(404, { message: "invoice_not_found" });
+    if (user.role !== "client" || invoice.clientId !== user.id) {
+      throw new HTTPException(403, { message: "client_only" });
+    }
+    if (invoice.status === "paid") {
+      return c.json({ reconciled: false, status: invoice.status });
+    }
+
+    const sessionId = invoice.paymongoCheckoutSessionId;
+    const secretKey = env().PAYMONGO_SECRET_KEY;
+    if (!sessionId || !secretKey) {
+      return c.json({ reconciled: false, status: invoice.status });
+    }
+
+    let session: Awaited<ReturnType<typeof retrieveCheckoutSession>>;
+    try {
+      session = await retrieveCheckoutSession(secretKey, sessionId);
+    } catch (err) {
+      if (err instanceof PaymongoApiError) {
+        console.error("paymongo_reconcile_failed", err.status, err.bodyText.slice(0, 200));
+      } else {
+        console.error("paymongo_reconcile_unreachable", err);
+      }
+      return c.json({ reconciled: false, status: invoice.status });
+    }
+
+    const payment = checkoutSessionPayment(session.attributes);
+    // Defense in depth: the session's metadata must point back at this invoice.
+    if (payment.metadataInvoiceId && payment.metadataInvoiceId !== invoice.id) {
+      console.error("paymongo_reconcile_invoice_mismatch", {
+        invoiceId: invoice.id,
+        sessionInvoiceId: payment.metadataInvoiceId,
+      });
+      return c.json({ reconciled: false, status: invoice.status });
+    }
+    if (!payment.paid) {
+      return c.json({ reconciled: false, status: invoice.status });
+    }
+
+    const result = await applyPaymentWebhook({
+      provider: "paymongo",
+      providerPaymentId: sessionId,
+      invoiceId: invoice.id,
+      status: "succeeded",
+      amountCents: payment.amountCents,
+      feeCents: payment.feeCents,
+      currency: "PHP",
+      rawPayload: { source: "reconcile", session },
+    });
+
+    const fresh = await conn.query.invoices.findFirst({
+      where: eq(schema.invoices.id, invoice.id),
+    });
+    return c.json({
+      reconciled: !result.idempotent,
+      status: fresh?.status ?? invoice.status,
     });
   })
 
@@ -607,6 +688,8 @@ export async function applyPaymentWebhook(input: {
   amountCents?: number;
   currency?: string;
   failureReason?: string;
+  /** PayMongo collection fee (cents); 0/undefined when unknown. */
+  feeCents?: number;
   rawPayload?: unknown;
 }) {
   const conn = db();
@@ -633,24 +716,39 @@ export async function applyPaymentWebhook(input: {
   const amount = input.amountCents ?? invoice.totalCents - invoice.paidCents;
   const currency = input.currency ?? invoice.currency;
   const wasUnpaid = invoice.paidCents === 0;
-
   const paymentId = crypto.randomUUID();
-  await conn.insert(schema.payments).values({
-    id: paymentId,
-    invoiceId: invoice.id,
-    provider: input.provider,
-    providerPaymentId: input.providerPaymentId,
-    status: input.status,
-    amountCents: amount,
-    currency,
-    succeededAt: input.status === "succeeded" ? now : null,
-    failedAt: input.status === "failed" ? now : null,
-    failureReason: input.failureReason ?? null,
-    rawPayload: input.rawPayload ?? null,
-  });
 
-  if (input.status === "succeeded") {
-    await conn.insert(schema.transactions).values({
+  // Which receipt to send, decided inside the transaction (it depends on the
+  // subscription-renewal write) but dispatched only AFTER commit. `null` = none.
+  type ReceiptPlan =
+    | { kind: "subscription_receipt"; periodEnd: Date }
+    | { kind: "payment_receipt" };
+
+  // All money writes happen atomically: payment row, charge ledger, lawyer
+  // balance entries, invoice paidCents/status, discount bump, subscription
+  // renewal. If ANY of them throws, the whole set rolls back — so we can never
+  // record a payment + charge while leaving the invoice unpaid (the
+  // partial-commit bug this guards against). Email dispatch is deferred to
+  // after commit: external I/O must not hold the connection open, nor be able
+  // to unwind billing that has already committed.
+  const receiptPlan = await conn.transaction(async (tx): Promise<ReceiptPlan | null> => {
+    await tx.insert(schema.payments).values({
+      id: paymentId,
+      invoiceId: invoice.id,
+      provider: input.provider,
+      providerPaymentId: input.providerPaymentId,
+      status: input.status,
+      amountCents: amount,
+      currency,
+      succeededAt: input.status === "succeeded" ? now : null,
+      failedAt: input.status === "failed" ? now : null,
+      failureReason: input.failureReason ?? null,
+      rawPayload: input.rawPayload ?? null,
+    });
+
+    if (input.status !== "succeeded") return null;
+
+    await tx.insert(schema.transactions).values({
       id: crypto.randomUUID(),
       invoiceId: invoice.id,
       paymentId,
@@ -661,9 +759,42 @@ export async function applyPaymentWebhook(input: {
       note: `Payment via ${input.provider}`,
     });
 
+    // Lawyer earnings: only for case invoices (subscription invoices are
+    // platform revenue, not lawyer earnings). Pass-through model — credit the
+    // full gross as `earning`, debit only PayMongo's real collection fee. Both
+    // clear together after the configured window.
+    if (invoice.kind !== "subscription") {
+      const feeCents = input.feeCents ?? 0;
+      const clearsAt = clearsAtForEarning(now, env().PAYOUT_CLEARING_DAYS);
+      await tx.insert(schema.balanceEntries).values({
+        id: crypto.randomUUID(),
+        lawyerId: invoice.lawyerId,
+        kind: "earning",
+        direction: "credit",
+        amountCents: amount,
+        currency,
+        clearsAt,
+        relatedPaymentId: paymentId,
+        note: `Earning from invoice ${invoice.number}`,
+      });
+      if (feeCents > 0) {
+        await tx.insert(schema.balanceEntries).values({
+          id: crypto.randomUUID(),
+          lawyerId: invoice.lawyerId,
+          kind: "processing_fee",
+          direction: "debit",
+          amountCents: feeCents,
+          currency,
+          clearsAt,
+          relatedPaymentId: paymentId,
+          note: `PayMongo collection fee for invoice ${invoice.number}`,
+        });
+      }
+    }
+
     const newPaid = invoice.paidCents + amount;
     const fullyPaid = newPaid >= invoice.totalCents;
-    await conn
+    await tx
       .update(schema.invoices)
       .set({
         paidCents: newPaid,
@@ -675,11 +806,11 @@ export async function applyPaymentWebhook(input: {
 
     // Bump discount code redemptions on first successful payment.
     if (invoice.appliedDiscountCodeId && wasUnpaid) {
-      const code = await conn.query.discountCodes.findFirst({
+      const code = await tx.query.discountCodes.findFirst({
         where: eq(schema.discountCodes.id, invoice.appliedDiscountCodeId),
       });
       if (code) {
-        await conn
+        await tx
           .update(schema.discountCodes)
           .set({ redemptions: code.redemptions + 1 })
           .where(eq(schema.discountCodes.id, code.id));
@@ -689,86 +820,84 @@ export async function applyPaymentWebhook(input: {
     // Subscription renewal: extend the lawyer's paid period. The earlier
     // dedup check on (provider, providerPaymentId) means we only get here
     // once per provider payment, so the +30 days is never double-applied.
-    let subscriptionPeriodEnd: Date | undefined;
     if (invoice.kind === "subscription") {
-      const sub = await conn.query.lawyerSubscriptions.findFirst({
+      const sub = await tx.query.lawyerSubscriptions.findFirst({
         where: eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId),
       });
-      if (sub) {
-        // Stack onto the existing period if it hasn't elapsed yet (early
-        // renewal); otherwise start a fresh period from `now`.
-        const base = sub.currentPeriodEndsAt > now ? sub.currentPeriodEndsAt : now;
-        const newPeriodEnd = addDays(base, RENEWAL_DAYS);
-        subscriptionPeriodEnd = newPeriodEnd;
-        await conn
-          .update(schema.lawyerSubscriptions)
-          .set({
-            status: "active",
-            currentPeriodEndsAt: newPeriodEnd,
-            lastPaidAt: now,
-            updatedAt: now,
-          })
-          .where(eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId));
+      if (!sub) {
+        console.error(
+          "[email] subscription row missing, skipping receipt",
+          invoice.lawyerId,
+        );
+        return null;
       }
+      // Stack onto the existing period if it hasn't elapsed yet (early
+      // renewal); otherwise start a fresh period from `now`.
+      const base = sub.currentPeriodEndsAt > now ? sub.currentPeriodEndsAt : now;
+      const newPeriodEnd = addDays(base, RENEWAL_DAYS);
+      await tx
+        .update(schema.lawyerSubscriptions)
+        .set({
+          status: "active",
+          currentPeriodEndsAt: newPeriodEnd,
+          lastPaidAt: now,
+          updatedAt: now,
+        })
+        .where(eq(schema.lawyerSubscriptions.lawyerId, invoice.lawyerId));
+      return { kind: "subscription_receipt", periodEnd: newPeriodEnd };
     }
 
-    // Enqueue receipt emails — payment.id-keyed dedupeKey means replays
-    // (same providerPaymentId) are already blocked above by the existing
-    // check; the try/catch ensures a recipient-lookup failure can't unwind
-    // a billing op that has already committed.
-    if (invoice.kind === "subscription") {
-      try {
-        if (!subscriptionPeriodEnd) {
-          console.error(
-            "[email] subscription row missing, skipping receipt",
-            invoice.lawyerId,
-          );
-        } else {
-          const lawyerUser = await conn.query.user.findFirst({
-            where: eq(schema.user.id, invoice.lawyerId),
-          });
-          if (lawyerUser?.email) {
-            await dispatchEmail({
-              kind: "subscription_receipt",
-              to: lawyerUser.email,
-              dedupeKey: `subscription_receipt:${paymentId}`,
-              data: {
-                lawyerName: lawyerUser.name,
-                invoiceNumber: invoice.number,
-                amountFormatted: formatPhp(amount),
-                currency: invoice.currency,
-                periodEndFormatted: formatDate(subscriptionPeriodEnd),
-                subscriptionUrl: `${env().BETTER_AUTH_URL}/lawyer/subscribe`,
-              },
-            });
-          }
-        }
-      } catch (err) {
-        console.error("[email] subscription_receipt dispatch failed", paymentId, err);
-      }
-    } else if (invoice.clientId) {
-      try {
-        const clientUser = await conn.query.user.findFirst({
-          where: eq(schema.user.id, invoice.clientId),
+    return invoice.clientId ? { kind: "payment_receipt" } : null;
+  });
+
+  // Enqueue the receipt email AFTER commit. The (provider, providerPaymentId)
+  // dedup above already blocks replays; the try/catch ensures a recipient
+  // lookup or enqueue failure can't unwind a billing op that already committed.
+  if (receiptPlan?.kind === "subscription_receipt") {
+    try {
+      const lawyerUser = await conn.query.user.findFirst({
+        where: eq(schema.user.id, invoice.lawyerId),
+      });
+      if (lawyerUser?.email) {
+        await dispatchEmail({
+          kind: "subscription_receipt",
+          to: lawyerUser.email,
+          dedupeKey: `subscription_receipt:${paymentId}`,
+          data: {
+            lawyerName: lawyerUser.name,
+            invoiceNumber: invoice.number,
+            amountFormatted: formatPhp(amount),
+            currency: invoice.currency,
+            periodEndFormatted: formatDate(receiptPlan.periodEnd),
+            subscriptionUrl: `${env().BETTER_AUTH_URL}/lawyer/subscribe`,
+          },
         });
-        if (clientUser?.email) {
-          await dispatchEmail({
-            kind: "payment_receipt",
-            to: clientUser.email,
-            dedupeKey: `payment_receipt:${paymentId}`,
-            data: {
-              clientName: clientUser.name,
-              invoiceNumber: invoice.number,
-              amountPaidFormatted: formatPhp(amount),
-              currency: invoice.currency,
-              paidAtFormatted: formatDate(now),
-              invoiceUrl: `${env().BETTER_AUTH_URL}/invoices/${invoice.id}`,
-            },
-          });
-        }
-      } catch (err) {
-        console.error("[email] payment_receipt dispatch failed", paymentId, err);
       }
+    } catch (err) {
+      console.error("[email] subscription_receipt dispatch failed", paymentId, err);
+    }
+  } else if (receiptPlan?.kind === "payment_receipt" && invoice.clientId) {
+    try {
+      const clientUser = await conn.query.user.findFirst({
+        where: eq(schema.user.id, invoice.clientId),
+      });
+      if (clientUser?.email) {
+        await dispatchEmail({
+          kind: "payment_receipt",
+          to: clientUser.email,
+          dedupeKey: `payment_receipt:${paymentId}`,
+          data: {
+            clientName: clientUser.name,
+            invoiceNumber: invoice.number,
+            amountPaidFormatted: formatPhp(amount),
+            currency: invoice.currency,
+            paidAtFormatted: formatDate(now),
+            invoiceUrl: `${env().BETTER_AUTH_URL}/invoices/${invoice.id}`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[email] payment_receipt dispatch failed", paymentId, err);
     }
   }
 
@@ -796,72 +925,108 @@ export async function refundPayment(input: {
 }) {
   const conn = db();
 
-  const payment = await conn.query.payments.findFirst({
-    where: eq(schema.payments.id, input.paymentId),
-  });
-  if (!payment) {
-    throw new HTTPException(404, { message: "payment_not_found" });
-  }
-  if (payment.status !== "succeeded" && payment.status !== "refunded") {
-    throw new HTTPException(409, { message: "payment_not_refundable" });
-  }
-  const remaining = payment.amountCents - payment.refundedCents;
-  if (input.amountCents > remaining) {
-    throw new HTTPException(409, { message: "refund_exceeds_remaining" });
-  }
-  if (input.amountCents <= 0) {
-    throw new HTTPException(400, { message: "refund_amount_invalid" });
-  }
+  // The payment-status flip, refund ledger row, balance reversal, and invoice
+  // roll-back must all commit together. Validation reads happen inside too so a
+  // rejected validation simply aborts an empty transaction. (Today's only
+  // caller is the admin refund handler, which writes its own audit row after.)
+  return conn.transaction(async (tx) => {
+    const payment = await tx.query.payments.findFirst({
+      where: eq(schema.payments.id, input.paymentId),
+    });
+    if (!payment) {
+      throw new HTTPException(404, { message: "payment_not_found" });
+    }
+    if (payment.status !== "succeeded" && payment.status !== "refunded") {
+      throw new HTTPException(409, { message: "payment_not_refundable" });
+    }
+    const remaining = payment.amountCents - payment.refundedCents;
+    if (input.amountCents > remaining) {
+      throw new HTTPException(409, { message: "refund_exceeds_remaining" });
+    }
+    if (input.amountCents <= 0) {
+      throw new HTTPException(400, { message: "refund_amount_invalid" });
+    }
 
-  const invoice = await conn.query.invoices.findFirst({
-    where: eq(schema.invoices.id, payment.invoiceId),
-  });
-  if (!invoice) {
-    throw new HTTPException(404, { message: "invoice_not_found" });
-  }
+    const invoice = await tx.query.invoices.findFirst({
+      where: eq(schema.invoices.id, payment.invoiceId),
+    });
+    if (!invoice) {
+      throw new HTTPException(404, { message: "invoice_not_found" });
+    }
 
-  const now = new Date();
-  const newRefunded = payment.refundedCents + input.amountCents;
-  const fullyRefunded = newRefunded >= payment.amountCents;
+    const now = new Date();
+    const newRefunded = payment.refundedCents + input.amountCents;
+    const fullyRefunded = newRefunded >= payment.amountCents;
 
-  await conn
-    .update(schema.payments)
-    .set({
+    await tx
+      .update(schema.payments)
+      .set({
+        refundedCents: newRefunded,
+        status: fullyRefunded ? "refunded" : payment.status,
+        updatedAt: now,
+      })
+      .where(eq(schema.payments.id, payment.id));
+
+    await tx.insert(schema.transactions).values({
+      id: crypto.randomUUID(),
+      invoiceId: invoice.id,
+      paymentId: payment.id,
+      kind: "refund",
+      direction: "debit",
+      amountCents: input.amountCents,
+      currency: payment.currency,
+      note: input.note ?? `Refund${input.providerRefundId ? ` ${input.providerRefundId}` : ""}`,
+    });
+
+    // Claw back the lawyer's earnings for the refunded portion. Reverse the NET
+    // that was credited (gross - collection fee), pro-rata to refundedGross/gross.
+    // Only applies to case invoices (subscription invoices never credited a balance).
+    if (invoice.kind !== "subscription") {
+      const feeLine = await tx.query.balanceEntries.findFirst({
+        where: and(
+          eq(schema.balanceEntries.relatedPaymentId, payment.id),
+          eq(schema.balanceEntries.kind, "processing_fee"),
+        ),
+      });
+      const reversal = refundReversalCents({
+        grossCents: payment.amountCents,
+        processingFeeCents: feeLine?.amountCents ?? 0,
+        refundedGrossCents: input.amountCents,
+      });
+      if (reversal > 0) {
+        await tx.insert(schema.balanceEntries).values({
+          id: crypto.randomUUID(),
+          lawyerId: invoice.lawyerId,
+          kind: "refund_reversal",
+          direction: "debit",
+          amountCents: reversal,
+          currency: payment.currency,
+          clearsAt: now, // immediate — may drive available negative
+          relatedPaymentId: payment.id,
+          note: `Refund reversal for invoice ${invoice.number}`,
+        });
+      }
+    }
+
+    // Roll back the invoice paid total + status.
+    const newPaid = Math.max(0, invoice.paidCents - input.amountCents);
+    const nextStatus: "sent" | "partially_paid" | "paid" =
+      newPaid <= 0 ? "sent" : newPaid < invoice.totalCents ? "partially_paid" : "paid";
+    await tx
+      .update(schema.invoices)
+      .set({
+        paidCents: newPaid,
+        status: nextStatus,
+        paidAt: nextStatus === "paid" ? invoice.paidAt : null,
+        updatedAt: now,
+      })
+      .where(eq(schema.invoices.id, invoice.id));
+
+    return {
+      paymentId: payment.id,
       refundedCents: newRefunded,
-      status: fullyRefunded ? "refunded" : payment.status,
-      updatedAt: now,
-    })
-    .where(eq(schema.payments.id, payment.id));
-
-  await conn.insert(schema.transactions).values({
-    id: crypto.randomUUID(),
-    invoiceId: invoice.id,
-    paymentId: payment.id,
-    kind: "refund",
-    direction: "debit",
-    amountCents: input.amountCents,
-    currency: payment.currency,
-    note: input.note ?? `Refund${input.providerRefundId ? ` ${input.providerRefundId}` : ""}`,
+      invoiceStatus: nextStatus,
+      fullyRefunded,
+    };
   });
-
-  // Roll back the invoice paid total + status.
-  const newPaid = Math.max(0, invoice.paidCents - input.amountCents);
-  const nextStatus: "sent" | "partially_paid" | "paid" =
-    newPaid <= 0 ? "sent" : newPaid < invoice.totalCents ? "partially_paid" : "paid";
-  await conn
-    .update(schema.invoices)
-    .set({
-      paidCents: newPaid,
-      status: nextStatus,
-      paidAt: nextStatus === "paid" ? invoice.paidAt : null,
-      updatedAt: now,
-    })
-    .where(eq(schema.invoices.id, invoice.id));
-
-  return {
-    paymentId: payment.id,
-    refundedCents: newRefunded,
-    invoiceStatus: nextStatus,
-    fullyRefunded,
-  };
 }

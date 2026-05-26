@@ -1,0 +1,1 @@
+ALTER TABLE "invoice" ADD COLUMN "paymongo_checkout_session_id" text;

@@ -5,11 +5,13 @@ import { health } from "./routes/health";
 import { auth } from "./routes/auth";
 import { lawyers } from "./routes/lawyers";
 import { clients } from "./routes/clients";
+import { devAccounts } from "./routes/dev-accounts";
 import { directory } from "./routes/directory";
 import { cases } from "./routes/cases";
 import { engagements } from "./routes/engagements";
 import { billing, billingDev, discountCodesRouter } from "./routes/billing";
 import { subscriptions } from "./routes/subscriptions";
+import { payouts, payoutsDev, adminPayouts } from "./routes/payouts";
 import { referrals, referralLinksPublic } from "./routes/referrals";
 import { files } from "./routes/files";
 import { references } from "./routes/references";
@@ -34,6 +36,10 @@ export function createApp() {
   app.route("/health", health);
   app.route("/auth", auth);
   app.route("/signup", signup);
+  // `devAccounts` must be registered before the auth-gated `clients` router so
+  // the more specific path matches first and skips `requireSession` (mirrors
+  // the `/billing/dev` precedent below).
+  app.route("/accounts/_dev", devAccounts);
   app.route("/accounts", clients);
   app.route("/lawyers", lawyers);
   app.route("/directory", directory);
@@ -45,12 +51,17 @@ export function createApp() {
   app.route("/billing", billing);
   app.route("/billing/discount-codes", discountCodesRouter);
   app.route("/lawyer/subscription", subscriptions);
+  // `payoutsDev` before the auth-gated `payouts` so the more specific path
+  // matches first and skips requireRole (mirrors the /billing/dev precedent).
+  app.route("/lawyer/payouts/dev", payoutsDev);
+  app.route("/lawyer/payouts", payouts);
   app.route("/referrals", referrals);
   app.route("/directory/referral-links", referralLinksPublic);
   app.route("/files", files);
   app.route("/references", references);
   app.route("/integrations", integrations);
   app.route("/webhooks", webhooks);
+  app.route("/admin/payouts", adminPayouts);
   app.route("/admin", admin);
 
   app.onError(errorHandler);

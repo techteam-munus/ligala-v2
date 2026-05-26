@@ -3,7 +3,7 @@ import { z } from "zod";
 const base = { to: z.string().email(), dedupeKey: z.string().min(1) };
 
 export const emailMessage = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("auth_verify"), ...base, data: z.object({ name: z.string(), verifyUrl: z.string().url() }) }),
+  z.object({ kind: z.literal("auth_verify"), ...base, data: z.object({ code: z.string().min(4).max(10) }) }),
   z.object({ kind: z.literal("auth_reset"), ...base, data: z.object({ name: z.string(), resetUrl: z.string().url() }) }),
   z.object({
     kind: z.literal("invoice_sent"), ...base,

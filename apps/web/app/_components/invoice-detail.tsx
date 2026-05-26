@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
+import { phDateFormat } from "@/lib/datetime";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -34,6 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusPill } from "@/app/_components/invoice-status";
+import { PaymentStatusBanner } from "@/app/_components/payment-status-banner";
 
 export type InvoiceRow = {
   id: string;
@@ -117,7 +119,7 @@ function Peso({
 function longDate(iso: string | null | undefined) {
   if (!iso) return null;
   const d = new Date(iso);
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -125,7 +127,7 @@ function longDate(iso: string | null | undefined) {
 }
 
 function timeOf(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
@@ -152,6 +154,7 @@ export function InvoiceDetail({
   transactions,
   appliedCode,
   renderPaymentAction,
+  justPaid = false,
 }: {
   viewerRole: "client" | "lawyer" | "admin";
   invoice: InvoiceRow;
@@ -160,6 +163,8 @@ export function InvoiceDetail({
   transactions: TxRow[];
   appliedCode: AppliedCode;
   renderPaymentAction?: (payment: PaymentRow) => ReactNode;
+  /** Set when the client just returned from a successful checkout redirect. */
+  justPaid?: boolean;
 }) {
   const remaining = Math.max(0, invoice.totalCents - invoice.paidCents);
   const paidPct =
@@ -182,6 +187,14 @@ export function InvoiceDetail({
 
   return (
     <div className="mx-auto w-full max-w-7xl px-6 py-10">
+      {/* Post-checkout reconcile + status watcher (client redirect only) -- */}
+      {justPaid ? (
+        <PaymentStatusBanner
+          invoiceId={invoice.id}
+          settled={invoice.status === "paid" || invoice.status === "partially_paid"}
+        />
+      ) : null}
+
       {/* Breadcrumb back -------------------------------------------------- */}
       <Link
         href={backHref as never}
@@ -650,7 +663,9 @@ function MetaInline({
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
         {label}
       </span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+      <span className="text-sm font-medium text-foreground" suppressHydrationWarning>
+        {value}
+      </span>
     </span>
   );
 }

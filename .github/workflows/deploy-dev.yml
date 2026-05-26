@@ -58,6 +58,26 @@ jobs:
         working-directory: infra
         run: pnpm exec cdk deploy --all --context env=dev --require-approval=never --outputs-file ../cdk-outputs.json
 
+      # Apply any outstanding Drizzle migrations to the dev DB. CDK ships the
+      # new schema/code but does NOT run migrations, so without this a deploy
+      # that adds a column leaves the API querying a column the DB lacks → 500s.
+      # `migrate` (not migrate-and-seed) is idempotent: no-ops when up to date.
+      - name: Run DB migrations
+        run: |
+          set -euo pipefail
+          aws lambda invoke \
+            --function-name ligala-v2-dev-migrate \
+            --payload '{"action":"migrate"}' \
+            --cli-binary-format raw-in-base64-out \
+            --region "$AWS_REGION" \
+            migrate-out.json
+          echo "=== migrate Lambda response ==="
+          cat migrate-out.json; echo
+          # Fail the deploy if the Lambda errored or reported ok:false (an error
+          # payload has no .ok, so this catches unhandled exceptions too).
+          jq -e '.ok == true' migrate-out.json > /dev/null \
+            || { echo "::error::DB migration failed (see response above)"; exit 1; }
+
       - name: Print stack outputs
         if: always()
         run: |

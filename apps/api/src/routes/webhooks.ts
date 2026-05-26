@@ -9,6 +9,7 @@ import {
   type PaymongoEvent,
 } from "../lib/paymongo";
 import { env } from "../lib/env";
+import { applyTransferWebhook, mapTransferStatus } from "../lib/transfer-webhook";
 
 /**
  * Webhook handlers. Real deployments verify signatures and enqueue to SQS;
@@ -115,6 +116,11 @@ export const webhooks = new Hono()
         : typeof resource.attributes.amount === "number"
           ? resource.attributes.amount
           : undefined;
+    // Collection fee PayMongo charged on this payment — forwarded so the lawyer
+    // balance credit nets it out. NOTE: exact field name unconfirmed in sandbox;
+    // when absent we pass undefined → fee treated as 0 (no deduction yet).
+    const feeCents: number | undefined =
+      typeof resource.attributes.fee === "number" ? resource.attributes.fee : undefined;
     const status: "succeeded" | "failed" =
       type === "payment.failed" ? "failed" : "succeeded";
     const failureReason =
@@ -130,6 +136,7 @@ export const webhooks = new Hono()
         invoiceId,
         status,
         amountCents,
+        feeCents,
         currency: "PHP",
         failureReason,
         rawPayload: event,
@@ -169,4 +176,51 @@ export const webhooks = new Hono()
     }
     const r = await applyPaymentWebhook({ ...parsed.data, rawPayload: body });
     return c.json(r);
+  })
+
+  /**
+   * PayMongo transfer webhook. Reconciles payout rows when a batch_transfer
+   * settles (succeeded) or bounces (failed / returned). Idempotent: replayed
+   * events for already-terminal payouts are no-op'd with { idempotent: true }.
+   * On failed/returned the lawyer's net + fee are re-credited so funds are
+   * never lost.
+   */
+  .post("/paymongo-transfer", async (c) => {
+    // Sandbox gate: confirm PayMongo's transfer webhook signature scheme + status shape.
+    // We reuse the same HMAC verifier as /paymongo.
+    const secret = env().PAYMONGO_TRANSFER_WEBHOOK_SECRET ?? env().PAYMONGO_WEBHOOK_SECRET;
+    if (!secret) return c.json({ error: "transfer_webhook_not_configured" }, 501);
+    const raw = await c.req.raw.text();
+    const header = c.req.header("Paymongo-Signature");
+    let event: PaymongoEvent;
+    try {
+      event = verifyWebhookSignature(raw, header, secret);
+    } catch (err) {
+      console.warn("paymongo_transfer_signature_invalid", err);
+      return c.json({ error: "invalid_signature" }, 401);
+    }
+    const resource = event.data.attributes.data;
+    const providerTransferId = resource.id;
+    const rawStatus =
+      typeof resource.attributes.status === "string" ? resource.attributes.status : "";
+    const status = mapTransferStatus(rawStatus);
+    if (!status) return c.json({ ignored: true, status: rawStatus });
+    try {
+      const result = await applyTransferWebhook({
+        provider: "paymongo",
+        providerTransferId,
+        status,
+        failureReason:
+          typeof resource.attributes.last_payment_error?.message === "string"
+            ? resource.attributes.last_payment_error.message
+            : undefined,
+      });
+      return c.json(result);
+    } catch (err) {
+      if (err instanceof HTTPException && err.status === 404) {
+        console.error("paymongo_transfer_payout_not_found", { providerTransferId });
+        return c.json({ ignored: true, reason: "payout_not_found" });
+      }
+      throw err;
+    }
   });

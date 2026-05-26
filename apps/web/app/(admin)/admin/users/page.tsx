@@ -8,6 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { phDateFormat } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,7 +110,7 @@ function shortDate(iso: string) {
   const d = new Date(iso);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     ...(sameYear ? {} : { year: "2-digit" }),

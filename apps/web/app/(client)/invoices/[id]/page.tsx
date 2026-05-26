@@ -22,10 +22,13 @@ async function load<T>(path: string): Promise<T | null> {
 
 export default async function ClientInvoicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   const { id } = await params;
+  const { status } = await searchParams;
   const data = await load<{
     invoice: InvoiceRow;
     lines: Line[];
@@ -36,7 +39,7 @@ export default async function ClientInvoicePage({
   if (!data) notFound();
   return (
     <main>
-      <InvoiceDetail viewerRole="client" {...data} />
+      <InvoiceDetail viewerRole="client" {...data} justPaid={status === "success"} />
     </main>
   );
 }

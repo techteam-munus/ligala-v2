@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
+import { phDateFormat } from "@/lib/datetime";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -102,7 +103,7 @@ const SELECT_CLASS =
 
 function longDate(iso: string | null | undefined) {
   if (!iso) return null;
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -113,7 +114,7 @@ function shortDate(iso: string) {
   const d = new Date(iso);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     ...(sameYear ? {} : { year: "2-digit" }),
@@ -131,7 +132,7 @@ function relativeTime(iso: string) {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.round(diffHr / 24);
   if (diffDay < 30) return `${diffDay}d ago`;
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
   }).format(new Date(iso));
@@ -1024,7 +1025,7 @@ function NotesSection({
                 <div className="flex items-center gap-2 text-[11px]">
                   <NoteVisibilityChip visibility={n.visibility} />
                   <span className="text-muted-foreground">
-                    {relativeTime(n.createdAt)}
+                    <span suppressHydrationWarning>{relativeTime(n.createdAt)}</span>
                   </span>
                 </div>
                 <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed">
@@ -1253,7 +1254,7 @@ function AttachmentsSection({
                       {a.sizeBytes
                         ? ` · ${(a.sizeBytes / 1024).toFixed(0)} KB`
                         : ""}{" "}
-                      · {relativeTime(a.createdAt)}
+                      · <span suppressHydrationWarning>{relativeTime(a.createdAt)}</span>
                     </p>
                   </div>
                 </div>
@@ -1355,7 +1356,7 @@ function ActivityTimeline({ items }: { items: Activity[] }) {
               <p className="text-[11px] tabular-nums text-muted-foreground">
                 {shortDate(a.createdAt)}
                 <span className="mx-1.5 text-muted-foreground/40">·</span>
-                {new Intl.DateTimeFormat("en-PH", {
+                {phDateFormat({
                   hour: "numeric",
                   minute: "2-digit",
                 }).format(new Date(a.createdAt))}

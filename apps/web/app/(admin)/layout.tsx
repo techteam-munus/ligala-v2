@@ -6,7 +6,12 @@ import { PortalShell } from "@/app/_components/portal-shell";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
-  if (!session) redirect("/login");
+  // Clear a stale cookie via /logout (not a bare /login redirect, which the
+  // edge middleware bounces straight back — an infinite loop). See app/logout.
+  if (!session) redirect("/logout");
+  // Block until the email is verified (6-digit code). Routes to the fix, not a
+  // dead end; the verify page reads the email from the session and resends.
+  if (!session.user.emailVerified) redirect("/verify-email?send=1");
   if (session.user.role !== "admin") redirect(roleHome(session.user.role));
   return (
     <PortalShell

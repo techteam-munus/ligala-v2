@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { emailOTP } from "better-auth/plugins";
 import { db, schema } from "@ligala/db";
 import { dispatchEmail } from "@ligala/email";
-import { buildVerificationMessage, buildResetMessage } from "./email-hooks";
+import { buildVerificationCodeMessage, buildResetMessage } from "./email-hooks";
+import { parseTrustedOrigins } from "./trusted-origins";
 
 // Better Auth performs its own `process.env.BETTER_AUTH_SECRET` lookup at init,
 // independent of the `secret` field below. Without a value it throws during
@@ -13,6 +15,8 @@ if (!process.env.BETTER_AUTH_SECRET) {
   process.env.BETTER_AUTH_SECRET =
     "build-time-placeholder-secret-replace-in-production-environment-12345";
 }
+
+const trustedOrigins = parseTrustedOrigins(process.env.AUTH_TRUSTED_ORIGINS);
 
 /**
  * Shared Better Auth instance — imported by both `apps/web` (mounted as a
@@ -39,6 +43,10 @@ export const auth = betterAuth({
   }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  // Additional trusted origins for CSRF (custom domain + Amplify default, etc).
+  // baseURL is always trusted; this only adds the others. Omitted when empty so
+  // we don't override Better Auth's default.
+  ...(trustedOrigins.length > 0 ? { trustedOrigins } : {}),
   // Hono mounts this handler at /auth/* (apps/api/src/app.ts), not the Better
   // Auth default /api/auth. Setting basePath here makes route matching pick
   // up requests under /auth/*.
@@ -52,11 +60,34 @@ export const auth = betterAuth({
     },
   },
   emailVerification: {
+    // Trigger a verification send on sign-up. With the emailOTP plugin's
+    // `overrideDefaultEmailVerification` below, this (and the
+    // `requireEmailVerification` sign-in path) sends a 6-digit code instead of
+    // a magic link. We deliberately DON'T define `sendVerificationEmail` here —
+    // the plugin injects its own that routes through `sendVerificationOTP`.
     sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string; name?: string | null }; url: string }) => {
-      await dispatchEmail(buildVerificationMessage(user, url));
-    },
+    // Once the code is confirmed, establish the session so the user lands in
+    // their portal without a separate sign-in step.
+    autoSignInAfterVerification: true,
   },
+  plugins: [
+    // Email verification by 6-digit code instead of a link.
+    // `overrideDefaultEmailVerification` makes Better Auth's verification
+    // machinery (sign-up + the `requireEmailVerification` sign-in gate) emit an
+    // OTP via `sendVerificationOTP` rather than a link.
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 60 * 10, // 10 minutes
+      overrideDefaultEmailVerification: true,
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        // Only email verification uses codes today; sign-in / password-reset
+        // OTP flows are not enabled (password reset stays a link).
+        if (type === "email-verification") {
+          await dispatchEmail(buildVerificationCodeMessage(email, otp));
+        }
+      },
+    }),
+  ],
   ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
     ? {
         socialProviders: {

@@ -14,6 +14,12 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 export interface CoreStackProps extends StackProps {
   envName: string;
+  /**
+   * Public custom domain (host, no scheme) in front of the Amplify default
+   * domain — e.g. `dev.ligalaoffice.mymunus.com`. Added to the uploads bucket
+   * CORS allowlist so browser presigned uploads work from it.
+   */
+  webCustomDomain?: string;
 }
 
 /**
@@ -73,8 +79,15 @@ export class CoreStack extends Stack {
 
     // ── S3 uploads bucket ──────────────────────────────────────────────────
     // CORS: browsers PUT directly to the presigned URL after the API hands one
-    // out, so the bucket must allow the Amplify origin + localhost (dev). Tighten
-    // to the exact Amplify branch URL once a custom domain replaces the default.
+    // out, so the bucket must allow every origin the app is served from — the
+    // Amplify default domain, localhost (dev), and the custom domain when set.
+    // Without the custom domain here, its presigned uploads fail the CORS
+    // preflight (no Access-Control-Allow-Origin on the OPTIONS response).
+    const uploadOrigins = [
+      "https://*.amplifyapp.com",
+      "http://localhost:3000",
+      ...(props.webCustomDomain ? [`https://${props.webCustomDomain}`] : []),
+    ];
     this.uploadsBucket = new s3.Bucket(this, "UploadsBucket", {
       bucketName: `ligala-v2-${props.envName}-uploads`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -91,10 +104,7 @@ export class CoreStack extends Stack {
             s3.HttpMethods.GET,
             s3.HttpMethods.HEAD,
           ],
-          allowedOrigins: [
-            "https://*.amplifyapp.com",
-            "http://localhost:3000",
-          ],
+          allowedOrigins: uploadOrigins,
           allowedHeaders: ["*"],
           exposedHeaders: ["ETag"],
           maxAge: 3000,
@@ -213,6 +223,15 @@ export class CoreStack extends Stack {
         secretStringTemplate: JSON.stringify({
           PAYMONGO_SECRET_KEY: "",
           PAYMONGO_WEBHOOK_SECRET: "",
+          // Disbursements / payouts (PayMongo batch_transfers). The wallet is the
+          // platform source account funds are transferred FROM; the transfer
+          // webhook secret verifies the /webhooks/paymongo-transfer callback.
+          // Until these are filled, payouts resolve to the dev_simulate provider
+          // (no real transfer) — see apps/api/src/routes/payouts.ts.
+          PAYMONGO_WALLET_ACCOUNT_NUMBER: "",
+          PAYMONGO_WALLET_ACCOUNT_NAME: "",
+          PAYMONGO_WALLET_BIC: "",
+          PAYMONGO_TRANSFER_WEBHOOK_SECRET: "",
           PAYPAL_CLIENT_ID: "",
           PAYPAL_CLIENT_SECRET: "",
           PAYPAL_WEBHOOK_ID: "",
