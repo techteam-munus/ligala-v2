@@ -28,6 +28,16 @@ const schema = z.object({
   EMAIL_REPLY_TO: z.string().default("support@mymunus.com"),
   EMAIL_VERIFICATION_REQUIRED: z.enum(["true", "false"]).default("false"),
   EMAIL_DEV_VERIFY_ENABLED: z.enum(["true", "false"]).default("false"),
+  // --- KYC / IDMeta ---
+  IDMETA_BASE_URL: z.string().url().default("https://integrate.idmetagroup.com"),
+  IDMETA_TOKEN: z.string().optional(),
+  IDMETA_TEMPLATE_ID: z.string().optional(),
+  IDMETA_WEBHOOK_SECRET: z.string().optional(),
+  // Full Trust Flow hosted link (used to build the per-lawyer launch URL, and
+  // as the dev fallback when no IDMETA_TOKEN is set).
+  IDMETA_HOSTED_URL: z.string().url().optional(),
+  // SQS queue for async ingest in prod. Unset => webhook ingests inline (dev).
+  IDMETA_QUEUE_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
