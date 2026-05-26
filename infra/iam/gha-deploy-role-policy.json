@@ -10,6 +10,12 @@
         "arn:aws:iam::615299765252:role/cdk-hnb659fds-file-publishing-role-615299765252-ap-southeast-1",
         "arn:aws:iam::615299765252:role/cdk-hnb659fds-image-publishing-role-615299765252-ap-southeast-1"
       ]
+    },
+    {
+      "Sid": "InvokeMigrateLambda",
+      "Effect": "Allow",
+      "Action": "lambda:InvokeFunction",
+      "Resource": "arn:aws:lambda:ap-southeast-1:615299765252:function:ligala-v2-dev-migrate"
     }
   ]
 }
