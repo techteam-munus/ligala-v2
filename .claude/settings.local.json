@@ -263,7 +263,8 @@
       "Bash(ls -la apps/web/.env*)",
       "Bash(ls -la .env*)",
       "Bash(grep -rn \"IDMETA_HOSTED_URL\" apps/web/.env* .env .env.local)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "Bash(grep -viE \"NodeVersionSupportWarning|logRetention is deprecated|node >=22|continue receiving|security updates|More information|trace-warnings|^$\")"
     ]
   }
 }
