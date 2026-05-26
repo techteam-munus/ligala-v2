@@ -312,13 +312,30 @@ export const payouts = new Hono()
     }
   });
 
+/** Mirrors the `payout_status` pgEnum — used to validate the admin ?status= filter. */
+const PAYOUT_STATUS_VALUES = [
+  "pending",
+  "processing",
+  "succeeded",
+  "failed",
+  "returned",
+] as const;
+type PayoutStatusValue = (typeof PAYOUT_STATUS_VALUES)[number];
+
 /**
  * Admin payout queue (read-only). Mounted at /admin/payouts.
  */
 export const adminPayouts = new Hono()
   .use("*", requireRole("admin"))
   .get("/", async (c) => {
-    const status = c.req.query("status");
+    // Validate the optional ?status= filter against the payout_status enum
+    // before it reaches the query. A raw unknown value would otherwise be sent
+    // to Postgres and rejected ("invalid input value for enum payout_status"),
+    // surfacing as a 500 rather than a filtered/empty result. Unknown → ignore.
+    const statusParam = c.req.query("status");
+    const status = PAYOUT_STATUS_VALUES.includes(statusParam as PayoutStatusValue)
+      ? (statusParam as PayoutStatusValue)
+      : undefined;
     const conn = db();
     const base = conn
       .select({
@@ -330,7 +347,7 @@ export const adminPayouts = new Hono()
       .leftJoin(schema.user, eq(schema.user.id, schema.payouts.lawyerId));
     const rows = status
       ? await base
-          .where(eq(schema.payouts.status, status as never))
+          .where(eq(schema.payouts.status, status))
           .orderBy(desc(schema.payouts.createdAt))
       : await base.orderBy(desc(schema.payouts.createdAt));
     return c.json({

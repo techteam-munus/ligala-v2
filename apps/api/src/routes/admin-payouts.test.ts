@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { rows, mockSelectChain, mockDb } = vi.hoisted(() => {
+const { rows, mockSelectChain, mockDb, mockWhere } = vi.hoisted(() => {
   const rows = [
     {
       payout: { id: "po_1", lawyerId: "law_1", amountCents: 60000, feeCents: 1000, netCents: 59000, status: "succeeded", currency: "PHP", requestedAt: new Date(), completedAt: new Date(), destinationSnapshot: { type: "gcash" } },
@@ -14,7 +14,7 @@ const { rows, mockSelectChain, mockDb } = vi.hoisted(() => {
   const from = vi.fn().mockReturnValue({ leftJoin });
   const mockSelectChain = { from };
   const mockDb = { select: vi.fn().mockReturnValue(mockSelectChain) };
-  return { rows, mockSelectChain, mockDb };
+  return { rows, mockSelectChain, mockDb, mockWhere: where };
 });
 
 vi.mock("@ligala/db", () => ({
@@ -41,5 +41,17 @@ describe("adminPayouts GET /", () => {
     expect(res.status).toBe(200);
     const body = await res.json() as { items: Array<Record<string, unknown>> };
     expect(body.items[0]).toMatchObject({ id: "po_1", lawyer: { name: "Atty. Juan" } });
+  });
+
+  it("applies the status filter for a valid status", async () => {
+    const res = await adminPayouts.request("/?status=succeeded", { method: "GET" });
+    expect(res.status).toBe(200);
+    expect(mockWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores an unknown status value (skips the enum filter, no 500)", async () => {
+    const res = await adminPayouts.request("/?status=not_a_status", { method: "GET" });
+    expect(res.status).toBe(200);
+    expect(mockWhere).not.toHaveBeenCalled();
   });
 });
