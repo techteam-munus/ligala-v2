@@ -169,6 +169,15 @@
 
 ## Session Log
 
+### 2026-05-27 — Session 24 (IDMeta deployed to dev + corrected to the real API/webhook contract)
+
+- **Did:**
+  - **Deployed the IDMeta KYC feature to dev and got verification + status reconciliation working end-to-end** (merged onto `develop`, deployed via `pnpm cdk:deploy:dev`). Wired `IDMETA_HOSTED_URL` into the `AppSecret` + `AmplifyEnvInjector` (commit `343c63b`); added the IDMeta SQS queue/DLQ/`idmeta-worker` + `IDMETA_QUEUE_URL` on the api Lambda (`be1a535`); forwarded `IDMETA_HOSTED_URL` to the Next SSR runtime in `amplify.yml` (the gate for the `/lawyer/kyc` card).
+  - **Corrected the integration against the real IDMeta contract (most of the original spec's assumptions were wrong):** the API `template_id` is the **numeric** Trust Flow id (`1085`, not the base64 share-link `templateId`); the webhook is **`{ type, data }`** and only `trustValidation.complete` is terminal (`data.status` 3=verified); the hosted share link **ignores** `verification_id`/`trustValidationId` binding and returns `metadata:null`. **The working correlation (copied from ligala-v1's `lawyerVerificationSDK.tsx`) is the `&m=submissionId:<id>` SDK param**, which round-trips into `data.metadata` on the completion webhook. Rewrote the webhook handler to normalize that shape (`normalizeIdmetaWebhook`), ack non-terminal events, map by `metadata.submissionId`, idempotent on duplicates (IDMeta fires the completion ~15×), and dropped the useless pre-create/token-at-launch step (`8c66a83`, `b306343`, `c032a1a`).
+  - **Verified live on dev:** a real verification flips the submission to **approved**, mapped via `m=submissionId`.
+- **Did NOT / blocked:** **storing the captured ID/selfie bytes in S3.** Diagnostic-confirmed that IDMeta returns **no image data** in the webhook *or* `finalize-verification` (`verification_data` is `"[]"`), and the retrieval endpoint `GET /api/v1/verification/get-verification` returns **403 Forbidden** for the current app token (permission/plan gate). v1 has the same limitation (stores status only). So `kyc_document` ingestion yields 0 docs — images live in IDMeta's vault. The S3 ingestion plumbing (`extractImages` → `putKycDocument`) is built and ready the moment a token with document-retrieval permission is available.
+- **Next:** ask IDMeta support / check the app-token scope for document retrieval (to unblock S3 image ingestion), or accept IDMeta as the document system-of-record (status-only, current behavior). Then merge `develop` → `main` when ready.
+
 ### 2026-05-26 — Session 23 (IDMeta KYC verification + S3 document ingestion)
 
 - **Did:**
