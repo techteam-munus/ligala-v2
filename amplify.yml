@@ -22,6 +22,10 @@ applications:
             # short-lived IBP verification cookie. Must match the same secret
             # the API Lambda reads from Secrets Manager.
             - echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET" >> .env.production
+            # Gates the "Verify with IDMeta" card on /lawyer/kyc (server-side
+            # read in the page). Injected into the Amplify app env from the app
+            # secret by the AmplifyEnvInjector; forwarded to the SSR runtime here.
+            - echo "IDMETA_HOSTED_URL=$IDMETA_HOSTED_URL" >> .env.production
             - pnpm build
       artifacts:
         baseDirectory: .next
