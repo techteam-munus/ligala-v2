@@ -9,7 +9,7 @@
 
 The codebase already anticipated IDMeta: `kyc_submission.idmetaApplicantId` exists, `POST /webhooks/idmeta` reconciles a submission's status, `workers/idmeta/handler.ts` is a "Phase 2" no-op stub, and `.env.example` lists `IDMETA_BASE_URL` / `IDMETA_TOKEN` / `IDMETA_TEMPLATE_ID` / `IDMETA_WEBHOOK_SECRET`. Today's *actual* KYC flow on `/lawyer/kyc` is manual document upload (gov ID, bar cert, selfie) → S3 (presigned PUT) → admin review at `/admin/kyc`.
 
-**Goal:** add an **API-driven IDMeta verification path** to the `/lawyer/kyc` page, *alongside* the existing manual upload. A lawyer launches IDMeta's hosted verification (selfie + ID) in a new tab; when they finish, our backend **ingests the documents IDMeta captured into our own S3** as `kyc_document` rows and updates the submission status — so admins see the same artifacts they get from manual upload, and the verification result maps back to the correct lawyer.
+**Goal:** add an **API-driven IDMeta verification path** to the `/lawyer/kyc` page, *alongside* the existing manual upload. A lawyer launches IDMeta's hosted verification (selfie + ID) in a new tab; when they finish, our backend **ingests the documents IDMeta captured into our own S3** as `kyc_document` rows and updates the submission status — so the captured documents are stored exactly like manually-uploaded ones (same `kyc_document` rows under the per-lawyer S3 prefix), and the verification result maps back to the correct lawyer. (Note: surfacing KYC documents in the admin `/admin/kyc` inbox UI is a separate pre-existing gap — the inbox shows status, not the document images, for manual uploads too — and is out of scope here.)
 
 ## 2. Scope
 
@@ -101,7 +101,7 @@ At-least-once webhook delivery + idempotency on `verification_id` (skip if the s
 ## 7. Error handling & idempotency
 
 - **Idempotency:** `ingestIdmetaResult` is keyed on `verification_id` → its `kyc_submission`. If the submission already has IDMeta-sourced documents, re-ingestion is a no-op (status may still be re-reconciled). Webhook replays return `{ idempotent: true }`.
-- **Submission mapping precedence:** resolve `verification_id` → submission via `idmetaApplicantId`; cross-check `metadata.submissionId` from finalize. If neither resolves, 404 + loud log (do not create an orphan).
+- **Submission mapping precedence:** resolve `verification_id` → submission via `idmetaApplicantId` (set at `/start`), then a fallback to a submission whose `id` equals the verification id. If neither resolves, 404 + loud log (do not create an orphan). *As-built:* the additional `metadata.submissionId` fallback is deferred to the §11.1 sandbox confirmation — it pairs naturally with confirming how the hosted link carries our reference, so it's wired up then rather than speculatively now.
 - **Webhook failures:** dev surfaces inline; prod relies on SQS retry → DLQ (alarmed via the `Monitoring` construct, like other queues).
 - **Partial images:** ingest whatever images are present; a missing selfie or ID is logged but does not fail the whole submission (status still updates).
 - **Feature gating:** if `IDMETA_TOKEN`/`IDMETA_TEMPLATE_ID` unset, `start` and the IDMeta card are disabled; `/webhooks/idmeta` returns `501 idmeta_not_configured`.
