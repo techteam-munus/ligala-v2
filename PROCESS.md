@@ -169,6 +169,16 @@
 
 ## Session Log
 
+### 2026-05-26 — Session 21 (lawyer payouts web UI — Plan 2 complete)
+
+- **Did:**
+  - **Landed the lawyer + admin payouts web UI** (Plan 2) on branch `feat/lawyer-payouts-web`, complementing the Plan 1 backend. Lawyer portal page `(lawyer)/lawyer/payouts` (Available/Pending KPI strip, withdraw form, withdrawal history, payout-method manager) + server actions in `apps/web/lib/actions/payouts.ts` (Zod-parsed, `api()`-forwarded, `revalidatePath`). Admin read-only page `(admin)/admin/payouts` with a status filter, backed by a new `adminPayouts` (`requireRole("admin")`) read endpoint mounted at `/admin/payouts`. `Payouts` nav added to the lawyer Billing group and admin Money group.
+  - **Production-safety hardening** (carried on this branch): added a guard in `POST /lawyer/payouts` that returns 501 `payouts_not_configured` when `NODE_ENV=production` and no disbursement wallet is set — prevents the `dev_simulate` fallthrough from debiting the ledger into a stuck-`pending` payout once the UI is reachable. Added the missing `PAYMONGO_WALLET_*` + transfer-webhook secret slots to the CDK `AppSecret` template. Hardened the admin `?status=` filter to validate against the `payout_status` enum (was a 500 on unknown values).
+  - Date display uses `phDateFormat` (Asia/Manila) per convention; money stays integer cents.
+  - **Verification:** `pnpm typecheck` 9/9 green; `pnpm lint` 0 errors (pre-existing warnings only); `pnpm build` 3/3 green (`/lawyer/payouts` + `/admin/payouts` compiled); api tests green incl. new `admin-payouts.test.ts` (3) and the payout-guard test.
+- **Did NOT:** admin `adjustment` (audited) mutation, admin payout retry, stale-`pending` reconciliation sweep, real PayMongo Disbursements sandbox verification, CPRA §43 / fund-custody sign-off — all still gating real production payouts (see backlog).
+- **Next:** wire PayMongo sandbox disbursement creds into the dev secret to exercise a real transfer end-to-end; then the reconciliation sweep + counsel sign-off before enabling the real provider in prod.
+
 ### 2026-05-26 — Session 20 (lawyer payouts backend — Plan 1 complete)
 
 - **Did:**
