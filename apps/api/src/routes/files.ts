@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -21,6 +22,14 @@ export const files = new Hono()
   .post("/presign", zValidator("json", presignRequest), async (c) => {
     const { kind, contentType } = c.req.valid("json");
     const user = c.get("user");
+
+    // Avatars are rendered as <img> (including publicly for lawyers), so a PDF
+    // would surface as a broken image. The shared enum allows application/pdf
+    // for documents; reject it here for the avatar kind.
+    if (kind === "avatar" && !contentType.startsWith("image/")) {
+      throw new HTTPException(400, { message: "avatar_must_be_image" });
+    }
+
     const ext = contentType.split("/")[1] ?? "bin";
     const s3Key = `${kind}/${user.id}/${crypto.randomUUID()}.${ext}`;
     const bucket = process.env.S3_UPLOADS_BUCKET;

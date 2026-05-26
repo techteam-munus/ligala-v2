@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { resolveAvatarUrl } from "@/lib/avatar";
 import { roleHome } from "@/lib/role";
 import { PortalShell } from "@/app/_components/portal-shell";
 
@@ -13,12 +14,13 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   // dead end; the verify page reads the email from the session and resends.
   if (!session.user.emailVerified) redirect("/verify-email?send=1");
   if (session.user.role !== "client") redirect(roleHome(session.user.role));
+  const userImage = await resolveAvatarUrl(session.user.image);
   return (
     <PortalShell
       variant="client"
       userEmail={session.user.email}
       userName={session.user.name}
-      userImage={session.user.image}
+      userImage={userImage}
     >
       {children}
     </PortalShell>

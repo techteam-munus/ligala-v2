@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getSession } from "@/lib/session";
 import { PageHero } from "@/app/_components/page-hero";
 import { ClientProfileForm } from "./form";
 
@@ -22,16 +23,29 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
 }
 
 export default async function ClientProfilePage() {
-  const res = await safe<ProfileResponse>("/accounts/profile", {
-    profile: {
-      userId: "",
-      displayName: null,
-      phone: null,
-      city: null,
-      region: null,
-      preferredLanguage: "en",
-    },
-  });
+  const [res, avatar, session] = await Promise.all([
+    safe<ProfileResponse>("/accounts/profile", {
+      profile: {
+        userId: "",
+        displayName: null,
+        phone: null,
+        city: null,
+        region: null,
+        preferredLanguage: "en",
+      },
+    }),
+    safe<{ url: string | null }>("/accounts/avatar-url", { url: null }),
+    getSession(),
+  ]);
+
+  const fallbackInitial = (
+    res.profile.displayName ||
+    session?.user.name ||
+    session?.user.email ||
+    "?"
+  )
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -49,6 +63,8 @@ export default async function ClientProfilePage() {
             region: res.profile.region ?? "",
             preferredLanguage: res.profile.preferredLanguage,
           }}
+          avatarUrl={avatar.url}
+          fallbackInitial={fallbackInitial}
         />
       </div>
     </main>

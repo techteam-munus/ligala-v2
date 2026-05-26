@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
+import { getSession } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/app/_components/page-hero";
 import { LawyerProfileForm } from "./form";
@@ -29,18 +30,24 @@ async function safe<T>(path: string, fallback: T): Promise<T> {
 }
 
 export default async function LawyerProfilePage() {
-  const [profileRes, ibp, practice, jurisdictions] = await Promise.all([
-    safe<ProfileResponse>("/lawyers/profile", {
-      profile: null,
-      practiceAreaIds: [],
-      jurisdictionIds: [],
-    }),
-    api<RefList<Ref>>("/references/ibp-chapters"),
-    api<RefList<Ref>>("/references/practice-areas"),
-    api<RefList<Ref>>("/references/jurisdictions"),
-  ]);
+  const [profileRes, avatar, session, ibp, practice, jurisdictions] =
+    await Promise.all([
+      safe<ProfileResponse>("/lawyers/profile", {
+        profile: null,
+        practiceAreaIds: [],
+        jurisdictionIds: [],
+      }),
+      safe<{ url: string | null }>("/accounts/avatar-url", { url: null }),
+      getSession(),
+      api<RefList<Ref>>("/references/ibp-chapters"),
+      api<RefList<Ref>>("/references/practice-areas"),
+      api<RefList<Ref>>("/references/jurisdictions"),
+    ]);
 
   const publicSlug = profileRes.profile?.slug ?? "";
+  const fallbackInitial = (session?.user.name || session?.user.email || "?")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
@@ -75,6 +82,8 @@ export default async function LawyerProfilePage() {
             probonoAvailable: profileRes.profile?.probonoAvailable ?? false,
             probonoStatement: profileRes.profile?.probonoStatement ?? "",
           }}
+          avatarUrl={avatar.url}
+          fallbackInitial={fallbackInitial}
           ibpChapters={ibp.items}
           practiceAreas={practice.items}
           jurisdictions={jurisdictions.items}

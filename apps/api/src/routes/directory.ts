@@ -4,6 +4,7 @@ import { zValidator } from "@hono/zod-validator";
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db, schema } from "@ligala/db";
 import { lawyerSearchQuery } from "@ligala/shared/schemas";
+import { resolveImageUrl } from "../lib/avatar";
 
 /**
  * Public read-only "directory" of verified lawyers. No auth — these endpoints
@@ -98,6 +99,7 @@ export const directory = new Hono()
         slug: schema.lawyerProfiles.slug,
         userId: schema.lawyerProfiles.userId,
         name: schema.user.name,
+        image: schema.user.image,
         bio: schema.lawyerProfiles.bio,
         probonoAvailable: schema.lawyerProfiles.probonoAvailable,
         createdAt: schema.lawyerProfiles.createdAt,
@@ -148,16 +150,21 @@ export const directory = new Hono()
       paByLawyer.set(r.lawyerId, list);
     }
 
-    const items = rows.map((r) => ({
-      slug: r.slug,
-      name: r.name,
-      bio: r.bio,
-      city: officeByLawyer.get(r.userId)?.city ?? null,
-      region: officeByLawyer.get(r.userId)?.region ?? null,
-      verified: true,
-      probonoAvailable: r.probonoAvailable,
-      practiceAreas: paByLawyer.get(r.userId) ?? [],
-    }));
+    // Resolve each lawyer's photo to a presigned GET URL (or null). Signing is
+    // local CPU, not an S3 round trip, so Promise.all over a page is cheap.
+    const items = await Promise.all(
+      rows.map(async (r) => ({
+        slug: r.slug,
+        name: r.name,
+        bio: r.bio,
+        city: officeByLawyer.get(r.userId)?.city ?? null,
+        region: officeByLawyer.get(r.userId)?.region ?? null,
+        verified: true,
+        probonoAvailable: r.probonoAvailable,
+        photoUrl: await resolveImageUrl(r.image),
+        practiceAreas: paByLawyer.get(r.userId) ?? [],
+      })),
+    );
 
     return c.json({ items, total, page, pageSize });
   })
@@ -236,6 +243,7 @@ export const directory = new Hono()
       profile: {
         slug: profile.slug,
         name: userRow.name,
+        photoUrl: await resolveImageUrl(userRow.image),
         bio: profile.bio,
         barNumber: profile.barNumber,
         verified: true,

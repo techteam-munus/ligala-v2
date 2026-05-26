@@ -247,7 +247,11 @@
       "Bash(git branch *)",
       "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\dejes\\\\munus\\\\ligala\\\\ligala-v2\\\\apps\\\\web\\\\app\\\\\\(lawyer\\)\\\\lawyer\\\\payouts\\\\_components\")",
       "Bash(Out-Null)",
-      "Bash(Write-Host \"Directory created\")"
+      "Bash(Write-Host \"Directory created\")",
+      "Bash(xargs grep -l \"File\\\\|upload\\\\|presign\")",
+      "Bash(xargs grep -l \"s3Client\\\\|S3Client\")",
+      "Bash(git stat *)",
+      "Bash(git --no-pager diff --stat HEAD)"
     ]
   }
 }

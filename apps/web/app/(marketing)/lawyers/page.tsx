@@ -33,6 +33,7 @@ type Item = {
   region: string | null;
   verified: boolean;
   probonoAvailable: boolean;
+  photoUrl: string | null;
   practiceAreas: { id: string; name: string }[];
 };
 
@@ -492,17 +493,28 @@ function LawyerCard({ item }: { item: Item }) {
         <Card className="gap-0 py-0 transition-all group-hover:ring-foreground/30 group-hover:shadow-sm">
           <CardContent className="flex items-start gap-4 px-5 py-5">
             {/* Avatar */}
-            <span
-              className={cn(
-                "flex size-12 shrink-0 items-center justify-center rounded-full text-base font-semibold ring-1 ring-inset",
-                tint.bg,
-                tint.text,
-                tint.ring,
-              )}
-              aria-hidden
-            >
-              {initialsOf(item.name) || "?"}
-            </span>
+            {item.photoUrl ? (
+              // Plain <img>, not next/image: presigned S3 URLs rotate hosts/
+              // query params, which next/image's remotePatterns can't allow.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.photoUrl}
+                alt=""
+                className="size-12 shrink-0 rounded-full object-cover ring-1 ring-inset ring-border"
+              />
+            ) : (
+              <span
+                className={cn(
+                  "flex size-12 shrink-0 items-center justify-center rounded-full text-base font-semibold ring-1 ring-inset",
+                  tint.bg,
+                  tint.text,
+                  tint.ring,
+                )}
+                aria-hidden
+              >
+                {initialsOf(item.name) || "?"}
+              </span>
+            )}
 
             {/* Body */}
             <div className="min-w-0 flex-1">
