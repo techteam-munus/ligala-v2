@@ -36,7 +36,13 @@ export const webhooks = new Hono()
       return c.json({ error: "invalid_signature" }, 401);
     }
 
-    const parsed = idmetaWebhookPayload.safeParse(JSON.parse(raw || "null"));
+    let body: unknown;
+    try {
+      body = JSON.parse(raw || "null");
+    } catch {
+      return c.json({ error: "bad_payload" }, 400);
+    }
+    const parsed = idmetaWebhookPayload.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: "bad_payload", issues: parsed.error.flatten() }, 400);
     }

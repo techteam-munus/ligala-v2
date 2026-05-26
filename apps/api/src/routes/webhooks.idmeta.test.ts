@@ -100,4 +100,14 @@ describe("POST /webhooks/idmeta", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("400s a malformed (non-JSON) body", async () => {
+    const res = await app().request("/webhooks/idmeta", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{ not json",
+    });
+    expect(res.status).toBe(400);
+    expect(ingestIdmetaResult).not.toHaveBeenCalled();
+  });
 });

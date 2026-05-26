@@ -91,6 +91,7 @@ export async function ingestIdmetaResult(input: IngestInput): Promise<IngestResu
       idmetaApplicantId: input.verificationId,
       submittedAt: submission.submittedAt ?? now,
       decidedAt: decided ? now : null,
+      rejectReason: status === "rejected" ? "Identity verification was not approved by IDMeta." : null,
       updatedAt: now,
     })
     .where(eq(schema.kycSubmissions.id, submission.id));

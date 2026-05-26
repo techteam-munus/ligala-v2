@@ -83,7 +83,20 @@ describe("ingestIdmetaResult", () => {
     const kinds = rows.map((r) => r.kind).sort();
     expect(kinds).toEqual(["government_id", "selfie"]);
     expect(rows.every((r) => r.s3Key.startsWith("kyc_document/usr_1/"))).toBe(true);
-    expect(submissionUpdates[0]).toMatchObject({ status: "approved" });
+    expect(submissionUpdates[0]).toMatchObject({ status: "approved", rejectReason: null });
+  });
+
+  it("sets rejectReason when IDMeta rejects", async () => {
+    const res = await ingestIdmetaResult({
+      verificationId: "ver_1",
+      status: "REJECTED",
+      verificationResults: webhookResults,
+    });
+    expect(res.status).toBe("rejected");
+    expect(submissionUpdates[0]).toMatchObject({
+      status: "rejected",
+      rejectReason: "Identity verification was not approved by IDMeta.",
+    });
   });
 
   it("is idempotent: re-running with documents already present uploads nothing new", async () => {
