@@ -171,8 +171,9 @@ export default async function ClientCasesPage({
       </section>
 
       {/* Filter tabs --------------------------------------------------- */}
+      <div className="mt-6 max-w-full overflow-x-auto">
       <nav
-        className="mt-6 inline-flex w-fit items-center rounded-full border border-border/60 bg-card p-1"
+        className="inline-flex w-max items-center rounded-full border border-border/60 bg-card p-1"
         aria-label="Filter cases by status"
       >
         {FILTER_TABS.map((t) => {
@@ -209,6 +210,7 @@ export default async function ClientCasesPage({
           );
         })}
       </nav>
+      </div>
 
       {/* Table --------------------------------------------------------- */}
       <Card className="mt-4 gap-0 py-0">

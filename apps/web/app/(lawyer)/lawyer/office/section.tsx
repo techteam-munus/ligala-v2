@@ -302,14 +302,14 @@ export function OfficeSection({
                 <li
                   key={i}
                   className={cn(
-                    "grid items-center gap-3 px-4 py-2.5 text-sm",
-                    "grid-cols-[90px_1fr_1fr_100px]",
+                    "grid items-center gap-2 px-4 py-2.5 text-sm",
+                    "grid-cols-2 sm:grid-cols-[90px_1fr_1fr_100px] sm:gap-3",
                     entry.isClosed && "bg-muted/20",
                   )}
                 >
                   <span
                     className={cn(
-                      "font-medium",
+                      "col-span-2 font-medium sm:col-span-1",
                       entry.isClosed && "text-muted-foreground",
                     )}
                   >
@@ -345,7 +345,7 @@ export function OfficeSection({
                   />
                   <label
                     className={cn(
-                      "inline-flex items-center justify-end gap-1.5 text-xs",
+                      "col-span-2 inline-flex items-center justify-start gap-1.5 text-xs sm:col-span-1 sm:justify-end",
                       entry.isClosed
                         ? "text-foreground"
                         : "text-muted-foreground",
