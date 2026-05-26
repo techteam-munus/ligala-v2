@@ -21,7 +21,7 @@ const region = process.env.CDK_DEFAULT_REGION ?? "ap-southeast-1";
 const env = { account, region };
 const prefix = `Ligala-${envName}`;
 
-const core = new CoreStack(app, `${prefix}-Core`, { env, envName });
+const core = new CoreStack(app, `${prefix}-Core`, { env, envName, webCustomDomain });
 new AppStack(app, `${prefix}-App`, {
   env,
   envName,
