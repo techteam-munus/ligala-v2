@@ -21,6 +21,8 @@ export const kycDocumentKind = pgEnum("kyc_document_kind", [
   "other",
 ]);
 
+export const kycMethod = pgEnum("kyc_method", ["upload", "idmeta"]);
+
 /**
  * One submission per attempt — lawyers can resubmit if rejected. The "current"
  * submission is the newest by submittedAt for a given lawyer.
@@ -31,6 +33,7 @@ export const kycSubmissions = pgTable("kyc_submission", {
     .notNull()
     .references(() => lawyerProfiles.userId, { onDelete: "cascade" }),
   status: kycStatus("status").default("pending").notNull(),
+  method: kycMethod("method").default("upload").notNull(),
   idmetaApplicantId: text("idmeta_applicant_id"),
   submittedAt: timestamp("submitted_at", { withTimezone: true }),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
