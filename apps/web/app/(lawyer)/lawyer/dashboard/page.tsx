@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { phDateFormat } from "@/lib/datetime";
 import {
   ArrowUpRight,
   Briefcase,
@@ -87,7 +88,7 @@ function shortDate(iso: string) {
   const d = new Date(iso);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     ...(sameYear ? {} : { year: "2-digit" }),

@@ -7,6 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { phDateFormat } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PageHero } from "@/app/_components/page-hero";
@@ -39,7 +40,7 @@ function pesoNumber(cents: number) {
 }
 
 function longDate(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "long",
     day: "numeric",
     year: "numeric",

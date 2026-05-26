@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
+import { phDateFormat } from "@/lib/datetime";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -118,7 +119,7 @@ function Peso({
 function longDate(iso: string | null | undefined) {
   if (!iso) return null;
   const d = new Date(iso);
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -126,7 +127,7 @@ function longDate(iso: string | null | undefined) {
 }
 
 function timeOf(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
@@ -662,7 +663,9 @@ function MetaInline({
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
         {label}
       </span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+      <span className="text-sm font-medium text-foreground" suppressHydrationWarning>
+        {value}
+      </span>
     </span>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { TicketPercent, Trash2, UserCog } from "lucide-react";
 import { deleteDiscountCode } from "@/lib/actions/admin";
 import { cn } from "@/lib/utils";
+import { phDateFormat } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 
 type Row = {
@@ -34,7 +35,7 @@ function shortDate(iso: string | null) {
   const d = new Date(iso);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     ...(sameYear ? {} : { year: "2-digit" }),

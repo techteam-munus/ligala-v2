@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { phDateFormat } from "@/lib/datetime";
 import {
   ArrowUpRight,
   Receipt,
@@ -96,7 +97,7 @@ function relativeTime(iso: string) {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.round(diffHr / 24);
   if (diffDay < 30) return `${diffDay}d ago`;
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
   }).format(new Date(iso));

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { phDateFormat } from "@/lib/datetime";
 import {
   ArrowLeft,
   CircleDashed,
@@ -106,7 +107,7 @@ function tintFor(id: string): { bg: string; text: string; ring: string } {
 }
 
 function longDate(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -114,7 +115,7 @@ function longDate(iso: string) {
 }
 
 function timeOf(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, X } from "lucide-react";
 import { decideOnKyc } from "@/lib/actions/admin";
 import { cn } from "@/lib/utils";
+import { phDateFormat } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -64,7 +65,7 @@ function tintFor(id: string): { bg: string; text: string; ring: string } {
 }
 
 function longDate(iso: string) {
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -141,7 +142,10 @@ function Item({ row }: { row: Row }) {
               {row.lawyerEmail}
             </p>
             <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
-              Submitted {relativeTime(row.submission.createdAt)}
+              Submitted{" "}
+              <span suppressHydrationWarning>
+                {relativeTime(row.submission.createdAt)}
+              </span>
               <span className="ml-1 text-muted-foreground/60">
                 · {longDate(row.submission.createdAt)}
               </span>

@@ -7,6 +7,7 @@ import {
   Search,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { phDateFormat } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,7 +63,7 @@ function formatName(row: IbpLawyer): string {
 
 function shortDate(iso: string) {
   const d = new Date(iso);
-  return new Intl.DateTimeFormat("en-PH", {
+  return phDateFormat({
     month: "short",
     day: "numeric",
     year: "numeric",
