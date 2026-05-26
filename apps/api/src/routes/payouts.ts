@@ -18,6 +18,7 @@ import {
   PaymongoApiError,
   PaymongoUnreachableError,
 } from "../lib/paymongo";
+import { applyTransferWebhook } from "../lib/transfer-webhook";
 
 function newId() {
   return crypto.randomUUID();
@@ -300,3 +301,20 @@ export const payouts = new Hono()
       throw err;
     }
   });
+
+/**
+ * Dev-only payout simulator. Flips a `dev_simulate` payout to succeeded/failed.
+ * Session-less (mounted outside `payouts`' requireRole), mirroring billingDev.
+ */
+export const payoutsDev = new Hono().post("/simulate-transfer", async (c) => {
+  const url = new URL(c.req.url);
+  const payoutId = url.searchParams.get("payoutId");
+  const status = url.searchParams.get("status") === "failed" ? "failed" : "succeeded";
+  if (!payoutId) throw new HTTPException(400, { message: "missing_params" });
+  const result = await applyTransferWebhook({
+    provider: "dev_simulate",
+    providerTransferId: payoutId, // for dev_simulate, applyTransferWebhook looks up by payout.id
+    status,
+  });
+  return c.json(result);
+});
