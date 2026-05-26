@@ -169,6 +169,36 @@
 
 ## Session Log
 
+### 2026-05-26 — Session 20 (lawyer payouts backend — Plan 1 complete)
+
+- **Did:**
+  - **Landed the lawyer payouts backend** on branch `feat/lawyer-payouts`. This is an entirely new `payouts` aggregate spanning all three layers (DB schema, shared Zod, Hono routes).
+  - **DB (migration `0013_*`):** four new tables — `balance_entry` (running ledger per lawyer: kind credit/debit/adjustment, reference to invoice/payout, idempotent `dedupe_key`), `lawyer_payout_method` (GCash/bank metadata + `isDefault` flag), `payout` (status pending/completed/failed, `providerPayoutId`, advisory-lock guarded), plus a `payout_status` enum. Migration applied locally.
+  - **Balance crediting:** `applyPaymentWebhook` in `apps/api/src/routes/billing.ts` now, on successful settlement of a `kind=case` invoice, writes a `balance_entry(credit)` for the net invoice amount (pass-through, no platform commission today). On refund, `refundPayment(...)` writes a corresponding `balance_entry(debit)` to reverse the credit. Subscription invoices write no balance entry (lawyer subscription fees are not client-billed revenue).
+  - **Payout methods route** (`/lawyer/payout-methods`): CRUD — list, POST (create method, KYC-gated), DELETE. GCash or bank_transfer; `accountNumber` + `accountName` required; `bankCode` required for bank_transfer.
+  - **Payouts route** (`/lawyer/payouts`): `GET /` returns current available balance + a paginated ledger; `POST /` (withdraw) — KYC-gated, advisory-lock on the lawyer row to prevent concurrent withdrawals, debits the balance, creates a `payout(pending)` row, calls `paymongo.createBatchTransfer(...)` (real PayMongo Disbursements API call when `PAYMONGO_SECRET_KEY` is set), flips payout to `completed`; on provider error re-credits the balance and marks payout `failed` with the error message. `dev_simulate` provider path bypasses the PayMongo call.
+  - **Transfer-reconciliation webhook** (`/webhooks/paymongo-transfer`): handles `batch_transfer.updated` events; idempotent on `(provider, providerPayoutId)` — replays return `{ idempotent: true }`; updates payout status from PayMongo's reported state.
+  - **Verification:** `pnpm typecheck` 9/9 green; `pnpm lint` 0 errors (warnings only, pre-existing); `pnpm test` all green — 83 api tests (13 spec files including new `payouts.test.ts` 12 tests, `payouts-credit.test.ts` 2 tests, `payouts-refund.test.ts` 2 tests, `transfer-webhook.test.ts` 6 tests, `payouts-dev.test.ts` 3 tests) + 32 tests across other packages = **115 total, all passing**. Backend builds (`@ligala/api` + `@ligala/workers`) clean. `@ligala/web` build blocked by a Windows file-lock on `.next/trace` (EPERM — pre-existing environment issue, not introduced by this branch).
+- **Did NOT:**
+  - Web UI for payouts (balance tile on lawyer dashboard, withdrawal form, payout-method manager, admin payout views) — deferred to Plan 2.
+  - Admin payout views (`/admin/payouts`, payout reconciliation inbox) — Plan 2.
+  - Real PayMongo Disbursements API sandbox verification — the `createBatchTransfer` call shape, idempotency header name, `source_account` field, GCash rail enum values, and transfer-webhook signature/status enum are based on PayMongo documentation and must be confirmed against the live sandbox before enabling the `paymongo` provider in production.
+  - Stale-`pending`-payout reconciliation sweep — if the API crashes between the balance debit and the PayMongo call, a payout is left `pending` indefinitely with no balance to show for it. A reconciliation/alerting sweep (cron or on-demand Lambda) is needed before enabling the real provider in production.
+  - Single-default invariant enforcement for `lawyer_payout_method` — `isDefault` column exists but is not read by the withdrawal handler (withdrawal always uses the method supplied in the request body). Enforcement belongs with the Plan 2 method-form UX.
+  - PH counsel / IBP sign-off on the CPRA §43 fee-splitting / fund-custody posture — required (per the design spec §3) before launch.
+- **Deferred follow-ups (explicit, to track for Plan 2):**
+  - Wire the real PayMongo Disbursements API: confirm `createBatchTransfer` request shape in sandbox (idempotency header exact name, `source_account` field, GCash rail enum value), and confirm the transfer-webhook signature algorithm + status enum values that PayMongo actually sends.
+  - Add a stale-`pending`-payout reconciliation/alerting sweep (cron or scheduled Lambda) before enabling the real `paymongo` provider in production — closes the crash-window where a payout row is left `pending` with no corresponding balance credit.
+  - Enforce the single-default `lawyer_payout_method` invariant (currently `isDefault` is stored but unread by the withdrawal flow; belongs with Plan 2's method-management form).
+  - PH counsel / IBP sign-off on the CPRA §43 fee-splitting / fund-custody posture (per design spec §3) before launch.
+- **Next:** Plan 2 — web UI (lawyer balance tile + withdrawal form + method manager) and admin payout views.
+
+### 2026-05-25 — Session 19 (email verification switched to 6-digit OTP)
+
+- **Did:**
+  - **Switched email verification from a magic link to a 6-digit code** (Better Auth `emailOTP` plugin, `overrideDefaultEmailVerification` + `autoSignInAfterVerification`). The `auth_verify` email now carries a code; a new public `/verify-email` page collects it; signup → code → auto-sign-in → portal; login 403 and an `emailVerified` portal-layout gate both route to `/verify-email`; the lawyer IBP claim moved to after verification.
+  - Implemented + green on typecheck/lint/unit tests locally; not yet deployed or confirmed via a real code send.
+
 ### 2026-05-25 — Session 18 (transactional email pipeline shipped + hard email verification)
 
 - **Did:**
@@ -715,6 +745,11 @@
 - **Audit log retention / export** — All audit rows live in `admin_audit_log` forever. Add a CSV export endpoint + retention policy once we have a year of data and a compliance ask.
 - **Per-admin permission tiers** — All admins have all powers today. If we add finance-only or moderation-only roles, do it via a `admin_capability` link table rather than splitting the `admin` role enum.
 - **SES notification on admin actions** — User isn't told via email when they're paused/banned/refunded. Lands with SES wiring; template lives in `packages/email/`.
+- **Payouts — real PayMongo Disbursements API validation** — `createBatchTransfer` call shape, idempotency header, `source_account` field, GCash rail enum, and transfer-webhook signature/status enum must be confirmed against the PayMongo sandbox before enabling the real `paymongo` provider in production.
+- **Payouts — stale-`pending`-payout reconciliation sweep** — If the API crashes between the balance debit and the PayMongo call, a payout row is left `pending` indefinitely. A reconciliation/alerting cron or scheduled Lambda is needed before enabling the real provider in production (closes the crash-window).
+- **Payouts — single-default `lawyer_payout_method` invariant** — `isDefault` column is stored but unread by the withdrawal handler. Enforce the single-default constraint (and surface it in the UI) in Plan 2's method-management form.
+- **Payouts — CPRA §43 / fund-custody sign-off** — PH counsel / IBP sign-off on the fee-splitting / fund-custody posture (per design spec §3) required before production launch of the payout feature.
+- **Payouts Plan 2 — web UI + admin views** — Lawyer balance tile on the dashboard, withdrawal form, payout-method manager (`/lawyer/payout-methods`), payout history page, and admin payout reconciliation inbox (`/admin/payouts`).
 
 ---
 
