@@ -68,7 +68,7 @@ describe("POST /webhooks/idmeta", () => {
       headers: { "content-type": "application/json" },
       body: payload,
     });
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(200);
     expect(enqueueIdmetaIngest).toHaveBeenCalledWith({
       verificationId: "ver_1",
       submissionId: "sub_1",

@@ -68,7 +68,9 @@ export const webhooks = new Hono()
         submissionId: evt.submissionId,
         status: evt.status,
       });
-      return c.json({ queued: true, verificationId: evt.verificationId }, 202);
+      // 200 (not 202): IDMeta treats only 2xx as delivered; keep it conventional
+      // so it doesn't re-fire the completion event.
+      return c.json({ queued: true, verificationId: evt.verificationId });
     }
 
     const result = await ingestIdmetaResult({

@@ -17,6 +17,8 @@ export interface IngestInput {
 
 export interface IngestResult {
   notFound?: boolean;
+  /** Set when a duplicate webhook delivery was skipped (already reconciled). */
+  idempotent?: boolean;
   submissionId?: string;
   status?: KycStatus;
   ingestedDocuments: number;
@@ -52,13 +54,17 @@ export async function ingestIdmetaResult(input: IngestInput): Promise<IngestResu
   }
   if (!submission) return { notFound: true, ingestedDocuments: 0 };
 
-  // 2. Determine status. Prefer the webhook status; finalize as a backstop.
+  // 2. Determine status. Prefer the webhook status; only finalize as a backstop
+  // when we don't have one (the webhook's status is authoritative for
+  // reconciliation — finalizing just for images isn't worth the extra call /
+  // IDMeta rate limits; captured images, when a flow has them, arrive in the
+  // webhook results passed below).
   let statusValue: string | number | undefined = input.status;
   let results: unknown = input.verificationResults;
-  if (statusValue === undefined || results == null) {
+  if (statusValue === undefined) {
     try {
       const finalized = (await finalizeVerification(input.verificationId)) as Record<string, unknown>;
-      statusValue ??=
+      statusValue =
         (finalized.status_message as string | undefined) ??
         (finalized.status as string | number | undefined);
       results ??= finalized.verification_results ?? finalized;
@@ -67,6 +73,12 @@ export async function ingestIdmetaResult(input: IngestInput): Promise<IngestResu
     }
   }
   const status = mapIdmetaStatus(statusValue);
+
+  // Idempotent: duplicate webhook deliveries for an already-reconciled
+  // submission are a no-op (IDMeta can fire the completion event many times).
+  if (submission.idmetaApplicantId === input.verificationId && submission.status === status) {
+    return { submissionId: submission.id, status, ingestedDocuments: 0, idempotent: true };
+  }
 
   // 3. Ingest images — skip if this submission already has documents (idempotent).
   let ingestedDocuments = 0;

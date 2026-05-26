@@ -23,8 +23,13 @@ vi.mock("../middleware/session", () => ({
 vi.mock("../lib/sentry", () => ({ captureException: vi.fn(), initSentry: vi.fn() }));
 vi.mock("@ligala/kyc", () => ({ hostedUrlFor }));
 vi.mock("@ligala/db", () => ({
-  db: () => ({ insert: vi.fn(() => ({ values: insertValues })) }),
-  schema: { kycSubmissions: { lawyerId: "lawyer_id", id: "id" } },
+  db: () => ({
+    query: { kycSubmissions: { findFirst: vi.fn(async () => null) } },
+    insert: vi.fn(() => ({ values: insertValues })),
+  }),
+  schema: {
+    kycSubmissions: { lawyerId: "lawyer_id", id: "id", method: "method", status: "status" },
+  },
 }));
 
 import { lawyers } from "./lawyers";

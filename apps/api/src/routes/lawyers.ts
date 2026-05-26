@@ -128,13 +128,28 @@ export const lawyers = new Hono()
       throw new HTTPException(501, { message: "idmeta_not_configured" });
     }
 
-    const submissionId = newId();
-    await db().insert(schema.kycSubmissions).values({
-      id: submissionId,
-      lawyerId: user.id,
-      status: "pending",
-      method: "idmeta",
+    const conn = db();
+    // Reuse an existing open (pending) IDMeta submission rather than creating a
+    // new one on every launch — repeated "Start" clicks shouldn't pile up stale
+    // pending rows. A new submission is created only once the prior one is
+    // decided (approved/rejected) and the lawyer re-verifies.
+    const open = await conn.query.kycSubmissions.findFirst({
+      where: and(
+        eq(schema.kycSubmissions.lawyerId, user.id),
+        eq(schema.kycSubmissions.method, "idmeta"),
+        eq(schema.kycSubmissions.status, "pending"),
+      ),
+      orderBy: (s, { desc }) => [desc(s.createdAt)],
     });
+    const submissionId = open?.id ?? newId();
+    if (!open) {
+      await conn.insert(schema.kycSubmissions).values({
+        id: submissionId,
+        lawyerId: user.id,
+        status: "pending",
+        method: "idmeta",
+      });
+    }
 
     // Launch the hosted SDK with our submissionId attached as metadata (m=
     // param). IDMeta's SDK creates the verification and echoes the metadata back
