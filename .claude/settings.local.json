@@ -264,7 +264,13 @@
       "Bash(ls -la .env*)",
       "Bash(grep -rn \"IDMETA_HOSTED_URL\" apps/web/.env* .env .env.local)",
       "Bash(gh api *)",
-      "Bash(grep -viE \"NodeVersionSupportWarning|logRetention is deprecated|node >=22|continue receiving|security updates|More information|trace-warnings|^$\")"
+      "Bash(grep -viE \"NodeVersionSupportWarning|logRetention is deprecated|node >=22|continue receiving|security updates|More information|trace-warnings|^$\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('IDMETA_TEMPLATE_ID =', repr\\(d.get\\('IDMETA_TEMPLATE_ID'\\)\\)\\); print\\('IDMETA_TOKEN set?', bool\\(d.get\\('IDMETA_TOKEN'\\)\\)\\); print\\('IDMETA_BASE_URL =', repr\\(d.get\\('IDMETA_BASE_URL'\\)\\)\\)\")",
+      "Bash(grep -viE \"NodeVersionSupportWarning|logRetention is deprecated|node >=22|continue receiving|security updates|More information|trace-warnings|aws-cdk-lib:|npm ci|Affected versions|acknowledge|github.com/aws|^$\")",
+      "Bash(grep -viE \"NodeVersionSupportWarning|logRetention is deprecated|node >=22|continue receiving|security updates|More information|trace-warnings|aws-cdk-lib:|npm ci|Affected versions|acknowledge|github.com/aws|invalid lock|upgrade|^$\")",
+      "Bash(xargs grep -liE \"idmeta|trustvalidation|trust_validation\")",
+      "Read(//c/Users/dejes/.aws/**)",
+      "Bash(AWS_PROFILE=dev pnpm cdk:deploy:dev)"
     ]
   }
 }
