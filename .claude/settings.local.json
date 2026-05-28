@@ -280,7 +280,19 @@
       "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/admin/ibp-lawyers,/admin/discount-codes\" node scripts/resp-check.mjs)",
       "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/dashboard,/cases,/invoices,/profile,/cases/new,/lawyers/atty-retry,/lawyers/atty-final,/lawyers,/chapters,/pricing,/about,/terms,/privacy,/become-a-lawyer\" node scripts/resp-check.mjs)",
       "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/admin/dashboard,/admin/discount-codes,/admin/ibp-lawyers,/admin/users/GqUDgLyGV26PGtLelXA5AqyN73GjgxRG\" node scripts/resp-check.mjs)",
-      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/dashboard,/cases/65565644-a988-4a82-83a9-56595801a98f,/profile,/cases/new\" node scripts/resp-check.mjs)"
+      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/dashboard,/cases/65565644-a988-4a82-83a9-56595801a98f,/profile,/cases/new\" node scripts/resp-check.mjs)",
+      "PowerShell(Test-Path *)",
+      "Bash(AWS_PROFILE=dev aws lambda list-functions --query \"Functions[].FunctionName\" --output text)",
+      "Bash(AWS_PROFILE=dev aws lambda list-functions --region ap-southeast-1 --query \"Functions[].FunctionName\" --output text)",
+      "Bash(AWS_PROFILE=dev aws apigatewayv2 get-domain-names --region ap-southeast-1 --query \"Items[].DomainName\" --output text)",
+      "Bash(AWS_PROFILE=dev aws apigateway get-domain-names --region ap-southeast-1 --query \"items[].domainName\" --output text)",
+      "Bash(AWS_PROFILE=dev aws amplify list-apps --region ap-southeast-1 --query \"apps[].{name:name,id:appId,domain:defaultDomain}\" --output text)",
+      "Bash(export MSYS_NO_PATHCONV=1)",
+      "Bash(AWS_PROFILE=dev aws lambda get-function-configuration --region ap-southeast-1 --function-name ligala-v2-dev-api --query \"Environment.Variables\" --output json)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\(sorted\\(\\('SET ' if v else 'EMPTY '\\)+k for k,v in d.items\\(\\)\\)\\)\\)\")",
+      "PowerShell(aws lambda get-function-configuration --function-name ligala-v2-dev-api --region $r --profile $p --query \"{State:State,LastUpdateStatus:LastUpdateStatus}\" --output json)",
+      "PowerShell($r='ap-southeast-1')",
+      "PowerShell($p='dev')"
     ]
   }
 }

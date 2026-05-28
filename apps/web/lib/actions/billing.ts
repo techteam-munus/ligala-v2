@@ -16,7 +16,7 @@ import {
   type InvoicePatch,
   type InvoiceVoidInput,
 } from "@ligala/shared/schemas";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 export async function createInvoice(input: InvoiceCreateInput) {
   const parsed = invoiceCreateInput.parse(input);
@@ -61,15 +61,36 @@ export async function applyDiscount(id: string, input: ApplyDiscountInput) {
   revalidatePath(`/lawyer/invoices/${id}`);
 }
 
-export async function checkoutInvoice(id: string, input: CheckoutInput) {
+export type CheckoutResult =
+  | { ok: true; checkoutUrl: string; providerPaymentId: string; amountCents: number }
+  | { ok: false; code: string };
+
+export async function checkoutInvoice(
+  id: string,
+  input: CheckoutInput,
+): Promise<CheckoutResult> {
   const parsed = checkoutInput.parse(input);
-  return await api<{ checkoutUrl: string; providerPaymentId: string; amountCents: number }>(
-    `/billing/invoices/${id}/checkout`,
-    {
+  try {
+    const res = await api<{
+      checkoutUrl: string;
+      providerPaymentId: string;
+      amountCents: number;
+    }>(`/billing/invoices/${id}/checkout`, {
       method: "POST",
       body: JSON.stringify(parsed),
-    },
-  );
+    });
+    return { ok: true, ...res };
+  } catch (err) {
+    // A provider that's disabled/unconfigured or a business-rule rejection is an
+    // expected outcome, not a crash — return it so the UI can show a clear
+    // message instead of letting the Server Action throw (which surfaces as an
+    // opaque 500 in the browser). Anything that isn't a structured API error
+    // (e.g. a redirect, or a genuine bug) still propagates.
+    if (err instanceof ApiError) {
+      return { ok: false, code: err.code ?? "checkout_failed" };
+    }
+    throw err;
+  }
 }
 
 /**

@@ -932,6 +932,28 @@ function DiscountAction({ invoice }: { invoice: InvoiceRow }) {
   );
 }
 
+/** Map a checkout error code from the API into client-facing copy. */
+function checkoutErrorMessage(code: string): string {
+  switch (code) {
+    case "paymongo_not_configured":
+    case "paymongo_request_failed":
+    case "paymongo_unreachable":
+      return "Online card & e-wallet payments are temporarily unavailable. Please try again later.";
+    case "paypal_not_enabled":
+      return "PayPal isn't available yet. Please choose another payment method.";
+    case "amount_below_paymongo_minimum":
+      return "This amount is below the ₱20 minimum for online payment.";
+    case "invoice_already_paid":
+      return "This invoice has already been paid.";
+    case "invoice_not_payable":
+      return "This invoice can't be paid right now.";
+    case "client_only":
+      return "You don't have access to pay this invoice.";
+    default:
+      return "We couldn't start checkout. Please try again.";
+  }
+}
+
 function PayAction({
   invoice,
   remaining,
@@ -947,6 +969,10 @@ function PayAction({
     start(async () => {
       try {
         const res = await checkoutInvoice(invoice.id, { provider });
+        if (!res.ok) {
+          setError(checkoutErrorMessage(res.code));
+          return;
+        }
         if (provider === "dev_simulate") {
           const r = await fetch(res.checkoutUrl, { method: "POST" });
           if (!r.ok) throw new Error(`simulate ${r.status}`);
@@ -954,8 +980,8 @@ function PayAction({
         } else {
           window.location.href = res.checkoutUrl;
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed");
+      } catch {
+        setError("Something went wrong starting checkout. Please try again.");
       }
     });
   }
