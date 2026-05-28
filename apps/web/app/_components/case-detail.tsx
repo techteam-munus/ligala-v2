@@ -239,7 +239,7 @@ export function CaseDetail({
       ) : null}
 
       {/* Two-column body ----------------------------------------------- */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
         {/* Left column =================================================== */}
         <div className="space-y-6">
           {/* Description ------------------------------------------------ */}

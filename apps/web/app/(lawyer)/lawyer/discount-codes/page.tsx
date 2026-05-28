@@ -103,7 +103,7 @@ export default async function DiscountCodesPage() {
         />
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] [&>*]:min-w-0">
         {/* Codes table -------------------------------------------- */}
         <Card className="gap-0 py-0">
           <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">

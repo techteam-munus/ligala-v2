@@ -269,7 +269,7 @@ export function InvoiceDetail({
       {/* Two-column body -------------------------------------------------- */}
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Left column =================================================== */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Line items ------------------------------------------------- */}
           <Card className="gap-0 py-0">
             <CardContent className="px-0">
@@ -457,7 +457,7 @@ export function InvoiceDetail({
         </div>
 
         {/* Right column ================================================== */}
-        <aside className="space-y-4 lg:self-start">
+        <aside className="min-w-0 space-y-4 lg:self-start">
           {/* Summary ---------------------------------------------------- */}
           <Card size="sm" className="gap-3">
             <CardContent>

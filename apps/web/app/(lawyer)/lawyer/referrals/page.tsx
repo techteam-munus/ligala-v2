@@ -129,7 +129,7 @@ export default async function LawyerReferralsPage() {
         />
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] [&>*]:min-w-0">
         {/* Lists --------------------------------------------------- */}
         <div className="space-y-4">
           <Card className="gap-0 py-0">

@@ -97,7 +97,7 @@ export default async function ReferralLinksPage() {
         />
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
         <LinksManager items={items} origin={origin} />
       </div>
     </main>

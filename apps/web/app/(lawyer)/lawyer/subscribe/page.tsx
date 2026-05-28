@@ -131,7 +131,7 @@ export default async function SubscribePage({
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] [&>*]:min-w-0">
         {/* Plan card =================================================== */}
         <Card className="gap-0 py-0 overflow-hidden">
           <div className="border-b border-border/60 bg-muted/20 px-5 py-4">

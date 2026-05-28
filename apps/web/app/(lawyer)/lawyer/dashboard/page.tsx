@@ -218,7 +218,7 @@ export default async function LawyerDashboard() {
       </section>
 
       {/* Body */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] [&>*]:min-w-0">
         {/* Left: inbox + active cases */}
         <div className="space-y-4">
           {/* Inbox panel */}

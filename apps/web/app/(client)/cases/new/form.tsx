@@ -90,7 +90,7 @@ export function NewCaseForm({
   return (
     <form onSubmit={submit}>
       <input type="hidden" name="lawyerSlug" value={form.lawyerSlug} />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
         {/* Form ============================================== */}
         <div className="space-y-4">
           {/* Type selector */}

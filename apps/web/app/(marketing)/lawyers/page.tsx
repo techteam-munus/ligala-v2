@@ -249,7 +249,7 @@ export default async function LawyersDirectoryPage({
         </div>
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] [&>*]:min-w-0">
         {/* Filter sidebar -------------------------------------------- */}
         <aside className="lg:self-start">
           <Card size="sm" className="gap-3">

@@ -116,7 +116,7 @@ export default async function AdminIbpLawyersPage({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* Left: filter + table ------------------------------------- */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Filter bar */}
           <Card size="sm" className="gap-0 py-0">
             <CardContent className="px-2 py-2">
@@ -257,7 +257,7 @@ export default async function AdminIbpLawyersPage({
         </div>
 
         {/* Right: add form ------------------------------------------ */}
-        <aside>
+        <aside className="min-w-0">
           <AddIbpLawyerForm />
         </aside>
       </div>

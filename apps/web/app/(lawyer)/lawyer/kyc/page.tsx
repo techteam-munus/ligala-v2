@@ -123,7 +123,7 @@ export default async function KycPage() {
         }
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
         {/* Verification methods --------------------------------------- */}
         <div className="space-y-6">
           {idmetaEnabled ? (

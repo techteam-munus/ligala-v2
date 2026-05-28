@@ -101,7 +101,7 @@ export function LawyerProfileForm({
 
   return (
     <form onSubmit={onSubmit}>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] [&>*]:min-w-0">
         {/* Left column: Identity + Expertise ----------------------- */}
         <div className="space-y-4">
           {/* Identity */}
@@ -116,7 +116,7 @@ export function LawyerProfileForm({
               <div className="space-y-1.5">
                 <Label htmlFor="slug">Public URL slug</Label>
                 <div className="flex items-center rounded-md border border-input bg-transparent shadow-xs focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
-                  <span className="px-3 py-1 text-sm text-muted-foreground border-r border-input">
+                  <span className="shrink-0 px-3 py-1 text-sm text-muted-foreground border-r border-input">
                     ligala.ph/lawyers/
                   </span>
                   <input
@@ -124,7 +124,7 @@ export function LawyerProfileForm({
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     placeholder="juan-dela-cruz"
-                    className="flex-1 bg-transparent px-3 py-1 font-mono text-sm outline-none"
+                    className="w-full min-w-0 flex-1 bg-transparent px-3 py-1 font-mono text-sm outline-none"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">

@@ -102,7 +102,7 @@ export function PortalShell({
         <SidebarInset>
           <header className="flex h-14 items-center gap-2 border-b border-[color:var(--rule)] px-3">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mx-2 !h-4 mt-5" />
+            <Separator orientation="vertical" className="mx-2 !h-4" />
             <Breadcrumb>
               <BreadcrumbList className="text-[13px]">
                 {buildCrumbs(pathname).map((crumb, i, arr) => (

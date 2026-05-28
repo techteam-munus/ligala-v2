@@ -85,7 +85,7 @@ export function NewInvoiceForm({ caseId }: { caseId: string }) {
 
   return (
     <form onSubmit={submit}>
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px] [&>*]:min-w-0">
         {/* Editor =================================================== */}
         <div className="border-b border-border/60 lg:border-b-0 lg:border-r">
           {/* Header row */}

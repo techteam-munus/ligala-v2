@@ -327,7 +327,7 @@ export default async function PublicLawyerProfile({
       </header>
 
       {/* Body ----------------------------------------------------------- */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] [&>*]:min-w-0">
         {/* Left: practice / jurisdictions / FAQ ----------------------- */}
         <div className="space-y-6">
           {/* Practice areas */}
