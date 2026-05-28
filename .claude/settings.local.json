@@ -270,7 +270,17 @@
       "Bash(grep -viE \"NodeVersionSupportWarning|logRetention is deprecated|node >=22|continue receiving|security updates|More information|trace-warnings|aws-cdk-lib:|npm ci|Affected versions|acknowledge|github.com/aws|invalid lock|upgrade|^$\")",
       "Bash(xargs grep -liE \"idmeta|trustvalidation|trust_validation\")",
       "Read(//c/Users/dejes/.aws/**)",
-      "Bash(AWS_PROFILE=dev pnpm cdk:deploy:dev)"
+      "Bash(AWS_PROFILE=dev pnpm cdk:deploy:dev)",
+      "Bash(Get-ChildItem -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "Bash(cd *)",
+      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/admin/dashboard,/admin/users,/admin/invoices,/admin/payouts,/admin/referrals,/admin/ibp-lawyers,/admin/audit-log,/admin/kyc\" node scripts/resp-check.mjs)",
+      "Bash(xargs grep -l \"function AddIbpLawyerForm\\\\|export.*AddIbpLawyerForm\")",
+      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/admin/ibp-lawyers,/admin/discount-codes\" node scripts/resp-check.mjs)",
+      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/dashboard,/cases,/invoices,/profile,/cases/new,/lawyers/atty-retry,/lawyers/atty-final,/lawyers,/chapters,/pricing,/about,/terms,/privacy,/become-a-lawyer\" node scripts/resp-check.mjs)",
+      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/admin/dashboard,/admin/discount-codes,/admin/ibp-lawyers,/admin/users/GqUDgLyGV26PGtLelXA5AqyN73GjgxRG\" node scripts/resp-check.mjs)",
+      "Bash(MSYS_NO_PATHCONV=1 RESP_EMAIL=\"resp+mpow5t4n@ligala.test\" RESP_ROUTES=\"/dashboard,/cases/65565644-a988-4a82-83a9-56595801a98f,/profile,/cases/new\" node scripts/resp-check.mjs)"
     ]
   }
 }
